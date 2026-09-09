@@ -1,0 +1,2 @@
+# Netlify Proxy naar Val Town (omzeilt eventuele client-side adblockers of CSP restricties)
+/val-town-proxy/*  https://fit.val.run/:splat  200!

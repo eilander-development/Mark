@@ -1,0 +1,6 @@
+{
+  "name": "IRONFORGE Periodized Workout Tracker",
+  "description": "Periodized workout tracker met vaste thuisgym schema-vergrendeling, fysiologische krachtnormen voor leeftijd & lichaamsgewicht, lichaamsgewicht/opdrukken integratie, automatische deload en all-time PR detectie.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
