@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="primaryGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="goldGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background rounded rectangle -->
+  <rect width="512" height="512" rx="108" fill="url(#bgGrad)" />
+  <rect width="504" height="504" x="4" y="4" rx="104" fill="none" stroke="#334155" stroke-width="4" stroke-opacity="0.6" />
+
+  <!-- Subtle glow ring -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#10b981" stroke-width="2" stroke-opacity="0.2" />
+
+  <!-- Barbell Bar -->
+  <rect x="76" y="246" width="360" height="20" rx="10" fill="#94a3b8" />
+  
+  <!-- Outer Knurling Collars -->
+  <rect x="136" y="238" width="16" height="36" rx="4" fill="#64748b" />
+  <rect x="360" y="238" width="16" height="36" rx="4" fill="#64748b" />
+
+  <!-- Big Outer Plates (Emerald) -->
+  <rect x="156" y="146" width="32" height="220" rx="10" fill="url(#primaryGlow)" filter="url(#glow)" />
+  <rect x="324" y="146" width="32" height="220" rx="10" fill="url(#primaryGlow)" filter="url(#glow)" />
+
+  <!-- Inner Plates (Slate) -->
+  <rect x="194" y="176" width="24" height="160" rx="8" fill="#475569" />
+  <rect x="294" y="176" width="24" height="160" rx="8" fill="#475569" />
+
+  <!-- Center Hexagon Emblem / Anvil Badge -->
+  <polygon points="256,195 292,216 292,258 256,279 220,258 220,216" fill="#0f172a" stroke="#10b981" stroke-width="4" />
+
+  <!-- Bold Monogram "IF" -->
+  <text x="256" y="248" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="28" fill="#34d399" text-anchor="middle">IF</text>
+
+  <!-- Bottom Accent: Progressive Growth Chevron -->
+  <path d="M 232 320 L 256 304 L 280 320" fill="none" stroke="url(#goldGlow)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

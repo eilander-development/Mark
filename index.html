@@ -4049,13 +4049,8 @@
                   } else {
                     // Indien 2-weken consolidatie ingesteld staat
                     let applyInc = prevOverload;
-                    if (appState.overloadFrequency === "biweekly" && weekNum > 2) {
-                      const olderWeekData = appState.weeks[weekNum - 2] ? appState.weeks[weekNum - 2][dayKey] : null;
-                      const olderSlot = olderWeekData ? olderWeekData[slotKey] : null;
-                      const olderOverload = olderSlot ? checkOverloadAchieved(olderSlot, catalogItem.targetReps, isDeloadWeek(weekNum - 2)) : false;
-                      if (!olderOverload) {
-                        applyInc = false; // Eerste week van 2 weken behaald: gewicht behouden
-                      }
+                    if (appState.overloadFrequency === "biweekly" && weekNum % 2 === 0) {
+                      applyInc = false;
                     }
                     targetWeight = applyInc ? Math.round((maxPrev + inc) * 10) / 10 : maxPrev;
                   }
@@ -4241,13 +4236,8 @@
           } else {
             // 🟡 Goed & Pittig: Standaard consolidatiecyclus of wekelijks
             let isBiweeklyHold = false;
-            if (appState.overloadFrequency === "biweekly" && weekNum > 2) {
-              const olderWeekData = appState.weeks[weekNum - 2] ? appState.weeks[weekNum - 2][dayKey] : null;
-              const olderSlot = olderWeekData ? olderWeekData[slotKey] : null;
-              const olderOverload = olderSlot ? checkOverloadAchieved(olderSlot, targetReps, isDeloadWeek(weekNum - 2)) : false;
-              if (!olderOverload) {
-                isBiweeklyHold = true;
-              }
+            if (appState.overloadFrequency === "biweekly" && weekNum % 2 === 0) {
+              isBiweeklyHold = true;
             }
 
             if (isBiweeklyHold) {
@@ -5028,7 +5018,7 @@
             </span>
             <div class="flex items-center gap-3 text-[10px] font-mono flex-wrap">
               <span class="text-emerald-400">🟢 Vlot = Fast-Track (+${inc} kg)</span>
-              <span class="text-amber-400">🟡 Goed = 2 Wk Consolidatie</span>
+              <span class="text-amber-400">🟡 Goed = ${freq === "biweekly" ? "2 Wk Consolidatie" : `+${inc} kg bij doel`}</span>
               <span class="text-rose-400">🔴 Max = Gewicht Behouden</span>
             </div>
           </div>
