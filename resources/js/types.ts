@@ -104,6 +104,7 @@ export interface ImportPreview {
     weeks: number
     currentWeek: number
     cycle: number
+    mysqlCompletedSets?: number
     preview: boolean
     imported: boolean
     message?: string

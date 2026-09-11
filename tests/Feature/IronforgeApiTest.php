@@ -93,6 +93,7 @@ class IronforgeApiTest extends TestCase
         ])->assertOk();
 
         $name = $set->fresh()->slot->selected_name;
+        $this->patchJson('/api/preferences', ['current_week' => 7])->assertOk();
         $this->postJson('/api/cycles')->assertOk()->assertJsonPath('currentCycle', 2);
 
         $record = app(PersonalRecord::class)->allTime($name);

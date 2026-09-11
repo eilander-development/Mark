@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2026-09-10-beheer';
+const CACHE_VERSION = '2026-09-11-boot';
 const CACHE_NAME = 'ironforge-' + CACHE_VERSION;
 
 self.addEventListener('install', (event) => {

@@ -15,6 +15,7 @@ class CycleFactory
     public function __construct(
         private readonly Catalog $catalog,
         private readonly Periodization $periodization,
+        private readonly NextCycleAdvisor $nextCycle,
     ) {}
 
     public function ensureCurrent(): Cycle
@@ -52,7 +53,7 @@ class CycleFactory
             if (is_array($schema) && $schema !== []) {
                 $this->applyWizardSchema($cycle, $schema);
             } elseif ($carryForward && $from) {
-                $this->copyNamesAndStartWeights($from, $cycle);
+                $this->applyWizardSchema($cycle, $this->nextCycle->schema($from));
             }
 
             $prefs = $this->preferences();
@@ -98,9 +99,14 @@ class CycleFactory
 
     public function ensureSkeleton(Cycle $cycle): void
     {
+        $days = config('ironforge.days');
+        $expectedSessions = (int) $cycle->total_weeks * count($days);
+        if ($cycle->sessions()->count() >= $expectedSessions) {
+            return;
+        }
+
         $catalog = $this->catalog->allSlots();
         $splits = $this->catalog->splits();
-        $days = config('ironforge.days');
         $setCount = (int) config('ironforge.sets_per_slot', 3);
         for ($week = 1; $week <= $cycle->total_weeks; $week++) {
             $isDeload = $this->periodization->isDeloadWeek($week);
@@ -167,6 +173,9 @@ class CycleFactory
                     continue;
                 }
                 $slot->selected_name = $name;
+                if (isset($item['targetReps'])) {
+                    $slot->target_reps = (int) $item['targetReps'];
+                }
                 $slot->save();
 
                 $weight = isset($item['weight']) ? (float) $item['weight'] : 0.0;
@@ -176,52 +185,6 @@ class CycleFactory
                 foreach ($slot->sets as $set) {
                     if ($set->weight === '') {
                         $set->weight = (string) $weight;
-                        $set->save();
-                    }
-                }
-            }
-        }
-    }
-
-    private function copyNamesAndStartWeights(Cycle $from, Cycle $to): void
-    {
-        $peakWeek = $this->periodization->lastHeavyWeek((int) $from->total_weeks);
-        $fromPeak = $from->sessions()->where('week', $peakWeek)->with('slots.sets')->get()->keyBy('day');
-        foreach ($to->sessions()->with('slots.sets')->get() as $session) {
-            $source = $fromPeak->get($session->day);
-            if (! $source) {
-                continue;
-            }
-            $byKey = $source->slots->keyBy('slot_key');
-            foreach ($session->slots as $slot) {
-                $src = $byKey->get($slot->slot_key);
-                if (! $src) {
-                    continue;
-                }
-                $nextName = $this->catalog->nextAlternative($slot->slot_key, (string) $src->selected_name);
-                $rotated = $nextName !== $src->selected_name;
-                $slot->selected_name = $nextName;
-                $slot->save();
-
-                if ($rotated || (int) $session->week !== 1) {
-                    continue;
-                }
-
-                $peakWeight = 0.0;
-                foreach ($src->sets as $set) {
-                    $weight = (float) $set->weight;
-                    if ($weight > $peakWeight) {
-                        $peakWeight = $weight;
-                    }
-                }
-                if ($peakWeight <= 0) {
-                    continue;
-                }
-
-                $startWeight = (string) $peakWeight;
-                foreach ($slot->sets as $set) {
-                    if ($set->weight === '') {
-                        $set->weight = $startWeight;
                         $set->save();
                     }
                 }

@@ -18,20 +18,21 @@ class ImportValTownCommand extends Command
             if ($this->option('preview')) {
                 $preview = $importer->preview();
                 $this->table(
-                    ['updatedAt', 'completedSets', 'weeks', 'currentWeek', 'cycle'],
+                    ['updatedAt', 'completedSets', 'weeks', 'currentWeek', 'cycle', 'mysqlCompletedSets'],
                     [[
                         $preview['updatedAt'] ?? '-',
                         $preview['completedSets'],
                         $preview['weeks'],
                         $preview['currentWeek'] ?? 1,
                         $preview['cycle'] ?? 1,
+                        $preview['mysqlCompletedSets'] ?? 0,
                     ]],
                 );
 
                 return self::SUCCESS;
             }
 
-            if (! $this->option('force') && ! $this->confirm('Val Town-dump in de database zetten? Bestaande huidige cyclus wordt overschreven.')) {
+            if (! $this->option('force') && ! $this->confirm('Val-dump overschrijft de huidige cyclus in MySQL. Doorgaan?')) {
                 return self::SUCCESS;
             }
 

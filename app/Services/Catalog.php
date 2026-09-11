@@ -8,18 +8,19 @@ use Illuminate\Support\Collection;
 
 class Catalog
 {
+    private bool $synced = false;
+
+    /**
+     * @var array<string, array<string, mixed>>|null
+     */
+    private ?array $slotsCache = null;
+
     /**
      * @return array<string, mixed>
      */
     public function slot(string $slotKey): array
     {
-        $this->sync();
-        $row = ProgramSlot::query()->where('slot_key', $slotKey)->first();
-        if ($row) {
-            return $row->toCatalogArray();
-        }
-
-        return config('ironforge.catalog.'.$slotKey, []);
+        return $this->allSlots()[$slotKey] ?? config('ironforge.catalog.'.$slotKey, []);
     }
 
     /**
@@ -27,13 +28,19 @@ class Catalog
      */
     public function allSlots(): array
     {
+        if ($this->slotsCache !== null) {
+            return $this->slotsCache;
+        }
+
         $this->sync();
 
-        return ProgramSlot::query()
+        $this->slotsCache = ProgramSlot::query()
             ->orderBy('slot_key')
             ->get()
             ->mapWithKeys(fn (ProgramSlot $slot) => [$slot->slot_key => $slot->toCatalogArray()])
             ->all();
+
+        return $this->slotsCache;
     }
 
     /**
@@ -124,13 +131,17 @@ class Catalog
 
     public function sync(): void
     {
+        if ($this->synced) {
+            return;
+        }
+
+        $this->synced = true;
+
         $catalog = config('ironforge.catalog', []);
         $needsSeed = ProgramSlot::query()->count() < count($catalog)
             || Exercise::query()->count() < $this->expectedExerciseCount($catalog);
 
         if (! $needsSeed) {
-            $this->applyBuiltinVideos();
-
             return;
         }
 
@@ -180,6 +191,7 @@ class Catalog
         }
 
         $this->applyBuiltinVideos();
+        $this->slotsCache = null;
     }
 
     /**

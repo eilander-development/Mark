@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Cycle;
 use App\Models\WorkoutSession;
 use App\Models\WorkoutSet;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -12,7 +13,6 @@ class ValTownImporter
 {
     public function __construct(
         private readonly CycleFactory $factory,
-        private readonly Periodization $periodization,
     ) {}
 
     /**
@@ -23,13 +23,15 @@ class ValTownImporter
         $payload = $this->fetch();
         $state = $payload['appState'] ?? [];
         $weeks = is_array($state['weeks'] ?? null) ? $state['weeks'] : [];
+        $completedSets = $this->countCompleted($weeks);
 
         return [
             'updatedAt' => $payload['updatedAt'] ?? null,
-            'completedSets' => $this->countCompleted($weeks),
+            'completedSets' => $completedSets,
             'weeks' => count($weeks),
             'currentWeek' => $state['currentWeek'] ?? 1,
             'cycle' => $state['currentCycle'] ?? 1,
+            'mysqlCompletedSets' => $this->mysqlCompletedCount(),
             'preview' => true,
             'imported' => false,
         ];
@@ -54,12 +56,12 @@ class ValTownImporter
 
         $cycle = $this->factory->ensureCurrent();
         if ($replace) {
-            $this->applyState($cycle, $state, WorkoutSet::query()->where('completed', true)->exists());
+            $this->applyState($cycle, $state);
         }
 
         return [
             'updatedAt' => $payload['updatedAt'] ?? null,
-            'completedSets' => $this->countCompleted($weeks),
+            'completedSets' => $incomingCompleted,
             'weeks' => count($weeks),
             'currentWeek' => $state['currentWeek'] ?? 1,
             'cycle' => $state['currentCycle'] ?? 1,
@@ -89,44 +91,53 @@ class ValTownImporter
     /**
      * @param  array<string, mixed>  $state
      */
-    public function applyState(Cycle $cycle, array $state, bool $keepExistingCompleted = false): void
+    public function applyState(Cycle $cycle, array $state): void
     {
-        if (! $keepExistingCompleted) {
-            $prefs = $this->factory->preferences();
-            $prefs->fill([
-                'current_week' => min(7, max(1, (int) ($state['currentWeek'] ?? 1))),
-                'current_day' => in_array($state['currentDay'] ?? 'mon', config('ironforge.days'), true)
-                    ? ($state['currentDay'] ?? 'mon')
-                    : 'mon',
-                'sound_enabled' => (bool) ($state['soundEnabled'] ?? true),
-                'routine_locked' => (bool) ($state['routineLocked'] ?? true),
-                'show_live_video_panel' => (bool) ($state['showLiveVideoPanel'] ?? true),
-                'overload_increment' => (float) ($state['overloadIncrement'] ?? 2),
-                'overload_frequency' => (string) ($state['overloadFrequency'] ?? 'weekly'),
-                'preferred_rest_times' => $state['preferredRestTimes'] ?? [],
-                'custom_exercise_videos' => $state['customExerciseVideos'] ?? [],
+        DB::transaction(fn () => $this->writeState($cycle, $state));
+    }
+
+    /**
+     * @param  array<string, mixed>  $state
+     */
+    private function writeState(Cycle $cycle, array $state): void
+    {
+        $prefs = $this->factory->preferences();
+        $prefs->fill([
+            'current_week' => min(7, max(1, (int) ($state['currentWeek'] ?? 1))),
+            'current_day' => in_array($state['currentDay'] ?? 'mon', config('ironforge.days'), true)
+                ? ($state['currentDay'] ?? 'mon')
+                : 'mon',
+            'sound_enabled' => (bool) ($state['soundEnabled'] ?? true),
+            'routine_locked' => (bool) ($state['routineLocked'] ?? true),
+            'show_live_video_panel' => (bool) ($state['showLiveVideoPanel'] ?? true),
+            'overload_increment' => (float) ($state['overloadIncrement'] ?? 2),
+            'overload_frequency' => (string) ($state['overloadFrequency'] ?? 'weekly'),
+            'preferred_rest_times' => $state['preferredRestTimes'] ?? [],
+            'custom_exercise_videos' => $state['customExerciseVideos'] ?? [],
+        ]);
+        $prefs->save();
+
+        if (isset($state['userProfile']) && is_array($state['userProfile'])) {
+            $profile = $this->factory->profile();
+            $profile->fill([
+                'birth_year' => (int) ($state['userProfile']['birthYear'] ?? 1984),
+                'body_weight_kg' => (int) ($state['userProfile']['bodyWeightKg'] ?? 82),
+                'experience_level' => (string) ($state['userProfile']['experienceLevel'] ?? 'intermediate'),
+                'equipment' => $state['userProfile']['equipment'] ?? $profile->equipment,
             ]);
-            $prefs->save();
-
-            if (isset($state['userProfile']) && is_array($state['userProfile'])) {
-                $profile = $this->factory->profile();
-                $profile->fill([
-                    'birth_year' => (int) ($state['userProfile']['birthYear'] ?? 1984),
-                    'body_weight_kg' => (int) ($state['userProfile']['bodyWeightKg'] ?? 82),
-                    'experience_level' => (string) ($state['userProfile']['experienceLevel'] ?? 'intermediate'),
-                    'equipment' => $state['userProfile']['equipment'] ?? $profile->equipment,
-                ]);
-                $profile->save();
-            }
-
-            $cycle->number = (int) ($state['currentCycle'] ?? $cycle->number);
-            if (! empty($state['cycleStartedAt']) && preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $state['cycleStartedAt'])) {
-                $cycle->started_at = substr((string) $state['cycleStartedAt'], 0, 10);
-            }
-            $cycle->save();
+            $profile->save();
         }
 
+        $cycle->number = (int) ($state['currentCycle'] ?? $cycle->number);
+        if (! empty($state['cycleStartedAt']) && preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $state['cycleStartedAt'])) {
+            $cycle->started_at = substr((string) $state['cycleStartedAt'], 0, 10);
+        }
+        $cycle->save();
+
         $this->factory->ensureSkeleton($cycle);
+        $cycle->unsetRelation('sessions');
+        $cycle->load(['sessions.slots.sets']);
+        $this->resetCycleSets($cycle);
         $cycle->unsetRelation('sessions');
         $cycle->load(['sessions.slots.sets']);
 
@@ -156,12 +167,6 @@ class ValTownImporter
                     if (! $slot) {
                         continue;
                     }
-                    $slotAlreadyLogged = $keepExistingCompleted && $slot->sets->contains(
-                        fn (WorkoutSet $set) => $this->isLoggedSet($set, (string) $slot->selected_name),
-                    );
-                    if ($slotAlreadyLogged) {
-                        continue;
-                    }
                     $slot->selected_name = (string) ($slotData['selectedName'] ?? $slot->selected_name);
                     $slot->note = (string) ($slotData['note'] ?? $slot->note);
                     if (isset($slotData['targetReps'])) {
@@ -174,7 +179,7 @@ class ValTownImporter
                             continue;
                         }
                         $set = $slot->sets->firstWhere('position', $index + 1);
-                        if (! $set || ($keepExistingCompleted && $this->isLoggedSet($set, (string) $slot->selected_name))) {
+                        if (! $set) {
                             continue;
                         }
                         $exertion = $setData['exertion'] ?? 'good';
@@ -193,15 +198,15 @@ class ValTownImporter
                     }
                 }
 
-                if (array_key_exists('actualDuration', $slots) && (! $keepExistingCompleted || ! $session->actual_duration)) {
+                if (array_key_exists('actualDuration', $slots)) {
                     $session->actual_duration = $slots['actualDuration'] !== null && $slots['actualDuration'] !== ''
                         ? (int) $slots['actualDuration']
-                        : $session->actual_duration;
+                        : null;
                 }
-                if (array_key_exists('actualAvgRest', $slots) && (! $keepExistingCompleted || ! $session->actual_avg_rest)) {
+                if (array_key_exists('actualAvgRest', $slots)) {
                     $session->actual_avg_rest = $slots['actualAvgRest'] !== null && $slots['actualAvgRest'] !== ''
                         ? (int) $slots['actualAvgRest']
-                        : $session->actual_avg_rest;
+                        : null;
                 }
                 $session->save();
             }
@@ -243,15 +248,30 @@ class ValTownImporter
         return $n;
     }
 
-    private function isLoggedSet(WorkoutSet $set, string $exerciseName): bool
+    private function mysqlCompletedCount(): int
     {
-        if (! $set->completed) {
-            return false;
-        }
-        if ((int) $set->reps <= 0) {
-            return false;
+        return (int) WorkoutSet::query()->where('completed', true)->count();
+    }
+
+    private function resetCycleSets(Cycle $cycle): void
+    {
+        $slotIds = $cycle->sessions
+            ->flatMap(fn (WorkoutSession $session) => $session->slots->pluck('id'))
+            ->all();
+
+        foreach ($cycle->sessions as $session) {
+            $session->actual_duration = null;
+            $session->actual_avg_rest = null;
+            $session->save();
         }
 
-        return $this->periodization->isBodyweight($exerciseName) || (float) $set->weight > 0;
+        if ($slotIds !== []) {
+            WorkoutSet::query()->whereIn('workout_slot_id', $slotIds)->update([
+                'weight' => '',
+                'reps' => '',
+                'completed' => false,
+                'exertion' => 'good',
+            ]);
+        }
     }
 }

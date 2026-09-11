@@ -352,54 +352,8 @@ html = html.replace(
 );
 
 html = html.replace(
-    /async function fetchDataVanCloud\(showToastNotice = true\) \{[\s\S]*?\n    \}/,
-    `async function fetchDataVanCloud(showToastNotice = true) {
-      try {
-        if (showToastNotice) {
-          showToast("☁️ Val-dump ophalen (alleen lezen) en in de database zetten...", "info");
-        }
-        const imported = await fetch("/api/import/val", {
-          method: "POST",
-          headers: { Accept: "application/json", "Content-Type": "application/json" },
-          body: JSON.stringify({ confirm: true })
-        });
-        if (!imported.ok) {
-          const body = await imported.json().catch(() => ({}));
-          throw new Error(body.message || ("HTTP " + imported.status));
-        }
-        const fresh = await fetch("/api/marker-state", { headers: { Accept: "application/json" }, cache: "no-store" });
-        const payload = await fresh.json();
-        if (!payload.appState || !payload.appState.weeks) {
-          if (showToastNotice) {
-            showToast("ℹ️ Geen bestaande trainingsdata in Val gevonden.", "info");
-          }
-          return false;
-        }
-        appState = payload.appState;
-        lastPersisted = clonePersistedState(appState);
-        laravelPersistEnabled = true;
-        renderWeekPills();
-        switchDay(appState.currentDay || "mon");
-        updateDashboard();
-        if (showToastNotice) {
-          showToast("✅ Val-dump in de database gezet.", "success");
-        }
-        updateCloudSyncUI(true);
-        return true;
-      } catch (err) {
-        console.warn("Fout bij fetchDataVanCloud:", err);
-        if (showToastNotice) {
-          showToast("⚠️ " + (err && err.message ? err.message : "Kon Val-dump niet ophalen via de Laravel-API."), "error");
-        }
-        updateCloudSyncUI(false);
-        return false;
-      }
-    }`,
-);
-
-html = html.replace(
     'function startApp() {\n      initAppState();',
-    'async function startApp() {\n      await initAppState();',
+    'async function startApp() {\n      await initAppState();\n      document.getElementById("ironforgeBootOverlay")?.remove();',
 );
 
 html = html.replaceAll(
@@ -428,7 +382,7 @@ html = html.replace(
 );
 
 html = html.replace(
-    '    /* Helper: Bepaalt de beste video gegevens (eigen bewaarde link -> Athlean-X match -> fallback) */\n    function getExerciseVideoData(exerciseName, slotKey = null) {\n      const name = (exerciseName || "").trim();\n      \n      // 1. Heeft de gebruiker een eigen video bewaard voor deze oefening?',
+    '    /* Helper: Bepaalt de beste video gegevens (eigen bewaarde link -> bibliotheek -> fuzzy -> geen Athlean-stempel) */\n    function getExerciseVideoData(exerciseName, slotKey = null) {\n      const name = (exerciseName || "").trim();\n      \n      // 1. Heeft de gebruiker een eigen video bewaard voor deze oefening?',
     `    /* Helper: Bepaalt de beste video gegevens (eigen bewaarde link -> Athlean-X match -> fallback) */
     function getExerciseVideoData(exerciseName, slotKey = null) {
       const name = (exerciseName || "").trim();
@@ -450,14 +404,54 @@ html = html.replace(
 );
 
 html = html.replace(
-    `<div class="text-xs font-bold text-slate-200">JSON Back-up & Herstel</div>
+    `<div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Systeem</div>
+        <div class="space-y-1.5">
+          <button onclick="closeMenuDrawer(); openCloudSyncModal();" class="w-full p-2.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-left border border-blue-500/30 transition flex items-center gap-3 cursor-pointer">
+            <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center text-base flex-shrink-0">
+              ☁️
+            </div>
+            <div class="flex-1">
+              <div class="text-xs font-bold text-blue-200 flex items-center justify-between">
+                <span>Cloud Synchronisatie</span>
+                <span id="cloudSyncStatusBadge" class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">Val Town</span>
+              </div>
+              <div class="text-[10px] text-blue-400/80">fit.val.run • Ophalen & Opslaan</div>
+            </div>
+          </button>
+
+          <button onclick="closeMenuDrawer(); openDataModal();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
+            <div class="w-8 h-8 rounded-lg bg-slate-700/60 text-slate-300 flex items-center justify-center text-base flex-shrink-0">
+              💾
+            </div>
+            <div class="flex-1">
+              <div class="text-xs font-bold text-slate-200">JSON Back-up & Herstel</div>
               <div class="text-[10px] text-slate-400">Exporteer of importeer je trainingsdata</div>
             </div>
           </button>
         </div>
       </div>`,
-    `<div class="text-xs font-bold text-slate-200">JSON Back-up & Herstel</div>
-              <div class="text-[10px] text-slate-400">Exporteer of importeer je trainingsdata</div>
+    `<div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Systeem</div>
+        <div class="space-y-1.5">
+          <button onclick="closeMenuDrawer(); syncFromValOnDemand();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
+            <div class="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-300 flex items-center justify-center text-base flex-shrink-0">
+              ☁️
+            </div>
+            <div class="flex-1">
+              <div class="text-xs font-bold text-slate-200 flex items-center justify-between">
+                <span>Val importeren</span>
+                <span id="cloudSyncStatusBadge" class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">GET</span>
+              </div>
+              <div class="text-[10px] text-slate-400">Overschrijft de huidige cyclus</div>
+            </div>
+          </button>
+
+          <button onclick="closeMenuDrawer(); clearCurrentDay();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
+            <div class="w-8 h-8 rounded-lg bg-rose-500/15 text-rose-300 flex items-center justify-center text-base flex-shrink-0">
+              🔄
+            </div>
+            <div class="flex-1">
+              <div class="text-xs font-bold text-slate-200">Dag resetten</div>
+              <div class="text-[10px] text-slate-400">Sets van vandaag wissen</div>
             </div>
           </button>
 
@@ -466,8 +460,8 @@ html = html.replace(
               🛠️
             </div>
             <div class="flex-1">
-              <div class="text-xs font-bold text-emerald-200">Programma &amp; Beheer</div>
-              <div class="text-[10px] text-emerald-400/80">Oefeningen, video's, rust, overload</div>
+              <div class="text-xs font-bold text-emerald-200">Beheer</div>
+              <div class="text-[10px] text-emerald-400/80">Oefeningen, video, overload</div>
             </div>
           </a>
         </div>
@@ -475,8 +469,22 @@ html = html.replace(
 );
 
 html = html.replace(
-    'onclick="openCloudSyncModal()" id="headerCloudSyncBtn"',
-    'onclick="syncFromValOnDemand()" id="headerCloudSyncBtn"',
+    '<body class="min-h-screen flex flex-col bg-slate-900 text-slate-100 selection:bg-emerald-500 selection:text-slate-950 pb-28">',
+    `<body class="min-h-screen flex flex-col bg-slate-900 text-slate-100 selection:bg-emerald-500 selection:text-slate-950 pb-28">
+<div id="ironforgeBootOverlay" class="fixed inset-0 z-[300] bg-slate-950 flex flex-col items-center justify-center gap-2">
+  <div class="text-sm font-bold tracking-wide text-slate-100">Training laden…</div>
+  <div class="text-[11px] text-slate-500">Data komt uit de database</div>
+</div>`,
+);
+
+html = html.replace(
+    '<span class="text-emerald-400 font-bold">● Offline & Lokaal Veilig</span>\n      <span>v2.8 Thuisgym</span>',
+    '<span class="text-slate-400 font-bold">● Data in MySQL</span>\n      <span>v2.9 IronForge</span>',
+);
+
+html = html.replace(
+    /<button onclick="(?:openCloudSyncModal|syncFromValOnDemand)\(\)" id="headerCloudSyncBtn"[\s\S]*?<\/button>\s*/,
+    '',
 );
 
 html = html.replace(
@@ -508,7 +516,7 @@ html = html.replace(
         alert("Val-dump heeft geen voltooide sets. Bestaande training in de database blijft staan.");
         return;
       }
-      if (!confirm("Val-dump ophalen (" + preview.completedSets + " voltooide sets) en in de database zetten? Bestaande huidige cyclus wordt overschreven.")) {
+      if (!confirm("Val-dump (" + preview.completedSets + " sets, " + (preview.updatedAt || "geen datum") + ") overschrijft de huidige cyclus in MySQL. Doorgaan?")) {
         return;
       }
       const imported = await jsonApi("/api/import/val", "POST", { confirm: true });
@@ -540,6 +548,11 @@ html = html.replace(
       await syncFromValOnDemand();
       return false;
     }`,
+);
+
+html = html.replace(
+    'const ok = await fetchDataVanCloud(true);',
+    'await syncFromValOnDemand();\n        const ok = false;',
 );
 
 html = html.replace(
@@ -577,8 +590,33 @@ html = html.replace(
       registerIronForgeServiceWorker();`,
 );
 
-if (!html.includes('async function initAppState') || !html.includes('persistIncrementalToLaravel') || !html.includes('await initAppState') || !html.includes('registerIronForgeServiceWorker') || !html.includes('syncFromValOnDemand') || !html.includes('!Array.isArray(slot.sets)) return') || !html.includes('id="lwVideoArea" class="hidden flex-col') || !html.includes('href="/beheer"') || !html.includes('appState.exerciseVideos') || !html.includes('/api/import/val') || !html.includes('Val-dump heeft geen voltooide sets') || html.includes('id="lwVideoArea" class="hidden md:flex') || html.includes('persistAppStateToLaravel') || html.includes('Toon bij het openen van de app de cloud synchronisatie vraag') || html.includes('await fetchDataVanCloud(true)')) {
-    throw new Error('Marker-port patches failed. Check scripts/port-marker-ui.mjs against marker/index.html.');
+const portChecks = {
+    initAppState: html.includes('async function initAppState'),
+    persist: html.includes('persistIncrementalToLaravel'),
+    awaitInit: html.includes('await initAppState'),
+    bootOverlay: html.includes('id="ironforgeBootOverlay"'),
+    bootHide: html.includes('ironforgeBootOverlay")?.remove()'),
+    sw: html.includes('registerIronForgeServiceWorker'),
+    valSync: html.includes('syncFromValOnDemand'),
+    slotGuard: html.includes('!Array.isArray(slot.sets)) return'),
+    videoArea: html.includes('id="lwVideoArea" class="hidden flex-col'),
+    beheer: html.includes('href="/beheer"'),
+    videos: html.includes('appState.exerciseVideos'),
+    valApi: html.includes('/api/import/val'),
+    valEmpty: html.includes('Val-dump heeft geen voltooide sets'),
+    valOverwrite: html.includes('overschrijft de huidige cyclus in MySQL'),
+    nextPeriod: html.includes('canStartNewPeriod'),
+    soundIcon: html.includes('soundToggleIcon'),
+    noJson: !html.includes('JSON Back-up & Herstel'),
+    noMdFlex: !html.includes('id="lwVideoArea" class="hidden md:flex'),
+    noPersistAll: !html.includes('persistAppStateToLaravel'),
+    noAutoCloud: !html.includes('Toon bij het openen van de app de cloud synchronisatie vraag'),
+    noAwaitFetch: !html.includes('await fetchDataVanCloud(true)'),
+    noHeaderSync: !html.includes('id="headerCloudSyncBtn"'),
+};
+const failedPortChecks = Object.entries(portChecks).filter(([, ok]) => !ok).map(([name]) => name);
+if (failedPortChecks.length) {
+    throw new Error('Marker-port patches failed: ' + failedPortChecks.join(', '));
 }
 
 if (!html.includes('id="ironforge-vue"')) {

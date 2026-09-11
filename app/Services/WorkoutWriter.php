@@ -14,6 +14,7 @@ class WorkoutWriter
         private readonly Periodization $periodization,
         private readonly PersonalRecord $records,
         private readonly StateAssembler $state,
+        private readonly NextCycleAdvisor $nextCycle,
     ) {}
 
     /**
@@ -248,7 +249,20 @@ class WorkoutWriter
     public function startNextCycle(?array $schema = null): array
     {
         $current = $this->factory->ensureCurrent();
-        $this->factory->createCycle(((int) $current->number) + 1, true, $current, $schema);
+        $prefs = $this->factory->preferences();
+        $advice = $this->nextCycle->forCycle($current, (int) $prefs->current_week);
+        if (! $advice['available']) {
+            throw ValidationException::withMessages([
+                'cycle' => $advice['reason'],
+            ]);
+        }
+
+        $this->factory->createCycle(
+            ((int) $current->number) + 1,
+            true,
+            $current,
+            $schema ?: $advice['schema'],
+        );
 
         return $this->state->payload();
     }

@@ -17,6 +17,7 @@ Route::patch('/preferences', [WorkoutController::class, 'updatePreferences']);
 Route::patch('/profile', [WorkoutController::class, 'updateProfile']);
 Route::post('/days/clear', [WorkoutController::class, 'clearDay']);
 Route::post('/weeks/advance', [WorkoutController::class, 'applyOverload']);
+Route::get('/cycles/next-advice', [WorkoutController::class, 'nextCycleAdvice']);
 Route::post('/cycles', [WorkoutController::class, 'startCycle']);
 Route::get('/import/val', [ValImportController::class, 'preview']);
 Route::post('/import/val', [ValImportController::class, 'import']);

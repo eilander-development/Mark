@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class MarkerStateTest extends TestCase
@@ -25,10 +26,18 @@ class MarkerStateTest extends TestCase
             ->assertSee('syncFromValOnDemand', false)
             ->assertSee('/api/import/val', false)
             ->assertSee('Val-dump heeft geen voltooide sets', false)
+            ->assertSee('overschrijft de huidige cyclus in MySQL', false)
             ->assertSee('href="/beheer"', false)
             ->assertSee('appState.exerciseVideos', false)
             ->assertSee('!Array.isArray(slot.sets)) return', false)
             ->assertSee('id="lwVideoArea" class="hidden flex-col', false)
+            ->assertSee('canStartNewPeriod', false)
+            ->assertSee('soundToggleIcon', false)
+            ->assertSee('Val importeren', false)
+            ->assertSee('id="ironforgeBootOverlay"', false)
+            ->assertSee('ironforgeBootOverlay")?.remove()', false)
+            ->assertDontSee('JSON Back-up & Herstel', false)
+            ->assertDontSee('id="headerCloudSyncBtn"', false)
             ->assertDontSee('id="lwVideoArea" class="hidden md:flex', false)
             ->assertDontSee('Toon bij het openen van de app de cloud synchronisatie vraag', false)
             ->assertDontSee('await fetchDataVanCloud(true)', false);
@@ -76,5 +85,25 @@ class MarkerStateTest extends TestCase
             ->assertOk()
             ->assertJsonPath('appState.currentWeek', 2)
             ->assertJsonPath('appState.weeks.1.mon.slot_a1.sets.0.reps', '8');
+    }
+
+    public function test_second_marker_state_get_does_not_rewrite_the_catalog(): void
+    {
+        $this->getJson('/api/marker-state')->assertOk();
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $this->getJson('/api/marker-state')
+            ->assertOk()
+            ->assertJsonPath('appState.weeks.1.mon.slot_a1.selectedName', 'Barbell Bench Press');
+
+        $writes = collect(DB::getQueryLog())
+            ->pluck('query')
+            ->filter(fn (string $sql) => preg_match('/^\s*(insert|update|delete)/i', $sql) === 1)
+            ->values()
+            ->all();
+
+        $this->assertSame([], $writes);
     }
 }

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\WorkoutSession;
 use App\Models\WorkoutSet;
 use App\Models\WorkoutSlot;
+use App\Services\CycleFactory;
+use App\Services\NextCycleAdvisor;
 use App\Services\StateAssembler;
 use App\Services\WorkoutWriter;
 use Illuminate\Http\JsonResponse;
@@ -106,6 +108,13 @@ class WorkoutController extends Controller
         return response()->json($this->writer->applyOverloadAndAdvance((int) $data['week']));
     }
 
+    public function nextCycleAdvice(NextCycleAdvisor $advisor, CycleFactory $factory): JsonResponse
+    {
+        $cycle = $factory->ensureCurrent();
+
+        return response()->json($advisor->forCycle($cycle, (int) $factory->preferences()->current_week));
+    }
+
     public function startCycle(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -114,6 +123,7 @@ class WorkoutController extends Controller
             'schema.*.*' => ['sometimes', 'array'],
             'schema.*.*.selectedName' => ['sometimes', 'string', 'max:160'],
             'schema.*.*.weight' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'schema.*.*.targetReps' => ['sometimes', 'integer', 'min:1', 'max:30'],
         ]);
 
         return response()->json($this->writer->startNextCycle($data['schema'] ?? null));

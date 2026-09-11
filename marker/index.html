@@ -1025,8 +1025,8 @@
           IF
         </div>
         <div>
-          <div class="text-sm font-black text-slate-100 uppercase tracking-wider">IronForge Menu</div>
-          <div class="text-[10px] text-slate-400 font-mono">Overload & Thuisgym Beheer</div>
+          <div class="text-sm font-black text-slate-100 uppercase tracking-wider">IronForge</div>
+          <div class="text-[10px] text-slate-400 font-mono">Thuisgym</div>
         </div>
       </div>
       <button onclick="closeMenuDrawer()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition cursor-pointer" title="Sluit menu">
@@ -1038,15 +1038,15 @@
     <div class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
       <!-- Sectie 1: Schema & Krachtnormen -->
       <div>
-        <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Training & Doelen</div>
+        <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Training</div>
         <div class="space-y-1.5">
           <button onclick="closeMenuDrawer(); openSetupRoutineModal();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
             <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-base flex-shrink-0">
               🎯
             </div>
             <div class="flex-1">
-              <div class="text-xs font-bold text-slate-200">Vaste Routine Inrichten</div>
-              <div class="text-[10px] text-slate-400">Oefeningen kiezen & schema vergrendelen</div>
+              <div class="text-xs font-bold text-slate-200">Routine</div>
+              <div class="text-[10px] text-slate-400">Oefeningen kiezen en vastzetten</div>
             </div>
           </button>
 
@@ -1055,8 +1055,8 @@
               📊
             </div>
             <div class="flex-1">
-              <div class="text-xs font-bold text-slate-200">Doelen & Krachtnormen</div>
-              <div class="text-[10px] text-slate-400">Evidence-based richtlijnen (42 jr, 82 kg)</div>
+              <div class="text-xs font-bold text-slate-200">Krachtnormen</div>
+              <div class="text-[10px] text-slate-400">Richtgewichten bij jouw profiel</div>
             </div>
           </button>
 
@@ -1065,18 +1065,18 @@
               📜
             </div>
             <div class="flex-1">
-              <div class="text-xs font-bold text-slate-200">Trainingshistorie & Periodes</div>
-              <div class="text-[10px] text-slate-400">Gearchiveerde mesocycles & PR's</div>
+              <div class="text-xs font-bold text-slate-200">Historie</div>
+              <div class="text-[10px] text-slate-400">Vorige periodes en PR's</div>
             </div>
           </button>
 
-          <button onclick="closeMenuDrawer(); startNewMesocyclePrompt();" class="w-full p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-left border border-amber-500/30 transition flex items-center gap-3 cursor-pointer">
-            <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center text-base flex-shrink-0">
+          <button id="menuNewPeriodBtn" onclick="closeMenuDrawer(); startNewMesocyclePrompt();" class="w-full p-2.5 rounded-xl bg-slate-800/40 text-left border border-slate-800 transition flex items-center gap-3 cursor-pointer">
+            <div class="w-8 h-8 rounded-lg bg-slate-700/40 text-slate-400 flex items-center justify-center text-base flex-shrink-0">
               🏁
             </div>
             <div class="flex-1">
-              <div class="text-xs font-bold text-amber-300">Nieuwe Periode Starten</div>
-              <div class="text-[10px] text-amber-400/80">Huidige cyclus archiveren & resetten</div>
+              <div id="menuNewPeriodTitle" class="text-xs font-bold text-slate-400">Nieuwe periode</div>
+              <div id="menuNewPeriodHint" class="text-[10px] text-slate-500">Beschikbaar na week 7</div>
             </div>
           </button>
         </div>
@@ -1084,7 +1084,7 @@
 
       <!-- Sectie 2: Thuisgym Voorkeuren -->
       <div>
-        <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Thuisgym Gemak & Voorkeuren</div>
+        <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Gym</div>
         <div class="space-y-1.5">
           <button id="wakeLockBtn" onclick="toggleWakeLock()" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center justify-between cursor-pointer">
             <div class="flex items-center gap-3">
@@ -1092,8 +1092,8 @@
                 💡
               </div>
               <div>
-                <div class="text-xs font-bold text-slate-200">Scherm Altijd Aan</div>
-                <div class="text-[10px] text-slate-400">Voorkom standby tijdens je training</div>
+                <div class="text-xs font-bold text-slate-200">Scherm aan</div>
+                <div class="text-[10px] text-slate-400">Niet dimmen tijdens sets</div>
               </div>
             </div>
             <span id="wakeLockStatus" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-slate-700 text-slate-300">Uit</span>
@@ -1101,12 +1101,12 @@
 
           <button id="soundToggleBtn" onclick="toggleSound()" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center justify-between cursor-pointer">
             <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-lg bg-purple-500/15 text-purple-400 flex items-center justify-center text-base flex-shrink-0">
+              <div id="soundToggleIcon" class="w-8 h-8 rounded-lg bg-purple-500/15 text-purple-400 flex items-center justify-center text-base flex-shrink-0">
                 🔊
               </div>
               <div>
-                <div class="text-xs font-bold text-slate-200">Geluid & Gym Buzzer</div>
-                <div class="text-[10px] text-slate-400">Signaal bij einde rusttijd</div>
+                <div class="text-xs font-bold text-slate-200">Geluid</div>
+                <div class="text-[10px] text-slate-400">Buzzer aan het eind van rust</div>
               </div>
             </div>
             <span id="soundStatusText" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Aan</span>
@@ -1117,8 +1117,8 @@
               📲
             </div>
             <div class="flex-1">
-              <div id="pwaInstallLabel" class="text-xs font-bold text-emerald-300">App Installeren (PWA)</div>
-              <div class="text-[10px] text-emerald-400/80">Als volscherm app op startscherm</div>
+              <div id="pwaInstallLabel" class="text-xs font-bold text-emerald-300">Installeren</div>
+              <div class="text-[10px] text-emerald-400/80">Volledig scherm, geen browserbalk</div>
             </div>
           </button>
         </div>
@@ -1126,7 +1126,7 @@
 
       <!-- Sectie 3: Gegevens & Back-up -->
       <div>
-        <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Cloud & Systeem</div>
+        <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Systeem</div>
         <div class="space-y-1.5">
           <button onclick="closeMenuDrawer(); openCloudSyncModal();" class="w-full p-2.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-left border border-blue-500/30 transition flex items-center gap-3 cursor-pointer">
             <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center text-base flex-shrink-0">
@@ -4703,8 +4703,9 @@
       if (!evalData) return;
       const nextWeekNum = fromWeekNum + 1;
 
-      if (nextWeekNum > appState.totalWeeks) {
-        appState.totalWeeks = nextWeekNum;
+      if (nextWeekNum > (appState.totalWeeks || 7)) {
+        startNewMesocyclePrompt();
+        return;
       }
       if (!appState.weeks[nextWeekNum]) {
         appState.weeks[nextWeekNum] = generateEmptyWeekData(nextWeekNum);
@@ -5043,11 +5044,7 @@
           ${isDeloadWeek(weekNum) || weekNum >= appState.totalWeeks ? `
             <button onclick="closeWeekReportModal(); startNewMesocyclePrompt();" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition shadow-lg active:scale-95 cursor-pointer">
               <span>🏆</span>
-              <span>Mesocycle Afronden & Start Periode ${Number(appState.currentCycle || 1) + 1}</span>
-            </button>
-            <button onclick="applyWeekOverloadAndAdvance(${weekNum})" class="py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-300 font-bold text-xs flex items-center justify-center gap-1.5 transition border border-slate-700 cursor-pointer">
-              <span>+</span>
-              <span>Of ga naar Week ${nextWeekNum}</span>
+              <span>Periode ${Number(appState.currentCycle || 1) + 1} met advies</span>
             </button>
           ` : `
             <button onclick="applyWeekOverloadAndAdvance(${weekNum})" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg active:scale-95 cursor-pointer">
@@ -5184,13 +5181,158 @@
       divider2.className = "h-4 w-px bg-slate-800 flex-shrink-0";
       container.appendChild(divider2);
 
-      // 3. Nieuwe Periode Starten Knop (elke cyclus is strikt 7 weken)
-      const cycleStartBtn = document.createElement("button");
-      cycleStartBtn.className = "flex-shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 transition flex items-center gap-1.5 shadow-sm cursor-pointer";
-      cycleStartBtn.title = "Mesocycle van 7 weken afronden & nieuwe periode starten";
-      cycleStartBtn.innerHTML = `<span>🏁</span><span>Nieuwe Periode</span>`;
-      cycleStartBtn.onclick = startNewMesocyclePrompt;
-      container.appendChild(cycleStartBtn);
+      if (canStartNewPeriod()) {
+        const cycleStartBtn = document.createElement("button");
+        cycleStartBtn.className = "flex-shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 transition flex items-center gap-1.5 shadow-sm cursor-pointer";
+        cycleStartBtn.title = "Deload is bereikt: start de volgende periode met schema-advies";
+        cycleStartBtn.innerHTML = `<span>🏁</span><span>Nieuwe Periode</span>`;
+        cycleStartBtn.onclick = startNewMesocyclePrompt;
+        container.appendChild(cycleStartBtn);
+      }
+    }
+
+    function canStartNewPeriod() {
+      if (appState.nextCycle && typeof appState.nextCycle.available === "boolean") {
+        return !!appState.nextCycle.available;
+      }
+      return (Number(appState.currentWeek) || 1) >= (Number(appState.totalWeeks) || 7);
+    }
+
+    function lastHeavyWeekNum() {
+      const total = Number(appState.totalWeeks) || 7;
+      for (let week = total; week >= 1; week--) {
+        if (!isDeloadWeek(week)) {
+          return week;
+        }
+      }
+      return 1;
+    }
+
+    function peakSlotWeight(day, slotKey) {
+      const peakWeek = lastHeavyWeekNum();
+      const slot = appState.weeks && appState.weeks[peakWeek] && appState.weeks[peakWeek][day]
+        ? appState.weeks[peakWeek][day][slotKey]
+        : null;
+      if (!slot || !Array.isArray(slot.sets)) {
+        return 0;
+      }
+      return slot.sets.reduce((max, set) => Math.max(max, Number(set && set.weight) || 0), 0);
+    }
+
+    function enrichNextCycleAdvice(advice) {
+      (advice.days || []).forEach((day) => {
+        (day.slots || []).forEach((slot) => {
+          if (slot.isBodyweight) {
+            return;
+          }
+          if (slot.weight) {
+            slot.weightSource = slot.weightSource || "peak";
+            return;
+          }
+          const bench = typeof getStrengthBenchmark === "function" ? getStrengthBenchmark(slot.selectedName) : null;
+          if (bench && !bench.isBodyweight && bench.suggestedStart) {
+            slot.weight = bench.suggestedStart;
+            slot.weightSource = "benchmark";
+          }
+          if (advice.schema && advice.schema[day.day] && advice.schema[day.day][slot.slotKey]) {
+            advice.schema[day.day][slot.slotKey].weight = slot.weight;
+            advice.schema[day.day][slot.slotKey].weightSource = slot.weightSource;
+          }
+        });
+      });
+      return advice;
+    }
+
+    function buildLocalNextCycleAdvice() {
+      if (appState.nextCycle && Array.isArray(appState.nextCycle.days) && appState.nextCycle.days.length) {
+        return enrichNextCycleAdvice(JSON.parse(JSON.stringify(appState.nextCycle)));
+      }
+      const schema = {};
+      const days = [];
+      ["mon", "tue", "thu", "fri"].forEach((day) => {
+        const slots = [];
+        schema[day] = {};
+        (SPLIT_INFO[day].slots || []).forEach((slotKey) => {
+          const catalog = EXERCISE_CATALOG[slotKey] || {};
+          const peakWeek = lastHeavyWeekNum();
+          const current = appState.weeks && appState.weeks[peakWeek] && appState.weeks[peakWeek][day]
+            ? appState.weeks[peakWeek][day][slotKey]
+            : null;
+          const fromName = (current && current.selectedName) || catalog.defaultName || "";
+          const selectedName = nextSlotAlternative(slotKey, fromName);
+          const rotated = selectedName !== fromName;
+          const peak = peakSlotWeight(day, slotKey);
+          const item = {
+            selectedName,
+            fromName,
+            weight: (!rotated && peak > 0) ? peak : null,
+            targetReps: catalog.targetReps || 8,
+            rotated,
+            isBodyweight: typeof isExerciseBodyweight === "function" ? isExerciseBodyweight(selectedName) : false,
+          };
+          schema[day][slotKey] = item;
+          slots.push({ slotKey, ...item });
+        });
+        days.push({ day, title: SPLIT_INFO[day].title, slots });
+      });
+      return enrichNextCycleAdvice({
+        available: canStartNewPeriod(),
+        schema,
+        days,
+        reason: "Wissel naar een nabije variant. Zelfde lift houdt piekgewicht; nieuwe lift krijgt een inregelgewicht.",
+      });
+    }
+
+    function updateNewPeriodMenuItem() {
+      const btn = document.getElementById("menuNewPeriodBtn");
+      const title = document.getElementById("menuNewPeriodTitle");
+      const hint = document.getElementById("menuNewPeriodHint");
+      const ready = canStartNewPeriod();
+      if (title) {
+        title.textContent = "Nieuwe periode";
+        title.className = ready ? "text-xs font-bold text-amber-300" : "text-xs font-bold text-slate-400";
+      }
+      if (hint) {
+        hint.textContent = ready ? "Schema-advies na de deload" : "Eerst week 7 (deload) afronden";
+        hint.className = ready ? "text-[10px] text-amber-400/80" : "text-[10px] text-slate-500";
+      }
+      if (btn) {
+        btn.className = ready
+          ? "w-full p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-left border border-amber-500/30 transition flex items-center gap-3 cursor-pointer"
+          : "w-full p-2.5 rounded-xl bg-slate-800/40 text-left border border-slate-800 transition flex items-center gap-3 cursor-pointer";
+      }
+    }
+
+    function renderNextCycleAdviceSlots(advice) {
+      return (advice.days || []).map((day) => {
+        const rows = (day.slots || []).map((slot) => {
+          const load = slot.isBodyweight
+            ? `${slot.targetReps} reps (BW)`
+            : (slot.weight ? `${slot.weight} kg × ${slot.targetReps}` : `${slot.targetReps} reps`);
+          const note = slot.rotated
+            ? (slot.weightSource === "benchmark" ? "nieuw · norm" : "nieuw · inregelen")
+            : "piek week 6";
+          return `<div class="flex items-start justify-between gap-2 py-1 border-b border-slate-800/70 last:border-0">
+            <div class="min-w-0">
+              <div class="text-[11px] font-bold text-slate-200 truncate">${slot.selectedName}</div>
+              ${slot.rotated && slot.fromName ? `<div class="text-[10px] text-slate-500 truncate">was ${slot.fromName}</div>` : ""}
+            </div>
+            <div class="text-right flex-shrink-0">
+              <div class="text-[11px] font-mono font-bold text-emerald-300">${load}</div>
+              <div class="text-[9px] uppercase tracking-wide text-slate-500">${note}</div>
+            </div>
+          </div>`;
+        }).join("");
+        return `<div class="rounded-xl border border-slate-800 bg-slate-900/70 p-2.5">
+          <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-1.5">${day.title}</div>
+          ${rows}
+        </div>`;
+      }).join("");
+    }
+
+    function acceptRecommendedNextCycle() {
+      const advice = buildLocalNextCycleAdvice();
+      executeStartNewMesocycle(true, advice.schema);
     }
 
     function startNewMesocyclePrompt() {
@@ -5199,103 +5341,51 @@
       const content = document.getElementById("startCycleModalContent");
       if (!modal || !content) return;
 
-      // Bereken samenvatting van huidige cyclus
-      let totalCycleVol = 0;
-      let totalCompletedDays = 0;
-      let totalSetsDone = 0;
-
-      for (let w = 1; w <= appState.totalWeeks; w++) {
-        totalCycleVol += calculateWeekVolume(w);
-        const wkData = appState.weeks[w];
-        if (wkData) {
-          ["mon", "tue", "thu", "fri"].forEach(d => {
-            const dayData = wkData[d];
-            if (dayData && Object.keys(dayData).length > 0) {
-              const allDone = SPLIT_INFO[d].slots.every(sKey => {
-                const sl = dayData[sKey];
-                return sl && sl.sets && sl.sets.slice(0, isDeloadWeek(w) ? 2 : 3).every(s => s.completed);
-              });
-              if (allDone) totalCompletedDays++;
-              SPLIT_INFO[d].slots.forEach(sKey => {
-                const sl = dayData[sKey];
-                if (sl && sl.sets) {
-                  totalSetsDone += sl.sets.filter(s => s.completed).length;
-                }
-              });
-            }
-          });
-        }
+      if (!canStartNewPeriod()) {
+        content.innerHTML = `
+          <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
+            <div class="text-sm font-black text-slate-100">Eerst de deload</div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Je zit in <strong>week ${appState.currentWeek || 1}</strong> van ${appState.totalWeeks || 7}.
+              Een nieuwe periode start pas ná week 7. Eerst afronden, dan wisselen van variant.
+            </p>
+            <p class="text-[11px] text-slate-500 leading-relaxed">
+              ${appState.nextCycle && appState.nextCycle.reason ? appState.nextCycle.reason : "Helms / Israetel: accumulatie → deload → nieuwe meso."}
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-2 justify-end">
+            <button onclick="closeStartCycleModal(); openWeekReportModal(appState.currentWeek);" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono cursor-pointer">Weekrapport</button>
+            <button onclick="closeStartCycleModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-mono cursor-pointer">Sluiten</button>
+          </div>
+        `;
+        modal.classList.remove("hidden");
+        return;
       }
 
+      const advice = buildLocalNextCycleAdvice();
       content.innerHTML = `
-        <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2.5">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-mono uppercase text-slate-400">Huidige Cyclus</span>
-            <span class="text-xs font-bold text-amber-400 font-mono">Mesocycle ${curCycle}</span>
+        <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-mono uppercase text-slate-400">Advies periode ${curCycle + 1}</span>
+            <span class="text-xs font-bold text-amber-400 font-mono">Na deload</span>
           </div>
-          <div class="grid grid-cols-3 gap-2 text-center pt-1">
-            <div class="p-2 rounded-xl bg-slate-900 border border-slate-800/80">
-              <div class="text-[10px] text-slate-500 font-mono">Weken</div>
-              <div class="text-sm font-bold font-mono text-slate-200">${appState.totalWeeks}</div>
-            </div>
-            <div class="p-2 rounded-xl bg-slate-900 border border-slate-800/80">
-              <div class="text-[10px] text-slate-500 font-mono">Workload</div>
-              <div class="text-sm font-bold font-mono text-emerald-400">${Math.round(totalCycleVol).toLocaleString()} kg</div>
-            </div>
-            <div class="p-2 rounded-xl bg-slate-900 border border-slate-800/80">
-              <div class="text-[10px] text-slate-500 font-mono">Training Dagen</div>
-              <div class="text-sm font-bold font-mono text-blue-400">${totalCompletedDays}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="space-y-2 text-xs text-slate-300 leading-relaxed">
-          <p>
-            Bij het afronden van <strong>Mesocycle ${curCycle}</strong> wordt deze cyclus met al je prestaties en rapportages veilig gearchiveerd in je <strong>Trainingshistorie Dashboard</strong>.
-          </p>
-          <p class="text-slate-400 text-[11px]">
-            Vervolgens start automatisch <strong>Mesocycle ${curCycle + 1}</strong> met een schone 7-weken cyclus (Week 1 t/m 6 opbouwende overload, Week 7 deload).
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            ${advice.reason || "Nabije varianten, startgewichten van piek of norm, dezelfde herhalingen."}
           </p>
         </div>
-
-        <div class="space-y-2.5 pt-2">
-          <div class="text-xs font-bold text-slate-200">Kies hoe je Periode ${curCycle + 1} wilt inrichten:</div>
-          
-          <button onclick="closeStartCycleModal(); openSetupRoutineModal(true, true);" class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-bold text-xs flex items-start gap-3 transition shadow-lg text-left cursor-pointer active:scale-98">
-            <span class="text-xl mt-0.5">🚀</span>
-            <div>
-              <div class="font-black text-sm text-slate-950">Aanbevolen: Nieuwe Cyclus Inrichten & Oefeningen Bepalen</div>
-              <div class="text-[11px] text-slate-900 font-medium mt-1 leading-relaxed">
-                Stel per trainingsdag je oefeningen vast, bekijk advies- en doelgewichten op basis van je behaalde pieken of fysiologische benchmarks (42 jr, 82 kg), en vergrendel je schema voor 7 weken.
-              </div>
-            </div>
+        <div class="space-y-2 max-h-[45vh] overflow-y-auto pr-0.5">
+          ${renderNextCycleAdviceSlots(advice)}
+        </div>
+        <div class="space-y-2 pt-1">
+          <button onclick="acceptRecommendedNextCycle()" class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-black text-sm transition shadow-lg cursor-pointer active:scale-98">
+            Start periode ${curCycle + 1} met dit advies
           </button>
-
-          <button onclick="executeStartNewMesocycle(true)" class="w-full p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold text-xs flex items-start gap-2.5 transition text-left cursor-pointer">
-            <span class="text-base mt-0.5">⚡</span>
-            <div>
-              <div class="font-bold text-slate-200">Snel Starten: Neem huidige oefeningen & piekgewichten direct over</div>
-              <div class="text-[11px] text-slate-400 font-normal mt-0.5">
-                Start Week 1 meteen met de hoogst behaalde gewichten van je zware werkweken als startpunt.
-              </div>
-            </div>
-          </button>
-
-          <button onclick="executeStartNewMesocycle(false)" class="w-full p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold text-xs flex items-start gap-2.5 transition text-left cursor-pointer">
-            <span class="text-base mt-0.5">🔄</span>
-            <div>
-              <div class="font-bold text-slate-200">Start met lege gewichten (Schone nulmeting)</div>
-              <div class="text-[11px] text-slate-400 font-normal mt-0.5">
-                Week 1 begint blanco voor een frisse kalibratieweek.
-              </div>
-            </div>
+          <button onclick="closeStartCycleModal(); openSetupRoutineModal(true, true);" class="w-full p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs cursor-pointer">
+            Schema zelf kiezen
           </button>
         </div>
-
-        <div class="pt-2 border-t border-slate-800 flex justify-end">
-          <button onclick="closeStartCycleModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-mono transition cursor-pointer">
-            Annuleren
-          </button>
+        <div class="pt-1 flex justify-end">
+          <button onclick="closeStartCycleModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-mono cursor-pointer">Annuleren</button>
         </div>
       `;
 
@@ -5464,6 +5554,7 @@
 
       // Initialiseer nieuwe cyclus (standaard 7 weken)
       appState.currentCycle = curCycleNum + 1;
+      appState.pendingCycleSchema = customSchema || null;
       appState.totalWeeks = 7;
       appState.currentWeek = 1;
       appState.currentDay = "mon";
@@ -5787,10 +5878,7 @@
         </div>
 
         <!-- MODAL FOOTER -->
-        <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
-          <button onclick="closeCycleHistoryModal(); openDataModal();" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono transition flex items-center gap-1.5 cursor-pointer">
-            <span>💾</span> JSON Back-up Beheer
-          </button>
+        <div class="pt-3 border-t border-slate-800 flex items-center justify-end">
           <button onclick="closeCycleHistoryModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition border border-slate-700 cursor-pointer">
             Sluiten
           </button>
@@ -7375,9 +7463,10 @@
 
       if (isStandalone) {
         if (headerBtn) {
-          headerBtn.innerHTML = `<span>✨</span> <span class="hidden sm:inline">PWA Actief</span>`;
-          headerBtn.classList.remove("bg-emerald-500/15", "animate-pulse", "border-emerald-500/30", "text-emerald-400");
-          headerBtn.classList.add("bg-slate-800/80", "text-slate-400", "border-slate-700/60");
+          const label = document.getElementById("pwaInstallLabel");
+          if (label) {
+            label.textContent = "PWA actief";
+          }
           headerBtn.title = "IronForge draait in standalone modus zonder browserbalk";
           headerBtn.onclick = () => alert("IronForge draait nu als geïnstalleerde PWA in standalone modus zonder Chrome-balk!");
         }
@@ -7386,16 +7475,14 @@
         }
       } else {
         if (headerBtn) {
-          headerBtn.innerHTML = `<span>📲</span> <span id="pwaInstallLabel" class="hidden sm:inline">Installeer</span>`;
+          const label = document.getElementById("pwaInstallLabel");
+          if (label) {
+            label.textContent = "Installeren";
+          }
           headerBtn.classList.remove("hidden");
         }
         if (banner) {
-          const dismissed = sessionStorage.getItem("pwa_banner_dismissed");
-          if (!dismissed) {
-            banner.classList.remove("hidden");
-          } else {
-            banner.classList.add("hidden");
-          }
+          banner.classList.add("hidden");
         }
       }
     }
@@ -7864,18 +7951,18 @@
     }
 
     function updateSoundUI() {
-      const btn = document.getElementById("soundToggleBtn");
+      const icon = document.getElementById("soundToggleIcon");
       const indicator = document.getElementById("timerSoundIndicator");
       const statusText = document.getElementById("soundStatusText");
       if (appState.soundEnabled) {
-        if (btn) btn.textContent = "🔊";
+        if (icon) icon.textContent = "🔊";
         if (indicator) indicator.textContent = "Audio signaal actief 🔔";
         if (statusText) {
           statusText.textContent = "Aan";
           statusText.className = "text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
         }
       } else {
-        if (btn) btn.textContent = "🔇";
+        if (icon) icon.textContent = "🔇";
         if (indicator) indicator.textContent = "Geluid gedempt 🔇";
         if (statusText) {
           statusText.textContent = "Uit";
@@ -9906,6 +9993,7 @@
     }
 
     function updateDashboard() {
+      updateNewPeriodMenuItem();
       const dashWeekEl = document.getElementById("dashWeekNum");
       if (dashWeekEl) dashWeekEl.textContent = appState.currentWeek;
 

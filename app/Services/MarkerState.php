@@ -11,6 +11,7 @@ class MarkerState
         private readonly CycleFactory $factory,
         private readonly ValTownImporter $importer,
         private readonly Catalog $catalog,
+        private readonly NextCycleAdvisor $nextCycle,
     ) {}
 
     /**
@@ -90,6 +91,7 @@ class MarkerState
                 ],
                 'weeks' => $weeks,
                 'exerciseVideos' => $this->catalog->videoLibrary(),
+                'nextCycle' => $this->nextCycle->forCycle($cycle, (int) $prefs->current_week),
             ],
         ];
     }

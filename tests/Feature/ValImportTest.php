@@ -74,7 +74,7 @@ class ValImportTest extends TestCase
         Http::assertSentCount(1);
     }
 
-    public function test_val_import_fills_missing_days_without_overwriting_logged_sets(): void
+    public function test_val_import_overwrites_logged_mysql_sets(): void
     {
         $state = $this->getJson('/api/marker-state')->assertOk()->json('appState');
         $state['weeks'][1]['mon']['slot_a1']['sets'][0] = [
@@ -122,18 +122,21 @@ class ValImportTest extends TestCase
 
         $this->getJson('/api/marker-state')
             ->assertOk()
-            ->assertJsonPath('appState.weeks.1.mon.slot_a1.sets.0.weight', '80')
-            ->assertJsonPath('appState.weeks.1.mon.slot_a1.selectedName', 'Barbell Bench Press')
+            ->assertJsonPath('appState.currentDay', 'tue')
+            ->assertJsonPath('appState.weeks.1.mon.slot_a1.selectedName', 'Dumbbell Bench Press')
+            ->assertJsonPath('appState.weeks.1.mon.slot_a1.sets.0.weight', '15')
+            ->assertJsonPath('appState.weeks.1.mon.slot_a1.sets.0.completed', true)
             ->assertJsonPath('appState.weeks.1.tue.slot_b1.sets.0.weight', '12')
-            ->assertJsonPath('appState.weeks.1.tue.slot_b1.sets.0.completed', true)
-            ->assertJsonPath('appState.weeks.1.tue.slot_b1.selectedName', 'Dumbbell Pullover');
+            ->assertJsonPath('appState.weeks.1.tue.slot_b1.sets.0.completed', true);
+
+        Http::assertSentCount(1);
     }
 
-    public function test_val_import_does_not_fill_empty_sibling_sets_in_a_logged_slot(): void
+    public function test_val_import_clears_mysql_days_that_are_not_in_the_dump(): void
     {
         $state = $this->getJson('/api/marker-state')->assertOk()->json('appState');
-        $state['weeks'][1]['mon']['slot_a1']['sets'][1] = [
-            'weight' => '80',
+        $state['weeks'][1]['thu']['slot_a1']['sets'][0] = [
+            'weight' => '30',
             'reps' => '8',
             'completed' => true,
             'exertion' => 'good',
@@ -145,15 +148,14 @@ class ValImportTest extends TestCase
             $this->valTownUrl() => Http::response([
                 'appState' => [
                     'currentWeek' => 1,
-                    'currentDay' => 'tue',
+                    'currentDay' => 'mon',
                     'weeks' => [
                         '1' => [
                             'mon' => [
                                 'slot_a1' => [
-                                    'selectedName' => 'Dumbbell Bench Press',
+                                    'selectedName' => 'Barbell Bench Press',
                                     'sets' => [
-                                        ['weight' => '15', 'reps' => '8', 'completed' => true, 'exertion' => 'easy'],
-                                        ['weight' => '15', 'reps' => '8', 'completed' => true, 'exertion' => 'easy'],
+                                        ['weight' => '90', 'reps' => '6', 'completed' => true, 'exertion' => 'max'],
                                     ],
                                 ],
                             ],
@@ -163,17 +165,15 @@ class ValImportTest extends TestCase
             ], 200),
         ]);
 
-        $this->postJson('/api/import/val', ['confirm' => true])
-            ->assertOk()
-            ->assertJsonPath('imported', true);
+        $this->postJson('/api/import/val', ['confirm' => true])->assertOk();
 
         $this->getJson('/api/marker-state')
             ->assertOk()
-            ->assertJsonPath('appState.weeks.1.mon.slot_a1.selectedName', 'Barbell Bench Press')
-            ->assertJsonPath('appState.weeks.1.mon.slot_a1.sets.0.completed', false)
-            ->assertJsonPath('appState.weeks.1.mon.slot_a1.sets.0.weight', '')
-            ->assertJsonPath('appState.weeks.1.mon.slot_a1.sets.1.weight', '80')
-            ->assertJsonPath('appState.weeks.1.mon.slot_a1.sets.1.completed', true);
+            ->assertJsonPath('appState.weeks.1.mon.slot_a1.sets.0.weight', '90')
+            ->assertJsonPath('appState.weeks.1.thu.slot_a1.sets.0.completed', false)
+            ->assertJsonPath('appState.weeks.1.thu.slot_a1.sets.0.weight', '');
+
+        Http::assertSentCount(1);
     }
 
     public function test_val_dump_with_completed_sets_replaces_the_current_cycle(): void

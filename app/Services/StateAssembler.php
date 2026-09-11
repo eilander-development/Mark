@@ -13,6 +13,7 @@ class StateAssembler
         private readonly PersonalRecord $records,
         private readonly SlotAdvisor $advisor,
         private readonly Catalog $catalog,
+        private readonly NextCycleAdvisor $nextCycle,
     ) {}
 
     public function payload(): array
@@ -110,6 +111,7 @@ class StateAssembler
             'deloadWeeks' => collect(range(1, $cycle->total_weeks))
                 ->filter(fn ($w) => $this->periodization->isDeloadWeek($w))
                 ->values(),
+            'nextCycle' => $this->nextCycle->forCycle($cycle, (int) $prefs->current_week),
         ];
     }
 
