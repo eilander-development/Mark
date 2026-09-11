@@ -1,0 +1,44 @@
+name: Deploy naar mijn.host
+
+on:
+  push:
+    branches:
+      - main # Of de naam van jouw hoofdbranch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Code ophalen uit GitHub
+      uses: actions/checkout@v4
+
+    - name: PHP instellen
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4' # Matcht met jouw projectvereiste
+        extensions: mbstring, xml, ctype, iconv, mysql
+
+    - name: Composer Packages installeren
+      run: |
+        composer install --no-ansi --no-dev --no-interaction --no-plugins --no-progress --no-scripts --optimize-autoloader
+
+    - name: Node.js instellen
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20' # Of de versie die je lokaal gebruikt
+
+    - name: NPM installeren en Vue PWA bouwen
+      run: |
+        npm ci
+        npm run build
+
+    - name: Bestanden uploaden naar mijn.host via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        # Belangrijk: Laravel hoort meestal in de root, 
+        # maar de domeinnaam moet naar de 'public' map wijzen!
+        server-dir: /public_html/ 
