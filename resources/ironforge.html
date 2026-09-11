@@ -76,6 +76,26 @@
   <div class="text-sm font-bold tracking-wide text-slate-100">Training laden…</div>
   <div class="text-[11px] text-slate-500">Data komt uit de database</div>
 </div>
+<div id="backupModal" class="hidden fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onclick="if(event.target === this) closeBackupModal()">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+      <h3 class="font-black text-sm uppercase tracking-wider text-slate-100">Backup importeren</h3>
+      <button type="button" onclick="closeBackupModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+    </div>
+    <p class="text-xs text-slate-400">Kies een eerder gedownload IronForge-backupbestand. Dit overschrijft alle trainingsdata in MySQL.</p>
+    <input id="backupFileInput" type="file" accept="application/json,.json" class="block w-full text-xs text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-800 file:text-slate-200" />
+    <div id="backupProgressWrap" class="hidden space-y-1.5">
+      <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+        <div id="backupProgressBar" class="h-full bg-emerald-500 transition-all" style="width: 0%"></div>
+      </div>
+      <p id="backupProgressLabel" class="text-[11px] font-mono text-slate-400">Wachten…</p>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <button type="button" onclick="closeBackupModal()" class="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs">Annuleren</button>
+      <button type="button" id="backupImportBtn" onclick="importTrainingBackup()" class="py-2 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs">Importeren</button>
+    </div>
+  </div>
+</div>
 
   <!-- TOP HEADER MET HORIZONTALE ACTIEBALK (SCREENSHOT 2) EN DRAWER MENU KNOP -->
   <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shadow-lg">
@@ -1138,6 +1158,26 @@
                 <span id="cloudSyncStatusBadge" class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">GET</span>
               </div>
               <div class="text-[10px] text-slate-400">Overschrijft de huidige cyclus</div>
+            </div>
+          </button>
+
+          <button onclick="closeMenuDrawer(); exportTrainingBackup();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-300 flex items-center justify-center text-base flex-shrink-0">
+              📤
+            </div>
+            <div class="flex-1">
+              <div class="text-xs font-bold text-slate-200">Backup exporteren</div>
+              <div class="text-[10px] text-slate-400">Download JSON voor later importeren</div>
+            </div>
+          </button>
+
+          <button onclick="closeMenuDrawer(); openBackupModal();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-300 flex items-center justify-center text-base flex-shrink-0">
+              📥
+            </div>
+            <div class="flex-1">
+              <div class="text-xs font-bold text-slate-200">Backup importeren</div>
+              <div class="text-[10px] text-slate-400">Overschrijft alle trainingsdata</div>
             </div>
           </button>
 
@@ -10913,8 +10953,127 @@
     window.opslaanDataNaarCloud = opslaanDataNaarCloud;
     window.fetchDataVanCloud = fetchDataVanCloud;
     window.testVerbinding = testVerbinding;
-    window.openCloudSyncModal = syncFromValOnDemand;
+        window.openCloudSyncModal = syncFromValOnDemand;
     window.syncFromValOnDemand = syncFromValOnDemand;
+    window.openBackupModal = openBackupModal;
+    window.closeBackupModal = closeBackupModal;
+    window.exportTrainingBackup = exportTrainingBackup;
+    window.importTrainingBackup = importTrainingBackup;
+
+    function setBackupProgress(percent, label) {
+      const wrap = document.getElementById("backupProgressWrap");
+      const bar = document.getElementById("backupProgressBar");
+      const text = document.getElementById("backupProgressLabel");
+      if (wrap) wrap.classList.remove("hidden");
+      if (bar) bar.style.width = Math.max(0, Math.min(100, percent)) + "%";
+      if (text) text.textContent = label;
+    }
+
+    function clearBackupFile() {
+      const input = document.getElementById("backupFileInput");
+      if (input) input.value = "";
+    }
+
+    function openBackupModal() {
+      const modal = document.getElementById("backupModal");
+      const wrap = document.getElementById("backupProgressWrap");
+      const bar = document.getElementById("backupProgressBar");
+      const btn = document.getElementById("backupImportBtn");
+      clearBackupFile();
+      if (wrap) wrap.classList.add("hidden");
+      if (bar) bar.style.width = "0%";
+      if (btn) btn.disabled = false;
+      if (modal) modal.classList.remove("hidden");
+    }
+
+    function closeBackupModal() {
+      const modal = document.getElementById("backupModal");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    async function exportTrainingBackup() {
+      try {
+        const response = await fetch("/api/backup", { headers: { Accept: "application/json" }, cache: "no-store" });
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.message || ("export HTTP " + response.status));
+        }
+        const blob = await response.blob();
+        const match = /filename="?([^"]+)"?/i.exec(response.headers.get("Content-Disposition") || "");
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = match ? match[1] : "ironforge-backup.json";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(link.href);
+      } catch (err) {
+        alert("Backup exporteren mislukt: " + (err && err.message ? err.message : err));
+      }
+    }
+
+    function importTrainingBackup() {
+      const input = document.getElementById("backupFileInput");
+      const file = input && input.files && input.files[0];
+      const btn = document.getElementById("backupImportBtn");
+      if (!file) {
+        alert("Kies eerst een backupbestand.");
+        return;
+      }
+      if (!confirm("Dit backupbestand overschrijft alle trainingsdata in MySQL. Doorgaan?")) {
+        return;
+      }
+      if (btn) btn.disabled = true;
+      setBackupProgress(15, "Bestand uploaden…");
+      const body = new FormData();
+      body.append("confirm", "1");
+      body.append("backup", file, file.name);
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/backup");
+      xhr.setRequestHeader("Accept", "application/json");
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable) return;
+        setBackupProgress(15 + Math.round((event.loaded / event.total) * 45), "Bestand uploaden…");
+      };
+      xhr.onerror = () => {
+        if (btn) btn.disabled = false;
+        setBackupProgress(0, "Upload mislukt.");
+        alert("Backup importeren mislukt.");
+      };
+      xhr.onload = async () => {
+        let result = {};
+        try { result = JSON.parse(xhr.responseText || "{}"); } catch (err) { result = {}; }
+        if (xhr.status < 200 || xhr.status >= 300) {
+          if (btn) btn.disabled = false;
+          setBackupProgress(0, result.message || "Import mislukt.");
+          alert(result.message || "Import mislukt.");
+          return;
+        }
+        setBackupProgress(75, "Database overschrijven…");
+        clearBackupFile();
+        setBackupProgress(90, "Trainer herladen…");
+        try {
+          const fresh = await fetch("/api/marker-state", { headers: { Accept: "application/json" }, cache: "no-store" });
+          const payload = await fresh.json();
+          if (!fresh.ok || !payload || !payload.appState || !payload.appState.weeks) {
+            throw new Error("Trainerstate kon niet opnieuw geladen worden.");
+          }
+          appState = payload.appState;
+          lastPersisted = clonePersistedState(appState);
+          renderWeekPills();
+          switchDay(appState.currentDay || "mon");
+          updateDashboard();
+        } catch (err) {
+          if (btn) btn.disabled = false;
+          alert(err && err.message ? err.message : err);
+          return;
+        }
+        setBackupProgress(100, result.deletedExport ? "Klaar. Exportbestand verwijderd." : "Klaar. Backup geïmporteerd.");
+        if (btn) btn.disabled = false;
+        setTimeout(() => closeBackupModal(), 700);
+      };
+      xhr.send(body);
+    }
 
     async function syncFromValOnDemand() {
       let preview;
@@ -11022,6 +11181,11 @@
           const startModal = document.getElementById("startCycleModal");
           if (startModal && !startModal.classList.contains("hidden")) {
             closeStartCycleModal();
+            return;
+          }
+          const backupModal = document.getElementById("backupModal");
+          if (backupModal && !backupModal.classList.contains("hidden")) {
+            closeBackupModal();
             return;
           }
           const dataModal = document.getElementById("dataModal");
