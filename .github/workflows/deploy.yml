@@ -39,6 +39,8 @@ jobs:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        # Belangrijk: Laravel hoort meestal in de root, 
-        # maar de domeinnaam moet naar de 'public' map wijzen!
-        server-dir: /public_html/ 
+        server-dir: /public_html/
+        port: 21
+        protocol: ftps      # Forceert een beveiligde SSL/TLS verbinding
+        security: loose     # Helpt bij firewalls van shared hosting
+        state-name: .ftp-deploy-sync-state.json # Voorkomt dubbel uploaden
