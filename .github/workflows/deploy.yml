@@ -54,7 +54,7 @@ jobs:
         DEPLOY_PATH: ${{ secrets.SSH_PATH }}
       run: |
         TARGET="${DEPLOY_PATH:-public_html}"
-        ssh -p "$SSH_TARGET_PORT" -o BatchMode=yes -o IdentitiesOnly=yes "${SSH_TARGET_USER}@${SSH_TARGET_HOST}" "TARGET='${TARGET}' bash -s" <<'EOF'
+        ssh -p "$SSH_TARGET_PORT" -o BatchMode=yes "${SSH_TARGET_USER}@${SSH_TARGET_HOST}" "TARGET='${TARGET}' bash -s" <<'EOF'
         set -e
         echo "home: $HOME"
         echo "php: $(php -r 'echo PHP_VERSION;')"
@@ -107,7 +107,7 @@ jobs:
         DEPLOY_PATH: ${{ secrets.SSH_PATH }}
       run: |
         TARGET="${DEPLOY_PATH:-public_html}"
-        rsync -az --delete -e "ssh -p ${SSH_TARGET_PORT} -o BatchMode=yes -o IdentitiesOnly=yes" \
+        rsync -az --delete -e "ssh -p ${SSH_TARGET_PORT} -o BatchMode=yes" \
           --exclude='.git/' \
           --exclude='.github/' \
           --exclude='.env' \
@@ -126,4 +126,4 @@ jobs:
         DEPLOY_PATH: ${{ secrets.SSH_PATH }}
       run: |
         TARGET="${DEPLOY_PATH:-public_html}"
-        ssh -p "$SSH_TARGET_PORT" -o BatchMode=yes -o IdentitiesOnly=yes "${SSH_TARGET_USER}@${SSH_TARGET_HOST}" "cd ${TARGET} && php artisan migrate --force && php artisan optimize && php artisan about --only=environment"
+        ssh -p "$SSH_TARGET_PORT" -o BatchMode=yes "${SSH_TARGET_USER}@${SSH_TARGET_HOST}" "cd ${TARGET} && php artisan migrate --force && php artisan optimize && php artisan about --only=environment"
