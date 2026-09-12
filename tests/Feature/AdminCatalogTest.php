@@ -49,13 +49,23 @@ class AdminCatalogTest extends TestCase
         $this->assertTrue($catalog->isVerifiedAthlean('vthMCtgVtFw'));
 
         $floor = Exercise::query()->where('name', 'Dumbbell Floor Press')->firstOrFail();
-        $this->assertSame('PcThnQTTDAo', $floor->youtube_id);
-        $this->assertSame('ATHLEAN-X™', $floor->channel);
-        $this->assertTrue($floor->toVideoArray()['isAthlean']);
+        $this->assertSame('uUGDRwge4F8', $floor->youtube_id);
+        $this->assertSame('ScottHermanFitness', $floor->channel);
+        $this->assertFalse($floor->toVideoArray()['isAthlean']);
 
-        $this->assertSame('y1r9toPQNkM', Exercise::query()->where('name', 'Dumbbell Pullover')->value('youtube_id'));
+        $this->assertSame('tpLnfSQJ0gg', Exercise::query()->where('name', 'Dumbbell Pullover')->value('youtube_id'));
+        $this->assertSame('8iPEnn-ltC8', Exercise::query()->where('name', 'Incline Dumbbell Press')->value('youtube_id'));
+        $this->assertSame('DbFgADa2PL8', Exercise::query()->where('name', 'Incline Barbell Press')->value('youtube_id'));
+        $this->assertSame('IODxDxX7oi4', Exercise::query()->where('name', 'Opdrukken (Klassieke Push-ups)')->value('youtube_id'));
         $this->assertSame('vi1-BOcj3cQ', Exercise::query()->where('name', 'Dips')->value('youtube_id'));
         $this->assertSame('jdFzYGmvDyg', Exercise::query()->where('name', 'Bench Dips')->value('youtube_id'));
+        $this->assertSame('ris9tKqMwgU', Exercise::query()->where('name', 'Arnold Press')->value('youtube_id'));
+
+        $retired = require database_path('data/retired-video-ids.php');
+        $assigned = Exercise::query()->pluck('youtube_id');
+        foreach ($retired as $videoId) {
+            $this->assertFalse($assigned->contains($videoId));
+        }
 
         $falseAthlean = Exercise::query()->where('channel', 'like', '%ATHLEAN%')
             ->get()
@@ -67,8 +77,9 @@ class AdminCatalogTest extends TestCase
 
         $payload = $this->getJson('/api/marker-state')->assertOk()->json('appState.exerciseVideos');
         $this->assertTrue($payload['Barbell Bench Press']['isAthlean']);
-        $this->assertTrue($payload['Dumbbell Floor Press']['isAthlean']);
-        $this->assertTrue($payload['Dumbbell Pullover']['isAthlean']);
+        $this->assertFalse($payload['Dumbbell Floor Press']['isAthlean']);
+        $this->assertFalse($payload['Dumbbell Pullover']['isAthlean']);
+        $this->assertTrue($payload['Arnold Press']['isAthlean']);
 
         $this->get('/beheer/oefeningen')
             ->assertOk()
@@ -119,6 +130,26 @@ class AdminCatalogTest extends TestCase
 
         $this->assertSame('ATHLEAN-X™', $exercise->fresh()->channel);
         $this->assertTrue($exercise->fresh()->toVideoArray()['isAthlean']);
+    }
+
+    public function test_catalog_replaces_retired_compilation_videos_on_later_sync(): void
+    {
+        app(Catalog::class)->sync();
+
+        $floor = Exercise::query()->where('name', 'Dumbbell Floor Press')->firstOrFail();
+        $floor->update([
+            'youtube_id' => 'PcThnQTTDAo',
+            'title' => 'How to Increase Your Bench Press (FASTEST WAY!)',
+            'channel' => 'ATHLEAN-X™',
+        ]);
+
+        (new Catalog)->sync();
+
+        $floor->refresh();
+        $this->assertSame('uUGDRwge4F8', $floor->youtube_id);
+        $this->assertSame('ScottHermanFitness', $floor->channel);
+        $this->assertFalse($floor->toVideoArray()['isAthlean']);
+        $this->assertNotEmpty($floor->cues);
     }
 
     public function test_preferences_can_be_updated(): void

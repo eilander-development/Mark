@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Catalog names that share a verified form video with a canonical library key.
+ * Catalog names that share a form video with a canonical library key.
  *
  * @return array<string, string>
  */
@@ -17,7 +17,7 @@ return [
     'Tempo Dumbbell Bench Press' => 'Dumbbell Bench Press',
     'Svend Press (Schijven)' => 'Barbell Bench Press',
     'Incline Dumbbell Hex Press' => 'Incline Dumbbell Press',
-    'Dumbbell High Incline Press' => 'Incline Dumbbell Press',
+    'Dumbbell High Incline Press' => 'Seated Dumbbell Shoulder Press',
     'Barbell Row (Wijde Grip)' => 'Barbell Row',
     'Dumbbell Gorilla Row' => 'Dumbbell One-Arm Row',
     'Meadows Row (Landmine)' => 'Barbell Row',
@@ -33,12 +33,10 @@ return [
     'Incline Bench Dumbbell Shrugs' => 'Dumbbell Shrugs',
     'Dumbbell Shrugs met Pauze (2s Squeeze)' => 'Dumbbell Shrugs',
     "Farmer's Walk (Heavy Carry)" => 'Barbell Shrugs',
-    'Barbell Upright Row' => 'Dumbbell Lateral Raises',
-    'Dumbbell Upright Row' => 'Dumbbell Lateral Raises',
+    'Barbell Upright Row' => 'Dumbbell Upright Row',
     'Leaning Dumbbell Lateral Raises' => 'Dumbbell Lateral Raises',
     'Lying Incline Lateral Raises' => 'Dumbbell Lateral Raises',
     'Prone Incline Lateral Raises' => 'Dumbbell Lateral Raises',
-    'Dumbbell Front Raises' => 'Dumbbell Lateral Raises',
     'Around The World Raises' => 'Dumbbell Lateral Raises',
     'Dumbbell Face Pulls (Liggend op Schuin Bankje)' => 'Face Pulls',
     'Barbell Rear Delt Raise' => 'Rear Delt Flyes',
@@ -46,18 +44,15 @@ return [
     'Bench-Supported Y-Raises' => 'Rear Delt Flyes',
     'Prone Incline Rear Delt Raises' => 'Rear Delt Flyes',
     'Seated Barbell Press' => 'Barbell Overhead Press (OHP)',
-    'Standing Dumbbell Shoulder Press' => 'Seated Dumbbell Shoulder Press',
     'Landmine Shoulder Press' => 'Barbell Overhead Press (OHP)',
     'Push Press (Barbell)' => 'Barbell Overhead Press (OHP)',
     'Preacher Curls (Dumbbell/EZ)' => 'Dumbbell Bicep Curls',
-    'Concentration Curls' => 'Dumbbell Bicep Curls',
     'Reverse Grip Barbell Curls' => 'Barbell Bicep Curls',
     'Spider Curls (Borst op Bank)' => 'Incline Dumbbell Curls',
     '21s Bicep Curls' => 'Dumbbell Bicep Curls',
     'Barbell Lying Tricep Extension (Skull Crushers)' => 'Lying Dumbbell Tricep Extension / Skull Crushers',
     'Dumbbell Skull Crushers (Liggend op Bankje)' => 'Lying Dumbbell Tricep Extension / Skull Crushers',
     'Incline Dumbbell Overhead Extension' => 'Dumbbell Overhead Tricep Extension',
-    'Dumbbell Kickbacks' => 'Dumbbell Overhead Tricep Extension',
     'Tate Press (Dumbbells)' => 'Lying Dumbbell Tricep Extension / Skull Crushers',
     'JM Press (Dumbbells of Barbell)' => 'Close-Grip Barbell Bench Press',
 ];

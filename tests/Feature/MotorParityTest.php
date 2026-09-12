@@ -83,7 +83,7 @@ class MotorParityTest extends TestCase
         $this->assertSame('Barbell Bench Press', $catalog->nextAlternative('slot_a1', 'Tempo Dumbbell Bench Press'));
     }
 
-    public function test_catalog_covers_every_program_name_with_a_verified_athlean_video(): void
+    public function test_catalog_covers_every_program_name_with_a_form_video(): void
     {
         $catalog = app(Catalog::class);
         $catalog->sync();

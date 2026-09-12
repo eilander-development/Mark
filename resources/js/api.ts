@@ -1,4 +1,4 @@
-import type { AppState, ImportPreview, WeekReport } from './types'
+import type { AppState, WeekReport } from './types'
 
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(url, {
@@ -38,6 +38,4 @@ export const api = {
         request<AppState>('/api/weeks/advance', { method: 'POST', body: JSON.stringify({ week }) }),
     startCycle: (schema?: Record<string, unknown>) =>
         request<AppState>('/api/cycles', { method: 'POST', body: JSON.stringify(schema ? { schema } : {}) }),
-    importPreview: () => request<ImportPreview>('/api/import/val'),
-    importVal: () => request<ImportPreview>('/api/import/val', { method: 'POST', body: JSON.stringify({ confirm: true }) }),
 }

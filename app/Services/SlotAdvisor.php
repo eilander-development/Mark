@@ -85,7 +85,8 @@ class SlotAdvisor
                 : ($isBw ? 0.0 : null);
         } elseif ($prevMax !== null) {
             if ($isBw) {
-                $type = $prevOverload ? 'overload' : 'repeat';
+                $hold = $this->periodization->isBiweeklyHoldWeek($week, $frequency);
+                $type = ($prevOverload && ! $hold) ? 'overload' : 'repeat';
                 $advised = 0.0;
             } else {
                 $advised = $this->periodization->advisedWeight(

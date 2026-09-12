@@ -67,4 +67,4 @@ Route::get('/{any?}', function () {
         'Content-Type' => 'text/html; charset=UTF-8',
         'Cache-Control' => 'no-cache, no-store, must-revalidate',
     ]);
-})->where('any', '^(?!beheer).*');
+})->where('any', '^(?!beheer|api).*');

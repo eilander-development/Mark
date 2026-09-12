@@ -76,11 +76,11 @@ class Periodization
         if ($exertion === 'max') {
             return $previousMax;
         }
-        if ($exertion === 'easy') {
-            return round($previousMax + (2 * $increment), 1);
-        }
         if ($this->isBiweeklyHoldWeek($weekNum, $frequency)) {
             return $previousMax;
+        }
+        if ($exertion === 'easy') {
+            return round($previousMax + (2 * $increment), 1);
         }
 
         return round($previousMax + $increment, 1);

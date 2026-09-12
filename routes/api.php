@@ -3,7 +3,6 @@
 use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\MarkerStateController;
 use App\Http\Controllers\Api\StateController;
-use App\Http\Controllers\Api\ValImportController;
 use App\Http\Controllers\Api\WorkoutController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,8 +19,6 @@ Route::post('/days/clear', [WorkoutController::class, 'clearDay']);
 Route::post('/weeks/advance', [WorkoutController::class, 'applyOverload']);
 Route::get('/cycles/next-advice', [WorkoutController::class, 'nextCycleAdvice']);
 Route::post('/cycles', [WorkoutController::class, 'startCycle']);
-Route::get('/import/val', [ValImportController::class, 'preview']);
-Route::post('/import/val', [ValImportController::class, 'import']);
 Route::middleware('throttle:10,1')->group(function () {
     Route::get('/backup', [BackupController::class, 'export']);
     Route::post('/backup', [BackupController::class, 'import']);

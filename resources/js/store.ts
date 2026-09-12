@@ -1,6 +1,6 @@
 import { computed, reactive } from 'vue'
 import { api } from './api'
-import type { AppState, DayKey, ImportPreview, Slot, WeekReport } from './types'
+import type { AppState, DayKey, Slot, WeekReport } from './types'
 
 export const toast = reactive({ message: '', tone: 'info' as 'info' | 'success' | 'error' })
 
@@ -20,7 +20,6 @@ export const store = reactive({
     error: '',
     showDetailedSets: false,
     report: null as WeekReport | null,
-    importPreview: null as ImportPreview | null,
 })
 
 export const currentSession = computed(() => {

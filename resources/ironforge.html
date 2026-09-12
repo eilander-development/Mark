@@ -961,78 +961,6 @@
   </div>
 
   <!-- ========================================================== -->
-  <!-- CLOUD SYNCHRONISATIE NOTIFICATIE & MODAL (VAL TOWN HTTP VAL) -->
-  <!-- ========================================================== -->
-  <div id="cloudSyncPromptModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md" onclick="if(event.target === this) closeCloudSyncModal()">
-    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl space-y-4 text-slate-200 animate-in fade-in zoom-in-95 duration-200" onclick="event.stopPropagation()">
-      <div class="flex items-start justify-between border-b border-slate-800 pb-3">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-xl flex-shrink-0 text-blue-400">
-            ☁️
-          </div>
-          <div>
-            <h3 class="font-black text-sm uppercase tracking-wider text-slate-100 flex items-center gap-2">
-              <span>Cloud Synchronisatie</span>
-              <span class="text-[9px] font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold">Val Town</span>
-            </h3>
-            <p class="text-[11px] text-blue-400/90 font-mono">https://fit.val.run/</p>
-          </div>
-        </div>
-        <button onclick="closeCloudSyncModal()" class="text-slate-400 hover:text-white text-lg p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer" title="Sluiten">✕</button>
-      </div>
-
-      <div class="space-y-3">
-        <div class="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
-          <div class="text-xs sm:text-sm font-bold text-slate-100 flex items-start gap-2">
-            <span class="text-blue-400 text-base">🔄</span>
-            <span>Cloud Synchronisatie & Database</span>
-          </div>
-          <p class="text-xs text-slate-400 leading-relaxed pl-6">
-            Kies hieronder of je de cloud-data wilt inladen (gebruiken), je lokale data wilt uploaden (pushen), of eerst de actieve verbinding wilt testen.
-          </p>
-          <div class="flex items-center justify-between text-[11px] font-mono pt-2 text-slate-400 border-t border-slate-800/80 mt-2">
-            <span class="text-slate-500">Cloud Status:</span>
-            <span id="cloudModalStatusText" class="text-slate-300 font-semibold">Gereed voor synchronisatie</span>
-          </div>
-        </div>
-
-        <div id="cloudModalMessage" class="hidden text-xs p-3 rounded-xl font-mono leading-relaxed transition"></div>
-      </div>
-
-      <!-- Knoppen: Data Gebruiken (GET), Data Pushen (POST), Test Verbinding, Sluiten -->
-      <div class="space-y-2 pt-1">
-        <button id="cloudSyncDownloadBtn" onclick="confirmCloudDownload()" class="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono font-bold text-xs sm:text-sm flex items-center justify-between shadow-lg shadow-blue-600/30 transition cursor-pointer active:scale-95">
-          <span class="flex items-center gap-2">
-            <span>📥</span>
-            <span>Data Gebruiken</span>
-          </span>
-          <span class="text-[10px] font-normal text-blue-200 bg-blue-700/60 px-2 py-0.5 rounded">Cloud → App</span>
-        </button>
-
-        <button id="cloudSyncUploadBtn" onclick="confirmCloudUpload()" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-mono font-bold text-xs flex items-center justify-between transition cursor-pointer active:scale-95">
-          <span class="flex items-center gap-2">
-            <span>📤</span>
-            <span>Data Pushen</span>
-          </span>
-          <span class="text-[10px] font-normal text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded">App → Cloud</span>
-        </button>
-
-        <button id="cloudSyncTestBtn" onclick="testVerbinding()" class="w-full py-2.5 px-4 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-slate-300 border border-slate-700/60 hover:border-slate-600 font-mono font-bold text-xs flex items-center justify-between transition cursor-pointer active:scale-95">
-          <span class="flex items-center gap-2">
-            <span>⚡</span>
-            <span>Test Verbinding</span>
-          </span>
-          <span class="text-[10px] font-normal text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded">Status Check</span>
-        </button>
-
-        <button onclick="closeCloudSyncModal()" class="w-full py-2 px-4 rounded-xl text-slate-400 hover:text-slate-200 text-xs font-mono transition cursor-pointer text-center">
-          Sluiten
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========================================================== -->
   <!-- SLIDE-OVER DRAWER MENU (MOBIEL & DESKTOP HEADER NAVIGATIE) -->
   <!-- ========================================================== -->
   <div id="menuDrawerBackdrop" class="hidden fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm transition-opacity" onclick="closeMenuDrawer()"></div>
@@ -1148,19 +1076,6 @@
       <div>
         <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Systeem</div>
         <div class="space-y-1.5">
-          <button onclick="closeMenuDrawer(); syncFromValOnDemand();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
-            <div class="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-300 flex items-center justify-center text-base flex-shrink-0">
-              ☁️
-            </div>
-            <div class="flex-1">
-              <div class="text-xs font-bold text-slate-200 flex items-center justify-between">
-                <span>Val importeren</span>
-                <span id="cloudSyncStatusBadge" class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">GET</span>
-              </div>
-              <div class="text-[10px] text-slate-400">Overschrijft de huidige cyclus</div>
-            </div>
-          </button>
-
           <button onclick="closeMenuDrawer(); exportTrainingBackup();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
             <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-300 flex items-center justify-center text-base flex-shrink-0">
               📤
@@ -1395,11 +1310,9 @@
         muscles: "Latissimus Dorsi, Bovenrug, Serratus",
         equipment: "Dumbbell + Vlak Bankje",
         tips: [
-          "Lig stabiel met je bovenrug op het fitnessbankje met voeten plat op de vloer.",
-          "Houd de dumbbell met beide handen in een ruitgreep vast boven je borst.",
-          "Laat het gewicht met licht gebogen ellebogen in een gecontroleerde boog achter je hoofd zakken voor diepe rek op de lats.",
-          "Trek krachtig vanuit je brede rugspieren terug omhoog tot boven je borst.",
-          "Geen instabiele optrekstang nodig; 100% stabiel, veilig en effectief thuis."
+          "Lig dwars: alleen de bovenrug op het bankje, heupen omhoog en core strak.",
+          "Ruitgreep, polsen recht, lichte vaste knik in de ellebogen.",
+          "Laat de dumbbell in een boog achter het hoofd zakken en trek terug met lats en borst."
         ],
         alternatives: [
           "Dumbbell Pullover",
@@ -1445,9 +1358,9 @@
         muscles: "Borst, Triceps (Lockout & Druksterkte)",
         equipment: "Dumbbells + Vloermat",
         tips: [
-          "Ga plat op de grond liggen met de knieën gebogen en voeten plat.",
-          "Laat de bovenarmen zachtjes op de vloer rusten (1 seconde dead-stop).",
-          "Explosief uitdrukken voor maximale triceps- en borstcontractie."
+          "Zet de dumbbells op je bovenbenen en rol achterover; knieën gebogen, onderrug plat.",
+          "Ellebogen iets ingetrokken; laat zakken tot de bovenarmen de vloer zacht raken (dead-stop).",
+          "Druk recht omhoog over de tepellijn zonder de schouders naar voren te rollen."
         ],
         alternatives: [
           "Dumbbell Floor Press",
@@ -1514,9 +1427,9 @@
         muscles: "Triceps Brachii",
         equipment: "Fitnessbankje (Lichaamsgewicht)",
         tips: [
-          "Blijf met je rug vlak langs de rand van het bankje op en neer bewegen.",
-          "Zakken tot maximaal een hoek van 90 graden in de ellebogen.",
-          "Druk krachtig en geconcentreerd uit vanuit de achterkant van je bovenarm."
+          "Draai de handen naar buiten (duimen naar voren) zodat de schouder extern roteert.",
+          "Heupen dicht langs het bankje; schouderbladen omlaag, borst open.",
+          "Zak tot circa 90°; stop bij pinching in de voorkant van de schouder."
         ],
         alternatives: [
           "Bench Dips",
@@ -1620,9 +1533,9 @@
         targetReps: 10,
         restTime: 90,
         tips: [
-          "Voorkomt hyperextensie van de schouder; 100% gewrichtsvriendelijk.",
-          "Bovenarmen kort laten rusten op de vloer (1 seconde dead-stop).",
-          "Explosief uitstoten vanuit de triceps en borst."
+          "Zet de dumbbells op je bovenbenen en rol achterover; knieën gebogen, onderrug plat.",
+          "Ellebogen iets ingetrokken; laat zakken tot de bovenarmen de vloer zacht raken (dead-stop).",
+          "Druk recht omhoog over de tepellijn zonder de schouders naar voren te rollen."
         ]
       },
       "Close-Grip Barbell Bench Press": {
@@ -1992,6 +1905,19 @@
           "Puur trekken vanuit de schouderbladen en bovenrugspieren."
         ]
       },
+      "Seal Row (Op Hoog Bankje)": {
+        primaryMuscles: ["upper_back", "lats"],
+        secondaryMuscles: ["rear_delt", "biceps"],
+        musclesText: "Pure Bovenrug & Rhomboids zonder Enige Cheating",
+        equipment: "Dumbbells of Barbell + Horizontaal Verhoogde Bank",
+        targetReps: 10,
+        restTime: 90,
+        tips: [
+          "Lig plat op je buik op een hoog/verhoogd bankje.",
+          "Benen hangen vrij; romp kan absoluut geen momentum gebruiken.",
+          "Puur trekken vanuit de schouderbladen en bovenrugspieren."
+        ]
+      },
       "Renegade Rows (Dumbbell)": {
         primaryMuscles: ["lats", "upper_back"],
         secondaryMuscles: ["core", "triceps", "biceps"],
@@ -2041,10 +1967,9 @@
         targetReps: 10,
         restTime: 90,
         tips: [
-          "Lig stabiel in de lengte of dwars op de bank met voeten stevig op de grond.",
-          "Houd de dumbbell met beide handen in ruitgreep vast boven je borst.",
-          "Laat het gewicht in een gecontroleerde boog achter je hoofd zakken.",
-          "Voel de diepe rek over de lats en ribbenkast, en trek krachtig terug."
+          "Lig dwars: alleen de bovenrug op het bankje, heupen omhoog en core strak.",
+          "Ruitgreep, polsen recht, lichte vaste knik in de ellebogen.",
+          "Laat de dumbbell in een boog achter het hoofd zakken en trek terug met lats en borst."
         ]
       },
       "Barbell Pullover (Liggend op Bankje)": {
@@ -2572,9 +2497,9 @@
         targetReps: 12,
         restTime: 75,
         tips: [
-          "Plaats handen op heupbreedte op de rand van de bank.",
-          "Beweeg met je rug vlak langs de rand naar beneden.",
-          "Duw krachtig uit tot de armen volledig gestrekt zijn."
+          "Draai de handen naar buiten (duimen naar voren) zodat de schouder extern roteert.",
+          "Heupen dicht langs het bankje; schouderbladen omlaag, borst open.",
+          "Zak tot circa 90°; stop bij pinching in de voorkant van de schouder."
         ]
       },
       "Dumbbell Overhead Tricep Extension": {
@@ -2690,113 +2615,113 @@
       // 1. Bench Press & Varianten
       "Barbell Bench Press": {
         videoId: "vthMCtgVtFw",
-        title: "How to Bench Press (Proper Form Step-by-Step)",
+        title: "The Official Bench Press Check List (AVOID MISTAKES!)",
         channel: "ATHLEAN-X™",
         cues: [
           "Trek je schouderbladen stevig naar elkaar en naar beneden (retract & depress) en plant ze in het bankje.",
-          "Houd je ellebogen circa 45° tot 70° ten opzichte van je romp (voorkom een haakse 90° hoek die je schouders overbelast).",
-          "Plant je voeten plat en stevig in de vloer voor 'leg drive' en maximale rompstabiliteit."
+          "Houd je ellebogen circa 45° tot 70° ten opzichte van je romp (geen haakse 90° die de schouders overbelast).",
+          "Plant je voeten plat in de vloer voor leg drive en een stabiele romp."
         ]
       },
       "Incline Barbell Press": {
-        videoId: "8iPEnn-ltC8",
-        title: "Incline Bench Press Form",
-        channel: "ATHLEAN-X™",
+        videoId: "DbFgADa2PL8",
+        title: "How To: Barbell Incline Chest Press",
+        channel: "ScottHermanFitness",
         cues: [
-          "Stel de bankhoek in op 30° tot 45° om schouderbelasting optimaal te beperken.",
-          "Laat de stang beheerst zakken richting de bovenkant van je borstbeen (sleutelbeenhoogte).",
-          "Druk explosief uit met constante spanning op de bovenste borstvezels."
+          "Zet de bank op circa 30°; hoger dan 45° verschuift het werk naar de voorste schouder.",
+          "Schouderbladen intrekken, billen op het kussen, stang laten zakken naar de bovenborst.",
+          "Polsen boven de ellebogen houden en explosief uitdrukken zonder de stang te stuiteren."
         ]
       },
       "Dumbbell Bench Press": {
-        videoId: "0Gs9g_7Z-rI",
-        title: "The Dumbbell Bench Press (Stop Doing This!)",
+        videoId: "SHsUIZiNdeY",
+        title: "Dumbbell Bench Press (BETTER CHEST ACTIVATION!)",
         channel: "ATHLEAN-X™",
         cues: [
-          "Houd de dumbbells in een lichte 'pijlpunt' hoek (circa 45°) in plaats van kaarsrecht dwars.",
-          "Zak tot een comfortabele diepe rek op de borstspieren zonder de schouderkoppen naar voren te laten rollen.",
+          "Houd de dumbbells in een lichte pijlpunt-hoek (circa 45°) in plaats van kaarsrecht dwars.",
+          "Zak tot een comfortabele diepe rek zonder de schouderkoppen naar voren te laten rollen.",
           "Duw omhoog en knijp de borst samen zonder de dumbbells tegen elkaar te laten botsen."
         ]
       },
       "Incline Dumbbell Press": {
         videoId: "8iPEnn-ltC8",
-        title: "Incline Dumbbell Press (Hits Upper Chest!)",
-        channel: "ATHLEAN-X™",
+        title: "How To: Dumbbell Incline Chest Press",
+        channel: "ScottHermanFitness",
         cues: [
-          "Zet de leuning op 30° tot 40° voor gerichte belasting op de bovenkant van de borst.",
-          "Houd je borst fier vooruit en schouderbladen ingetrokken.",
-          "Laat de gewichten gecontroleerd en diep zakken voor maximale spierrek."
+          "Bank op circa 30°. Breng de dumbbells via de knieën omhoog en rol gecontroleerd achterover.",
+          "Borst omhoog, ellebogen niet wijd uit; zak tot ongeveer tepelhoogte / 90° in de elleboog.",
+          "Druk schuin omhoog over de bovenborst, niet recht boven de schouders."
         ]
       },
       "Dumbbell Floor Press": {
         videoId: "uUGDRwge4F8",
-        title: "The Floor Press (Save Shoulders & Build Power)",
-        channel: "ATHLEAN-X™",
+        title: "How To: Dumbbell Floor Press",
+        channel: "ScottHermanFitness",
         cues: [
-          "Lig plat op de vloer met gebogen knieën en voeten plat op de grond.",
-          "Laat je triceps en ellebogen 1 seconde rusten op de grond (doodstil / dead-stop).",
-          "Druk explosief uit; ideaal om zware druk- en lockoutkracht te trainen zonder schouderklachten."
+          "Zet de dumbbells op je bovenbenen, rol achterover; knieën gebogen, voeten en onderrug plat.",
+          "Ellebogen iets ingetrokken, polsen recht; laat zakken tot de bovenarmen de vloer zacht raken.",
+          "Korte dead-stop, dan recht omhoog drukken over de tepellijn zonder schouders naar voren te rollen."
         ]
       },
       "Opdrukken (Klassieke Push-ups)": {
         videoId: "IODxDxX7oi4",
-        title: "The Perfect Pushup (Step by Step Guide)",
-        channel: "ATHLEAN-X™",
+        title: "The Perfect Push Up | Do it right!",
+        channel: "Calisthenicmovement",
         cues: [
-          "Span je buikspieren, bilspieren en benen aan: je hele lichaam vormt één kaarsrechte plank.",
-          "Houd de ellebogen in een pijlhoek van ca. 45° langs je romp.",
-          "Zak tot je borst net boven de grond zweeft en druk volledig uit."
+          "Span buik, billen en benen: één kaarsrechte plank van hoofd tot hak.",
+          "Handen onder de schouders, ellebogen circa 45° langs de romp (geen T-vorm).",
+          "Zak tot de borst bijna de vloer raakt en druk uit tot lange armen zonder de schouders op te trekken."
         ]
       },
       "Decline Push-ups (Voeten op Bankje)": {
         videoId: "IODxDxX7oi4",
-        title: "Decline Push-ups for Upper Chest",
-        channel: "ATHLEAN-X™",
+        title: "The Perfect Push Up | Do it right!",
+        channel: "Calisthenicmovement",
         cues: [
-          "Plaats je voeten op een bankje of verhoging voor extra focus op de bovenborst.",
-          "Houd je core kaarsrecht zonder doorzakken in de onderrug.",
-          "Duw je borst krachtig van de vloer weg."
+          "Voeten op een bankje; het lichaam blijft één strakke plank, geen holle onderrug.",
+          "Handen iets voor de schouders zodat je niet voorover kantelt.",
+          "Zak tot de bovenborst de vloer nadert; extra nadruk op bovenborst en voorkant schouder."
         ]
       },
       "Diamond Push-ups": {
-        videoId: "IODxDxX7oi4",
-        title: "Diamond Push-ups for Triceps",
-        channel: "ATHLEAN-X™",
+        videoId: "J0DnG1_S92I",
+        title: "How To: Diamond Push-Up",
+        channel: "ScottHermanFitness",
         cues: [
-          "Plaats je duimen en wijsvingers tegen elkaar in een diamantvorm onder je borst.",
-          "Houd de ellebogen relatief dicht bij het lichaam.",
-          "Druk puur uit vanuit je triceps."
+          "Duimen en wijsvingers in een ruit onder het midden van de borst, niet onder de nek.",
+          "Ellebogen strak langs het lichaam; zak tot de borst de handen nadert.",
+          "Druk uit vanuit de triceps; te hoog geplaatste handen belasten de schouders."
         ]
       },
       "Close-Grip Barbell Bench Press": {
-        videoId: "Wv-L63u-Nf8",
-        title: "Close Grip Bench Press Form",
-        channel: "ATHLEAN-X™",
+        videoId: "nEF0bv2FW94",
+        title: "How To: Close-Grip Barbell Bench Press",
+        channel: "ScottHermanFitness",
         cues: [
-          "Grijp de stang op schouderbreedte (niet overdreven smal om polspijn te voorkomen).",
-          "Houd je ellebogen dicht langs je ribbenkast tijdens het zakken.",
-          "Druk krachtig door tot volledige tricepscontractie."
+          "Grijp net buiten schouderbreedte (rand van de knurling), niet pink-tegen-pink.",
+          "Voeten plat, rug stabiel; laat de stang zakken richting de onderborst / navel.",
+          "Stop rond 90° in de ellebogen en druk recht uit met polsen boven de stang."
         ]
       },
       // 2. Rows, Rug & Lats
       "Barbell Row": {
-        videoId: "G8l_8chR5BE",
-        title: "How to Barbell Row (Stop Doing This!)",
+        videoId: "T3N-TO4reLQ",
+        title: "How to do Barbell Rows PROPERLY for a Big Back (AVOID MISTAKES!)",
         channel: "ATHLEAN-X™",
         cues: [
-          "Scharnier diep in je heupen met een rechte neutrale rug totdat je romp circa 45° of lager staat.",
-          "Trek de stang richting je navel/onderbuik, nooit naar je borst.",
-          "Leid de beweging vanuit je ellebogen en knijp de schouderbladen bovenin 1s krachtig samen."
+          "Scharnier diep in je heupen met een rechte neutrale rug.",
+          "Trek de stang richting je navel, nooit naar je borst.",
+          "Leid vanuit je ellebogen en knijp de schouderbladen bovenin 1s samen."
         ]
       },
       "Pendlay Row (Dead Stop)": {
-        videoId: "9efgAUafwic",
-        title: "How to Pendlay Row (Strict Dead-Stop)",
-        channel: "ATHLEAN-X™",
+        videoId: "8CrrVQi6t4w",
+        title: "How To: Pendlay Row | 3 GOLDEN RULES (EXPLOSIVE BACK GROWTH!)",
+        channel: "ScottHermanFitness",
         cues: [
-          "Elke rep start vanaf de grond tot volledige stilstand (dead-stop).",
-          "Romp blijft exact horizontaal evenwijdig aan de vloer.",
-          "Trek explosief op naar de onderste ribben zonder met je heupen op te wippen."
+          "Elke rep start vanaf de grond tot volledige stilstand; geen swing uit de heup.",
+          "Romp blijft ongeveer parallel, knieën gebogen, gewicht in heupen/bil (niet op starre knieën).",
+          "Trek explosief naar de onderborst / bovenbuik en laat de stang weer doodstil landen."
         ]
       },
       "Underhand Barbell Row (Yates Row)": {
@@ -2810,225 +2735,225 @@
         ]
       },
       "Dumbbell One-Arm Row": {
-        videoId: "pYcpY20QaE8",
-        title: "How to Dumbbell Row (The Right Way)",
+        videoId: "gfUg6qWohTk",
+        title: "STOP F*cking Up Dumbbell Rows (PROPER FORM!)",
         channel: "ATHLEAN-X™",
         cues: [
           "Plaats steunknie en hand op de bank met een neutrale, kaarsrechte rug.",
-          "Trek de dumbbell in een lichte boog naar je heup/achterzak, niet loodrecht omhoog.",
-          "Laat de lat onderin volledig uitstrekken en trek de schouder omlaag (niet naar je oor)."
+          "Trek de dumbbell in een lichte boog naar je heup, niet loodrecht omhoog naar de schouder.",
+          "Laat de lat onderin volledig uitstrekken en trek de schouder omlaag, niet naar het oor."
         ]
       },
       "Chest-Supported Dumbbell Row": {
-        videoId: "wPZ23oVwD-s",
-        title: "Chest Supported Row Form",
+        videoId: "gfUg6qWohTk",
+        title: "STOP F*cking Up Dumbbell Rows (PROPER FORM!)",
         channel: "ATHLEAN-X™",
         cues: [
-          "Rust met je borst tegen het schuine bankje om momentum volledig uit te sluiten.",
-          "Trek met je rug en ellebogen, niet met je onderarmen.",
-          "Ideaal voor maximale spiergroei zonder onderrugbelasting."
+          "Borst tegen een schuin bankje: geen heupzwaai, puur trekken vanuit de rug.",
+          "Leid met de ellebogen naar achter/buiten, onderarmen niet het werk laten doen.",
+          "Onderin de schouderbladen laten gaan, bovenin 1s knijpen zonder de nek in te trekken."
         ]
       },
       "Dumbbell Pullover": {
-        videoId: "taI4XduLpTk",
-        title: "The Dumbbell Pullover (Lats Focus Form)",
-        channel: "ATHLEAN-X™",
+        videoId: "tpLnfSQJ0gg",
+        title: "How To: Dumbbell Pull-Over",
+        channel: "ScottHermanFitness",
         cues: [
-          "Lig stevig met je bovenrug op het bankje met de voeten plat op de vloer.",
-          "Houd een lichte, vaste knik in de ellebogen (niet buigen of strekken tijdens de beweging).",
-          "Laat de dumbbell beheerst in een boog achter je hoofd zakken voor diepe stretch op de lats."
+          "Lig dwars: alleen de bovenrug op het bankje, heupen omhoog, core strak.",
+          "Ruitgreep, polsen recht, lichte vaste knik in de ellebogen (niet buigen/strekken).",
+          "Laat de dumbbell in een boog achter het hoofd zakken en trek terug met lats en borst."
         ]
       },
       "Pull-ups (Optrekken Bovengreep)": {
         videoId: "eGo4IYlbE5g",
-        title: "How to Do Pullups (Step by Step)",
-        channel: "ATHLEAN-X™",
+        title: "The Perfect Pull Up  - Do it right!",
+        channel: "Calisthenicmovement",
         cues: [
-          "Start vanuit een volledige 'dead hang' en activeer eerst je schouderbladen.",
-          "Trek je ellebogen krachtig omlaag en naar je zij alsof je de stang naar je borst trekt.",
-          "Voorkom zwaaien of 'kipping'; focus op pure spierkracht."
+          "Start vanuit een rustige dead hang; eerst schouderbladen omlaag en samen.",
+          "Bovengreep, trek de ellebogen naar de zij alsof je de stang naar de borst trekt.",
+          "Kin boven de stang, geen kipping; 2–3 seconden gecontroleerd zakken."
         ]
       },
       "Chin-ups (Optrekken Ondergreep)": {
         videoId: "eGo4IYlbE5g",
-        title: "Chin-ups for Lats & Biceps",
-        channel: "ATHLEAN-X™",
+        title: "The Perfect Pull Up  - Do it right!",
+        channel: "Calisthenicmovement",
         cues: [
-          "Handpalmen naar je toe gericht voor maximale biceps- en latrek.",
-          "Trek door tot je kin vlot boven de stang uitkomt.",
-          "Laat in 2 tot 3 seconden gecontroleerd zakken."
+          "Handpalmen naar je toe, greep ongeveer schouderbreedte.",
+          "Zelfde scapula-start als pull-ups; meer biceps, trek tot de kin boven de stang.",
+          "Geen zwaaien; langzaam zakken tot bijna gestrekte armen zonder de schouders te laten hangen."
         ]
       },
       // 3. Schouders & Traps
       "Seated Dumbbell Shoulder Press": {
         videoId: "qEwKCR5JCog",
-        title: "Dumbbell Shoulder Press (Save Your Shoulders)",
-        channel: "ATHLEAN-X™",
+        title: "How To: Dumbbell Shoulder Press",
+        channel: "ScottHermanFitness",
         cues: [
-          "Zet de bankleuning op 75°-80° (iets achterover geeft meer bewegingsvrijheid in de schouder).",
-          "Houd de ellebogen circa 30° naar voren gekanteld (in het 'scapular plane', niet plat 180° opzij).",
-          "Druk verticaal omhoog en laat beheerst zakken tot minimaal oorhoogte."
+          "Rugleuning 75°–80°; onderrug licht tegen het kussen, geen overdreven holling.",
+          "Ellebogen iets vóór het lichaam (scapular plane), niet plat 180° opzij.",
+          "Druk verticaal omhoog tot bijna gestrekt en zak tot minimaal oorhoogte."
         ]
       },
       "Barbell Overhead Press (OHP)": {
-        videoId: "2yjwXTZQDDI",
-        title: "The Perfect Overhead Press",
+        videoId: "2N5P_iWkluQ",
+        title: "Do This EVERY Time You Overhead Press (MORE STRENGTH!)",
         channel: "ATHLEAN-X™",
         cues: [
-          "Knijp je bilspieren en buikspieren muurvast om achterover leunen te voorkomen.",
-          "Beweeg je hoofd licht naar achteren terwijl de stang passeert en lock bovenin uit.",
+          "Knijp billen en buik muurvast om achterover leunen te voorkomen.",
+          "Beweeg je hoofd licht naar achteren terwijl de stang passeert.",
           "Strakke rechte bar-path recht boven je zwaartepunt."
         ]
       },
       "Arnold Press": {
-        videoId: "qEwKCR5JCog",
-        title: "The Arnold Press (Front & Side Delts)",
+        videoId: "ris9tKqMwgU",
+        title: "Stop F*cking Up The Arnold Press (PROPER FORM!)",
         channel: "ATHLEAN-X™",
         cues: [
-          "Start met de handpalmen naar je toe op borsthoogte.",
-          "Draai vloeiend naar buiten tijdens het omhoog drukken.",
-          "Vloeiende, gecontroleerde rotatie over de volledige bewegingsbaan."
+          "Start met handpalmen naar je toe en ellebogen vóór de romp, niet al wijd opzij.",
+          "Druk eerst omhoog; roteer pas rond voorhoogte, ellebogen blijven iets naar voren.",
+          "Niet achter het lichaam draaien (achter-de-nek press); gecontroleerd terugroteren."
         ]
       },
       "Dumbbell Lateral Raises": {
-        videoId: "2-fhIdqU26s",
-        title: "How to Side Lateral Raise (STOP DOING THIS!)",
-        channel: "ATHLEAN-X™",
+        videoId: "3VcKaXpzqRo",
+        title: "How To: Dumbbell Side Lateral Raise",
+        channel: "ScottHermanFitness",
         cues: [
-          "Leun een fractie voorover en hef in het scapular plane (iets naar voren gericht).",
-          "Leid de heffing met je ellebogen, niet met je polsen.",
-          "Gebruik strikt gewicht zonder mee te zwaaien met je heupen of rug."
+          "Lichte kniebuiging, schouderbladen licht geknepen, polsen recht.",
+          "Leid met de ellebogen tot ongeveer schouder-/kinhoogte; niet hoger dan de oren.",
+          "Geen rompzwaai; zak gecontroleerd, pink iets hoger dan de duim."
         ]
       },
       "Seated Dumbbell Lateral Raises": {
-        videoId: "2-fhIdqU26s",
-        title: "Seated Lateral Raises (Strict Delt Isolation)",
-        channel: "ATHLEAN-X™",
+        videoId: "3VcKaXpzqRo",
+        title: "How To: Dumbbell Side Lateral Raise",
+        channel: "ScottHermanFitness",
         cues: [
-          "Zittend uitvoeren elimineert alle hulp vanuit de benen en heupen.",
-          "Houd een kleine vaste buiging in de elleboog.",
-          "Hef tot schouderhoogte en laat rustig zakken."
+          "Zittend: geen hulp uit benen of heupen, romp stil.",
+          "Kleine vaste knik in de elleboog; hef tot schouderhoogte.",
+          "Langzaam zakken; kies een gewicht dat je strikt 10–12 reps haalt."
         ]
       },
       "Rear Delt Flyes": {
-        videoId: "PzsMitRj7mg",
-        title: "Rear Delt Flyes (Target the Posterior Deltoid)",
-        channel: "ATHLEAN-X™",
+        videoId: "ttvfGg9d76c",
+        title: "How To: Dumbbell Bent-Over Raise",
+        channel: "ScottHermanFitness",
         cues: [
-          "Buig diep voorover (70°-90°) met een rechte rug.",
-          "Duw de gewichten wijd naar buiten en focus op de achterkant van de schouders.",
-          "Trek niet met je nek of bovenste trapezius."
+          "Scharnier tot de romp bijna parallel is; neutrale nek, lichte kniebuiging.",
+          "Armen voor het lichaam, lichte elleboogknik; open naar buiten, niet naar de heup rowen.",
+          "Voel de achterste schouder; geen schouderophalen met de bovenste trap."
         ]
       },
       "Face Pulls": {
-        videoId: "rep-qVOkqgk",
-        title: "How to Face Pull (STOP DOING IT WRONG!)",
+        videoId: "eIq5CB9JfKE",
+        title: "Stop Doing Face Pulls Like This! (SAVE A FRIEND)",
         channel: "ATHLEAN-X™",
         cues: [
-          "Jeff Cavaliere's allerbelangrijkste oefening voor schoudergezondheid en houding.",
-          "Zorg voor externe rotatie: je duimen wijzen naar achteren en handen eindigen hoger dan ellebogen.",
-          "Trek richting je voorhoofd en span de achterkant van de schouders 2 tellen krachtig aan."
+          "Kabel of stevige band op gezichtshoogte; trek naar het voorhoofd, niet naar de borst.",
+          "Externe rotatie: duimen naar achteren, handen eindigen hoger dan de ellebogen.",
+          "2 tellen knijpen in de achterste schouder; geen zwaai met de onderrug."
         ]
       },
       "Barbell Shrugs": {
-        videoId: "g2g_n0s8Nbg",
-        title: "How to Shrug (Don't Roll Your Shoulders!)",
-        channel: "ATHLEAN-X™",
+        videoId: "cJRVVxmytaM",
+        title: "How To: Dumbbell Shrugs",
+        channel: "ScottHermanFitness",
         cues: [
-          "Rol je schouders NOOIT naar voren of achteren; dit schaadt het gewricht.",
-          "Trek zuiver recht omhoog alsof je je schouders naar je oren brengt.",
-          "Houd bovenin 2 seconden een keiharde 'peak contraction' vast."
+          "Rol de schouders NOOIT; til recht omhoog richting de oren.",
+          "Armen lang, polsen recht, lichte kniebuiging; til met de benen van de grond.",
+          "Bovenin 1–2s knijpen en zakken tot stretch, zonder de nek naar voren te duwen."
         ]
       },
       "Dumbbell Shrugs": {
-        videoId: "g2g_n0s8Nbg",
-        title: "How to Dumbbell Shrug",
-        channel: "ATHLEAN-X™",
+        videoId: "cJRVVxmytaM",
+        title: "How To: Dumbbell Shrugs",
+        channel: "ScottHermanFitness",
         cues: [
-          "Houd de dumbbells langs je zijkant met neutrale handpalmen.",
-          "Leun minimaal voorover voor de perfecte spiervezellijn van de trapezius.",
-          "Houd bovenin 2 seconden vast en zak tot volledige spierstretch."
+          "Dumbbells langs de zij, voeten dicht zodat de gewichten vrij hangen.",
+          "Schouderbladen licht geknepen houden; til recht omhoog, armen blijven lang.",
+          "Geen been-momentum; bovenin knijpen en langzaam zakken."
         ]
       },
       // 4. Triceps & Biceps
       "Bench Dips": {
-        videoId: "0326dy_-CzM",
-        title: "Bench Dips (STOP Doing Them Like This!)",
+        videoId: "jdFzYGmvDyg",
+        title: "Stop Doing Bench Dips Like This!",
         channel: "ATHLEAN-X™",
         cues: [
-          "Houd je heupen en onderrug heel dicht langs het bankje om voorwaartse schouderstress te minimaliseren.",
-          "Zak maximaal tot een 90° ellebooghoek (dieper zakken forceert het schouderkapsel onnodig).",
-          "Druk krachtig uit met je handpalmen en span je triceps bovenin 1s maximaal aan."
+          "Draai de handen naar buiten (duimen naar voren) zodat de schouder extern roteert.",
+          "Houd de borst open en de schouderbladen omlaag; heupen dicht langs het bankje.",
+          "Zak tot circa 90° elleboog; stop bij pinching in de voorkant van de schouder."
         ]
       },
       "Dips": {
-        videoId: "2z8JmcrW-As",
-        title: "How to Do Dips (Chest vs Tricep Form)",
+        videoId: "vi1-BOcj3cQ",
+        title: "Are You Doing Dips Properly? (AVOID MISTAKES!)",
         channel: "ATHLEAN-X™",
         cues: [
-          "Houd de schouders te allen tijde naar beneden gedrukt (depressed).",
-          "Blijf rechtop voor tricepsfocus of leun licht voorover voor borstfocus.",
-          "Zak gecontroleerd tot circa 90° ellebooghoek en druk explosief uit."
+          "Schuif borst en lichaam naar voren door de armen; schouderbladen actief omlaag.",
+          "Duw niet alleen naar beneden: knijp ellebogen/biceps naar je zij (adductie).",
+          "Zak gecontroleerd tot circa 90°; bovenin kort de handvatten naar elkaar knijpen."
         ]
       },
       "Dumbbell Overhead Tricep Extension": {
-        videoId: "_gsU5TGSZ3E",
-        title: "Overhead Tricep Extension (Elbow-Friendly Form)",
-        channel: "ATHLEAN-X™",
+        videoId: "YbX7Wd8jQ-Q",
+        title: "How To: Dumbbell Seated Overhead Tricep Extension",
+        channel: "ScottHermanFitness",
         cues: [
-          "Zit rechtop met ingetrokken ribbenkast; vermijd overmatige holling in je onderrug.",
-          "Laat de dumbbell gecontroleerd diep achter je hoofd zakken voor stretch op de lange kop.",
-          "Druk verticaal omhoog met gefixeerde ellebogen."
+          "Zit met de rug tegen de leuning; ruitgreep, polsen recht, dumbbell “kijkend” naar voren.",
+          "Ellebogen dicht bij het hoofd, niet wijd uit; zak tot circa 90° achter het hoofd.",
+          "Druk verticaal uit tot lange armen zonder de ribbenkast naar voren te duwen."
         ]
       },
       "Lying Dumbbell Tricep Extension / Skull Crushers": {
         videoId: "d_KZxkY_0cM",
-        title: "How to Skull Crusher (Save Your Elbows!)",
-        channel: "ATHLEAN-X™",
+        title: "How To: Skull Crushers",
+        channel: "ScottHermanFitness",
         cues: [
-          "Houd de bovenarmen iets naar achteren gekanteld (ca. 15° richting je hoofd) ipv loodrecht.",
-          "Dit houdt constante spanning op de triceps en ontlast de elleboogpezen aanzienlijk!",
-          "Laat zakken tot naast je voorhoofd/oren en strek krachtig uit."
+          "Bovenarmen iets naar achteren gekanteld (circa 15°), niet loodrecht boven de schouders.",
+          "Laat de dumbbells naast het voorhoofd/oren zakken; ellebogen wijzen naar het plafond.",
+          "Strek uit vanuit de triceps; geen schouderzwaai om het gewicht omhoog te gooien."
         ]
       },
       "Dumbbell Bicep Curls": {
         videoId: "ykJmrZ5v0Oo",
-        title: "How to Bicep Curl (Proper Form Step-by-Step)",
-        channel: "ATHLEAN-X™",
+        title: "How to Do a Dumbbell Biceps Curl | Arm Workout",
+        channel: "Howcast",
         cues: [
-          "Houd de ellebogen strak langs je flanken; zwaai ze niet naar voren tijdens het heffen.",
-          "Supineer (draai) je pink krachtig naar buiten omhoog voor maximale bicepscontractie.",
-          "Laat in 2 tot 3 tellen strikt en beheerst zakken."
+          "Ellebogen strak langs de flanken; niet naar voren zwaaien tijdens het heffen.",
+          "Supineer de pink naar buiten omhoog voor een volledige bicepscontractie.",
+          "2–3 tellen zakken tot bijna gestrekt, zonder de schouders mee te trekken."
         ]
       },
       "Barbell Bicep Curls": {
         videoId: "kwG2ipFRgfo",
-        title: "Barbell Curl Form (Strict No Body Swing)",
-        channel: "ATHLEAN-X™",
+        title: "How to Do a Barbell Curl | Arm Workout",
+        channel: "Howcast",
         cues: [
-          "Span buik en bilspieren aan om zwaaien met je onderrug te verhinderen.",
-          "Houd de ellebogen gefixeerd langs je zij en knijp bovenin vol aan.",
-          "Laat de stang beheerst zakken tot bijna volledige armstrekking."
+          "Span buik en billen aan zodat de stang niet uit de heup wordt gegooid.",
+          "Ellebogen gefixeerd langs de zij; bovenin knijpen zonder de schouders op te trekken.",
+          "Laat de stang zakken tot bijna volledige armstrekking, polsen neutraal."
         ]
       },
       "Hammer Curls (Dumbbells)": {
         videoId: "zC3nLlEvin4",
-        title: "How to Hammer Curl for Bigger Arms",
-        channel: "ATHLEAN-X™",
+        title: "How To: Dumbbell Hammer Curl",
+        channel: "ScottHermanFitness",
         cues: [
-          "Handpalmen blijven continu naar elkaar toe gericht (neutrale greep).",
-          "Bouwt de brachialis en onderarmspieren voor een dikkere bovenarm.",
-          "Strikte, gecontroleerde beweging zonder momentum."
+          "Handpalmen blijven naar elkaar gericht (neutrale greep) de hele rep.",
+          "Ellebogen stil; til tot de onderarm bijna verticaal is.",
+          "Geen rompzwaai; dit treft brachialis en onderarm naast de biceps."
         ]
       },
       "Incline Dumbbell Curls": {
         videoId: "soxrZlIl35U",
-        title: "Incline Dumbbell Curl (Long Head Stretch)",
-        channel: "ATHLEAN-X™",
+        title: "How To: Seated Incline Dumbbell Bicep Curl",
+        channel: "ScottHermanFitness",
         cues: [
-          "Stel de bank in op 45°-60° en laat je armen recht naar beneden hangen.",
-          "Biedt een uitzonderlijke stretch op de lange kop van de biceps.",
-          "Curl omhoog zonder je schouders naar voren te laten rollen."
+          "Bank 45°–60°, armen hangen recht naar beneden voor stretch op de lange kop.",
+          "Curl omhoog zonder de schouders naar voren te rollen of de ellebogen te tillen.",
+          "Langzaam zakken tot de armen weer lang zijn; blijf met de rug tegen het kussen."
         ]
       }
     };
@@ -3194,26 +3119,24 @@
 
     /* Helper om oefening details op te halen inclusief fallback */
     function getExerciseDetails(exerciseName, slotKey = null) {
-      if (EXERCISE_DETAILS[exerciseName]) {
-        return EXERCISE_DETAILS[exerciseName];
-      }
-      
       const catalogItem = slotKey && EXERCISE_CATALOG[slotKey] ? EXERCISE_CATALOG[slotKey] : null;
-      const primary = inferPrimaryMuscles(exerciseName, slotKey);
-      const secondary = inferSecondaryMuscles(exerciseName, slotKey);
+      const known = EXERCISE_DETAILS[exerciseName] || null;
+      const video = getExerciseVideoData(exerciseName, slotKey);
+      const videoCues = Array.isArray(video.cues) ? video.cues.filter(Boolean) : [];
+      const fallbackTips = [
+        "Beweeg met een volledige bewegingsuitslag (Full Range of Motion).",
+        "Houd spanning op de spier in zowel de opwaartse als neerwaartse fase.",
+        "Adem in bij het zakken en adem krachtig uit bij de contractie."
+      ];
 
       return {
-        primaryMuscles: primary,
-        secondaryMuscles: secondary,
-        musclesText: catalogItem ? catalogItem.muscles : "Bovenlichaam spiergroepen",
-        equipment: catalogItem ? catalogItem.equipment : "Dumbbells / Barbell",
-        targetReps: catalogItem ? catalogItem.targetReps : 10,
-        restTime: catalogItem ? catalogItem.restTime : 90,
-        tips: catalogItem ? catalogItem.tips : [
-          "Beweeg met een volledige bewegingsuitslag (Full Range of Motion).",
-          "Houd spanning op de spier in zowel de opwaartse als neerwaartse fase.",
-          "Adem in bij het zakken en adem krachtig uit bij de contractie."
-        ]
+        primaryMuscles: known ? known.primaryMuscles : inferPrimaryMuscles(exerciseName, slotKey),
+        secondaryMuscles: known ? known.secondaryMuscles : inferSecondaryMuscles(exerciseName, slotKey),
+        musclesText: known ? known.musclesText : (catalogItem ? catalogItem.muscles : "Bovenlichaam spiergroepen"),
+        equipment: known ? known.equipment : (catalogItem ? catalogItem.equipment : "Dumbbells / Barbell"),
+        targetReps: known ? known.targetReps : (catalogItem ? catalogItem.targetReps : 10),
+        restTime: known ? known.restTime : (catalogItem ? catalogItem.restTime : 90),
+        tips: videoCues.length ? videoCues : (known && known.tips ? known.tips : (catalogItem ? catalogItem.tips : fallbackTips))
       };
     }
 
@@ -3313,6 +3236,10 @@
       showLiveVideoPanel: true,
       weeks: {}
     };
+
+    function isBiweeklyHoldWeek(weekNum) {
+      return (appState.overloadFrequency || "weekly") === "biweekly" && weekNum > 1 && weekNum % 2 === 0;
+    }
 
     function isDeloadWeek(weekNum) {
       // Automatische deload elke 7e week (Week 7, Week 14, etc.)
@@ -4273,10 +4200,7 @@
                     if (targetWeight < inc && maxPrev > 0) targetWeight = maxPrev;
                   } else {
                     // Indien 2-weken consolidatie ingesteld staat
-                    let applyInc = prevOverload;
-                    if (appState.overloadFrequency === "biweekly" && weekNum % 2 === 0) {
-                      applyInc = false;
-                    }
+                    let applyInc = prevOverload && !isBiweeklyHoldWeek(weekNum);
                     targetWeight = applyInc ? Math.round((maxPrev + inc) * 10) / 10 : maxPrev;
                   }
                 }
@@ -4441,7 +4365,14 @@
             }
           }
 
-          if (isBW) {
+          if (isBiweeklyHoldWeek(weekNum)) {
+            advisedWeight = isBW ? 0 : prevMax;
+            adviceType = "repeat";
+            adviceTitle = "🟡 2-Weken Consolidatie";
+            adviceText = isBW
+              ? `Vorige week doel behaald. In je 2-weken schema herhaal je nu 3 × ${targetReps} reps voordat je reps optelt.`
+              : `Vorige week doel behaald op ${prevMax} kg. In je 2-weken schema consolideer je dit gewicht nu 1 week voordat je verhoogt.`;
+          } else if (isBW) {
             advisedWeight = 0;
             adviceType = "overload";
             adviceTitle = `🟢 Overload Behaald (Reps Uitbreiden)`;
@@ -4459,23 +4390,10 @@
             adviceTitle = "🔴 Gewicht Behouden (Vorm & Controle)";
             adviceText = `Vorige week doel behaald op ${prevMax} kg, maar met maximale inspanning (🔴). Herhaal vandaag ${advisedWeight} kg voor strakkere controle voor je ophoogt.`;
           } else {
-            // 🟡 Goed & Pittig: Standaard consolidatiecyclus of wekelijks
-            let isBiweeklyHold = false;
-            if (appState.overloadFrequency === "biweekly" && weekNum % 2 === 0) {
-              isBiweeklyHold = true;
-            }
-
-            if (isBiweeklyHold) {
-              advisedWeight = prevMax;
-              adviceType = "repeat";
-              adviceTitle = "🟡 2-Weken Consolidatie (Doel 1x Behaald)";
-              adviceText = `Vorige week doel behaald op ${prevMax} kg met goede vorm (🟡)! In je 2-weken schema consolideer je dit gewicht nu 1 week voor je verhoogt.`;
-            } else {
-              advisedWeight = Math.round((prevMax + inc) * 10) / 10;
-              adviceType = "overload";
-              adviceTitle = `🔥 Progressive Overload Advies (+${inc} kg)`;
-              adviceText = `Vorige week doel behaald op ${prevMax} kg! Verhoog vandaag naar ${advisedWeight} kg voor 3 × ${targetReps} reps (+${inc} kg).`;
-            }
+            advisedWeight = Math.round((prevMax + inc) * 10) / 10;
+            adviceType = "overload";
+            adviceTitle = `🔥 Progressive Overload Advies (+${inc} kg)`;
+            adviceText = `Vorige week doel behaald op ${prevMax} kg! Verhoog vandaag naar ${advisedWeight} kg voor 3 × ${targetReps} reps (+${inc} kg).`;
           }
         } else {
           advisedWeight = prevMax;
@@ -4714,7 +4632,12 @@
             nextAdvisedReps = Math.max(6, Math.round(ex.targetReps * 0.7));
             nextActionText = `Herstelweek: verlaag volume naar 2 sets van ${nextAdvisedReps} reps`;
           } else if (ex.targetRepsAchieved && ex.allSetsCompleted) {
-            if (dominantExertion === "easy") {
+            if (isBiweeklyHoldWeek(weekNum + 1)) {
+              statusTag = "Consolideren 🟡";
+              statusClass = "bg-amber-500/20 text-amber-300 border-amber-500/40";
+              nextAdvisedReps = ex.targetReps;
+              nextActionText = `Doel behaald. In 2-weken cyclus: herhaal 3 × ${ex.targetReps} reps in Week ${weekNum + 1} voordat je reps optelt.`;
+            } else if (dominantExertion === "easy") {
               // 🟢 VLOT: Fast-Track reps overload (+3 reps)
               statusTag = "Fast-Track Reps (+3) 🟢";
               statusClass = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
@@ -4760,7 +4683,12 @@
             if (nextAdvisedWeight < inc && maxW > 0) nextAdvisedWeight = maxW;
             nextActionText = `Herstelweek: verlaag naar ~70% (${nextAdvisedWeight} kg) voor 2 sets`;
           } else if (ex.targetRepsAchieved && ex.allSetsCompleted) {
-            if (dominantExertion === "easy") {
+            if (isBiweeklyHoldWeek(weekNum + 1)) {
+              statusTag = "Consolideren 🟡";
+              statusClass = "bg-amber-500/20 text-amber-300 border-amber-500/40";
+              nextAdvisedWeight = maxW;
+              nextActionText = `Doel behaald. In 2-weken cyclus: behoud ${maxW} kg in Week ${weekNum + 1} voordat je verhoogt.`;
+            } else if (dominantExertion === "easy") {
               // 🟢 VLOT: Fast-Track overload (+inc direct)!
               statusTag = `Fast-Track (+${inc} kg) 🟢`;
               statusClass = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
@@ -4773,23 +4701,10 @@
               nextAdvisedWeight = maxW;
               nextActionText = `Doel behaald, maar met maximale inspanning (🔴). Herhaal ${maxW} kg in Week ${weekNum + 1} voor strakkere controle.`;
             } else {
-              // 🟡 GOED & PITTIG: De ideale trainingsprikkel
-              let isBiweeklyHold = false;
-              if (appState.overloadFrequency === "biweekly" && weekNum > 1) {
-                isBiweeklyHold = (weekNum % 2 !== 0); // oneven week = consolidatie
-              }
-
-              if (isBiweeklyHold) {
-                statusTag = "Consolideren 🟡";
-                statusClass = "bg-amber-500/20 text-amber-300 border-amber-500/40";
-                nextAdvisedWeight = maxW;
-                nextActionText = `Stevige werksets (🟡)! In 2-weken cyclus: behoud ${maxW} kg en mik op 1–2 bonus-reps (Double Progression).`;
-              } else {
-                statusTag = `Doel Behaald (+${inc} kg) 🔥`;
-                statusClass = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
-                nextAdvisedWeight = Math.round((maxW + inc) * 10) / 10;
-                nextActionText = `Strakke werksets en doel behaald! Verhoog in Week ${weekNum + 1} met +${inc} kg naar ${nextAdvisedWeight} kg.`;
-              }
+              statusTag = `Doel Behaald (+${inc} kg) 🔥`;
+              statusClass = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+              nextAdvisedWeight = Math.round((maxW + inc) * 10) / 10;
+              nextActionText = `Strakke werksets en doel behaald! Verhoog in Week ${weekNum + 1} met +${inc} kg naar ${nextAdvisedWeight} kg.`;
             }
           } else if (weekNum === 1) {
             statusTag = "Nulmeting Bepaald ⚖️";
@@ -7082,11 +6997,15 @@
               </div>
             `;
           } else if (isBaselineAchieved) {
+            const week2Hold = isBiweeklyHoldWeek(2);
+            const nextWeekHint = week2Hold
+              ? (isBW ? `Week 2: herhaal 3 × ${targetReps} reps (2-weken consolidatie)` : `Week 2: herhaal ${maxCurrentWeight} kg (2-weken consolidatie)`)
+              : (isBW ? `Start Overload Week 2: 3 × ${targetReps + 1} reps (+1 rep)` : `Start Overload in Week 2: ${(maxCurrentWeight + inc).toFixed(1).replace(/\.0$/, "")} kg (+${inc} kg)`);
             adviceHtml = `
               <div class="mb-3 py-1.5 px-3 rounded-lg bg-blue-500/15 border border-blue-500/40 text-xs text-blue-200 font-mono flex items-center justify-between">
                 <span>🎯 <b>NULMETING VASTGELEGD!</b> (${isBW ? 'Lichaamsgewicht' : `${maxCurrentWeight} kg`} × ${targetReps} reps)</span>
-                <span class="font-bold text-emerald-400 bg-slate-900 px-2 py-0.5 rounded border border-emerald-500/40 text-[11px]">
-                  ${isBW ? `Start Overload Week 2: 3 × ${targetReps + 1} reps (+1 rep)` : `Start Overload in Week 2: ${(maxCurrentWeight + inc).toFixed(1).replace(/\.0$/, "")} kg (+${inc} kg)`}
+                <span class="font-bold ${week2Hold ? 'text-amber-300 border-amber-500/40' : 'text-emerald-400 border-emerald-500/40'} bg-slate-900 px-2 py-0.5 rounded border text-[11px]">
+                  ${nextWeekHint}
                 </span>
               </div>
             `;
@@ -7113,11 +7032,15 @@
             </div>
           `;
         } else if (isCurrentOverloadAchieved) {
+          const nextHold = isBiweeklyHoldWeek(appState.currentWeek + 1);
+          const nextHint = nextHold
+            ? (isBW ? `Volgende week: herhaal 3 × ${targetReps} reps` : `Volgende week: herhaal ${maxCurrentWeight} kg (consolidatie)`)
+            : (isBW ? `Volgende week advies: 3 × ${targetReps + 1} reps (+1 rep)` : `Volgende week advies: ${(maxCurrentWeight + inc).toFixed(1).replace(/\.0$/, "")} kg (+${inc} kg)`);
           adviceHtml = `
-            <div class="mb-3 py-1.5 px-3 rounded-lg bg-emerald-500/20 border border-emerald-500/50 text-xs text-emerald-300 font-mono flex items-center justify-between animate-pulse">
-              <span>🔥 <b>DOEL BEHAALD!</b></span>
-              <span class="font-bold text-emerald-400 bg-slate-900 px-2 py-0.5 rounded border border-emerald-500/40 text-[11px]">
-                ${isBW ? `Volgende week advies: 3 × ${targetReps + 1} reps (+1 rep)` : `Volgende week advies: ${(maxCurrentWeight + inc).toFixed(1).replace(/\.0$/, "")} kg (+${inc} kg)`}
+            <div class="mb-3 py-1.5 px-3 rounded-lg ${nextHold ? 'bg-amber-500/15 border-amber-500/40 text-amber-200' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'} border text-xs font-mono flex items-center justify-between ${nextHold ? '' : 'animate-pulse'}">
+              <span>${nextHold ? '🟡' : '🔥'} <b>DOEL BEHAALD!</b></span>
+              <span class="font-bold ${nextHold ? 'text-amber-300 border-amber-500/40' : 'text-emerald-400 border-emerald-500/40'} bg-slate-900 px-2 py-0.5 rounded border text-[11px]">
+                ${nextHint}
               </span>
             </div>
           `;
@@ -10130,11 +10053,11 @@
                       <span class="uppercase tracking-wider">Week ${targetW} Volledig Voltooid!</span>
                     </div>
                     <p class="text-xs text-slate-300 leading-relaxed">
-                      Alle 4 dagen van Week ${targetW} zijn afgerond. Bekijk direct de eindrapportage met het berekende progressive overload advies (+${Number(appState.overloadIncrement) || 2.0}kg) voor Week ${Number(targetW) + 1}.
+                      Alle 4 dagen van Week ${targetW} zijn afgerond. Bekijk het weekrapport voor het advies van Week ${Number(targetW) + 1}${isBiweeklyHoldWeek(Number(targetW) + 1) ? ' (2-weken consolidatie: zelfde gewicht)' : ''}.
                     </p>
                     <button onclick="closeLiveWorkoutModal(); openWeekReportModal(${targetW})" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition shadow-lg cursor-pointer">
                       <span>📋</span>
-                      <span>Bekijk Weekrapport & Pas Overload Toe</span>
+                      <span>Bekijk Weekrapport</span>
                     </button>
                   </div>
                 `;
@@ -10610,7 +10533,7 @@
           body: JSON.stringify(bodyData && bodyData.appState ? { appState: bodyData.appState } : { appState: bodyData || appState })
         });
       }
-      return fetch("/api/import/val", { headers: { Accept: "application/json" }, cache: "no-store" });
+      return fetch("/api/marker-state", { headers: { Accept: "application/json" }, cache: "no-store" });
     }
 
     /**
@@ -10693,7 +10616,6 @@
       if (showToastNotice) {
         showToast("Sync loopt via de database, niet via localStorage.", "info");
       }
-      await syncFromValOnDemand();
       return false;
     }
 
@@ -10744,7 +10666,6 @@
       }
 
       try {
-        await syncFromValOnDemand();
         const ok = false;
         if (ok) {
           if (msgEl) {
@@ -10953,8 +10874,6 @@
     window.opslaanDataNaarCloud = opslaanDataNaarCloud;
     window.fetchDataVanCloud = fetchDataVanCloud;
     window.testVerbinding = testVerbinding;
-        window.openCloudSyncModal = syncFromValOnDemand;
-    window.syncFromValOnDemand = syncFromValOnDemand;
     window.openBackupModal = openBackupModal;
     window.closeBackupModal = closeBackupModal;
     window.exportTrainingBackup = exportTrainingBackup;
@@ -11075,42 +10994,6 @@
       xhr.send(body);
     }
 
-    async function syncFromValOnDemand() {
-      let preview;
-      try {
-        const response = await fetch("/api/import/val", { headers: { Accept: "application/json" }, cache: "no-store" });
-        preview = await response.json();
-        if (!response.ok) throw new Error(preview.message || ("preview HTTP " + response.status));
-      } catch (err) {
-        alert("Val-dump ophalen mislukt: " + (err && err.message ? err.message : err));
-        return;
-      }
-      if (!preview.completedSets) {
-        alert("Val-dump heeft geen voltooide sets. Bestaande training in de database blijft staan.");
-        return;
-      }
-      if (!confirm("Val-dump (" + preview.completedSets + " sets, " + (preview.updatedAt || "geen datum") + ") overschrijft de huidige cyclus in MySQL. Doorgaan?")) {
-        return;
-      }
-      const imported = await jsonApi("/api/import/val", "POST", { confirm: true });
-      const result = await imported.json();
-      if (!imported.ok) {
-        alert(result.message || "Import mislukt.");
-        return;
-      }
-      const fresh = await fetch("/api/marker-state", { headers: { Accept: "application/json" }, cache: "no-store" });
-      const payload = await fresh.json();
-      if (!fresh.ok || !payload || !payload.appState || !payload.appState.weeks) {
-        alert("Import klaar, maar de trainerstate kon niet opnieuw geladen worden.");
-        return;
-      }
-      appState = payload.appState;
-      lastPersisted = clonePersistedState(appState);
-      renderWeekPills();
-      switchDay(appState.currentDay || "mon");
-      updateDashboard();
-    }
-    window.closeCloudSyncModal = closeCloudSyncModal;
 
     /* 13. START */
     async function startApp() {
@@ -11158,11 +11041,6 @@
       // ESC toets ondersteuning om de bovenste actieve modal te sluiten
       window.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
-          const cloudModal = document.getElementById("cloudSyncPromptModal");
-          if (cloudModal && !cloudModal.classList.contains("hidden")) {
-            closeCloudSyncModal();
-            return;
-          }
           const pwaModal = document.getElementById("pwaGuideModal");
           if (pwaModal && !pwaModal.classList.contains("hidden")) {
             closePwaGuideModal();

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\WorkoutSession;
 use App\Models\WorkoutSet;
 use App\Services\PersonalRecord;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -131,6 +132,33 @@ class IronforgeApiTest extends TestCase
             'reps' => '8',
             'completed' => 1,
         ]);
+    }
+
+    public function test_biweekly_week_two_repeats_week_one_instead_of_overloading(): void
+    {
+        $this->getJson('/api/state')->assertOk();
+        $this->patchJson('/api/preferences', [
+            'overload_frequency' => 'biweekly',
+            'overload_increment' => 2,
+        ])->assertOk();
+
+        $week1 = WorkoutSession::query()->where('week', 1)->where('day', 'mon')->firstOrFail();
+        $slot = $week1->slots()->where('slot_key', 'slot_a1')->firstOrFail();
+        foreach ($slot->sets as $set) {
+            $this->patchJson('/api/sets/'.$set->id, [
+                'weight' => '80',
+                'reps' => '8',
+                'completed' => true,
+                'exertion' => 'easy',
+                'context' => 'live',
+            ])->assertOk();
+        }
+
+        $slots = $this->getJson('/api/state')->assertOk()->json('weeks.2.mon.slots');
+        $bench = collect($slots)->firstWhere('slotKey', 'slot_a1');
+
+        $this->assertSame('repeat', $bench['advice']['adviceType']);
+        $this->assertEquals(80, $bench['advice']['advisedWeight']);
     }
 
     public function test_week_report_counts_completed_volume(): void

@@ -9,7 +9,7 @@
             <h2 class="mb-2 font-black text-emerald-300">7-weken mesocycle</h2>
             <ol class="list-decimal space-y-2 pl-5 text-sm text-slate-300">
                 <li><strong class="text-slate-100">Week 1 — inregelen.</strong> Geen overload. Jij kiest een gewicht waarmee 3 × doelreps strak gaan. Dat is de nulmeting.</li>
-                <li><strong class="text-slate-100">Week 2–6 — progressive overload.</strong> Als je vorige week het doel haalde (alle verplichte sets ≥ doelreps), komt er +{{ $increment }} kg bij. Frequentie nu: <span class="font-mono text-amber-200">{{ $frequency }}</span>.</li>
+                <li><strong class="text-slate-100">Week 2–6 — progressive overload.</strong> Als je vorige week het doel haalde (alle verplichte sets ≥ doelreps), komt er +{{ $increment }} kg bij — behalve op een biweekly-holdweek (W2/W4/W6: zelfde kg). Frequentie nu: <span class="font-mono text-amber-200">{{ $frequency }}</span>.</li>
                 <li><strong class="text-slate-100">Week 7 — deload.</strong> 2 sets i.p.v. 3, adviesgewicht = 70% van je recente max, afgerond op je increment ({{ $increment }} kg).</li>
             </ol>
         </article>
@@ -18,7 +18,7 @@
             <h2 class="mb-2 font-black text-amber-300">RPE / exertion (geen 1–10 schaal)</h2>
             <p class="mb-3 text-sm text-slate-300">Na elke set kies je hoe het voelde. Dat stuurt de volgende week:</p>
             <ul class="space-y-2 text-sm">
-                <li><span class="font-bold text-emerald-300">Vlot (easy)</span> — doel gehaald én makkelijk → +{{ number_format($increment * 2, 1) }} kg (2× increment), ook bij biweekly.</li>
+                <li><span class="font-bold text-emerald-300">Vlot (easy)</span> — doel gehaald én makkelijk → +{{ number_format($increment * 2, 1) }} kg (2× increment) op een overload-week. Bij biweekly blijft een even week gelijk (geen fast-track door de hold heen).</li>
                 <li><span class="font-bold text-amber-300">Goed (good)</span> — doel gehaald → +{{ $increment }} kg bij weekly; bij biweekly blijft een even week gelijk (W2/W4/W6 hold).</li>
                 <li><span class="font-bold text-red-300">Maximaal (max)</span> — doel gehaald maar tegen falen → zelfde gewicht herhalen. Doel gemist op max → −{{ $increment }} kg.</li>
             </ul>

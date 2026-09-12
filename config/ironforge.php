@@ -148,9 +148,9 @@ return [
             'muscles' => 'Latissimus Dorsi, Bovenrug, Serratus',
             'equipment' => 'Dumbbell + Vlak Bankje',
             'tips' => [
-                'Lig stabiel met je bovenrug op het fitnessbankje met voeten plat op de vloer.',
-                'Houd de dumbbell met beide handen in een ruitgreep vast boven je borst.',
-                'Laat het gewicht met licht gebogen ellebogen in een gecontroleerde boog achter je hoofd zakken.',
+                'Lig dwars: alleen de bovenrug op het bankje, heupen omhoog en core strak.',
+                'Ruitgreep, polsen recht, lichte vaste knik in de ellebogen.',
+                'Laat de dumbbell in een boog achter het hoofd zakken en trek terug met lats en borst.',
             ],
             'alternatives' => [
                 'Dumbbell Pullover', 'Pull-ups (Optrekken Bovengreep)', 'Chin-ups (Optrekken Ondergreep)',
@@ -184,9 +184,9 @@ return [
             'muscles' => 'Borst, Triceps (Lockout & Druksterkte)',
             'equipment' => 'Dumbbells + Vloermat',
             'tips' => [
-                'Ga plat op de grond liggen met de knieën gebogen en voeten plat.',
-                'Laat de bovenarmen zachtjes op de vloer rusten (1 seconde dead-stop).',
-                'Explosief uitdrukken voor maximale triceps- en borstcontractie.',
+                'Zet de dumbbells op je bovenbenen en rol achterover; knieën gebogen, onderrug plat.',
+                'Ellebogen iets ingetrokken; laat zakken tot de bovenarmen de vloer zacht raken (dead-stop).',
+                'Druk recht omhoog over de tepellijn zonder de schouders naar voren te rollen.',
             ],
             'alternatives' => [
                 'Dumbbell Floor Press', 'Opdrukken (Klassieke Push-ups)', 'Decline Push-ups (Voeten op Bankje)',
@@ -236,9 +236,9 @@ return [
             'muscles' => 'Triceps Brachii',
             'equipment' => 'Fitnessbankje (Lichaamsgewicht)',
             'tips' => [
-                'Blijf met je rug vlak langs de rand van het bankje op en neer bewegen.',
-                'Zakken tot maximaal een hoek van 90 graden in de ellebogen.',
-                'Druk krachtig en geconcentreerd uit vanuit de achterkant van je bovenarm.',
+                'Draai de handen naar buiten (duimen naar voren) zodat de schouder extern roteert.',
+                'Heupen dicht langs het bankje; schouderbladen omlaag, borst open.',
+                'Zak tot circa 90°; stop bij pinching in de voorkant van de schouder.',
             ],
             'alternatives' => [
                 'Bench Dips', 'Dumbbell Overhead Tricep Extension', 'Barbell Lying Tricep Extension (Skull Crushers)',

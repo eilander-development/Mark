@@ -141,10 +141,19 @@ class Catalog
         $needsSeed = ProgramSlot::query()->count() < count($catalog)
             || Exercise::query()->count() < $this->expectedExerciseCount($catalog);
 
-        if (! $needsSeed) {
-            return;
+        if ($needsSeed) {
+            $this->seedMissingCatalog($catalog);
         }
 
+        $this->applyBuiltinVideos();
+        $this->slotsCache = null;
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $catalog
+     */
+    private function seedMissingCatalog(array $catalog): void
+    {
         foreach ($catalog as $slotKey => $item) {
             ProgramSlot::query()->firstOrCreate(
                 ['slot_key' => $slotKey],
@@ -189,9 +198,6 @@ class Catalog
                 ],
             );
         }
-
-        $this->applyBuiltinVideos();
-        $this->slotsCache = null;
     }
 
     /**
@@ -302,8 +308,48 @@ class Catalog
         }
 
         $libraryId = isset($video['videoId']) && is_string($video['videoId']) ? $video['videoId'] : '';
+        $currentId = (string) $exercise->youtube_id;
 
-        return $this->isVerifiedAthlean($libraryId) && ! $this->isVerifiedAthlean((string) $exercise->youtube_id);
+        if ($this->isVerifiedAthlean($libraryId) && ! $this->isVerifiedAthlean($currentId)) {
+            return true;
+        }
+
+        return $libraryId !== ''
+            && $libraryId !== $currentId
+            && $this->isReplaceableLibraryId($currentId);
+    }
+
+    private function isReplaceableLibraryId(string $youtubeId): bool
+    {
+        if ($youtubeId === '') {
+            return false;
+        }
+
+        if (in_array($youtubeId, $this->retiredVideoIds(), true)) {
+            return true;
+        }
+
+        foreach ($this->builtinVideos() as $video) {
+            $id = isset($video['videoId']) && is_string($video['videoId']) ? $video['videoId'] : '';
+            if ($id === $youtubeId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function retiredVideoIds(): array
+    {
+        static $ids = null;
+        if ($ids === null) {
+            $ids = require database_path('data/retired-video-ids.php');
+        }
+
+        return $ids;
     }
 
     private function hasFalseAthleanLabel(Exercise $exercise): bool
@@ -316,7 +362,7 @@ class Catalog
     {
         $verified = $this->verifiedAthleanIds();
 
-        Exercise::query()
+        $query = Exercise::query()
             ->where('channel', 'like', '%ATHLEAN%')
             ->where(function ($query) use ($verified): void {
                 $query->whereNull('youtube_id')
@@ -324,8 +370,11 @@ class Catalog
                 if ($verified !== []) {
                     $query->orWhereNotIn('youtube_id', $verified);
                 }
-            })
-            ->update(['channel' => '']);
+            });
+
+        if ($query->exists()) {
+            $query->update(['channel' => '']);
+        }
     }
 
     /**

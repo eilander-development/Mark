@@ -33,7 +33,7 @@
             <li><strong class="text-slate-100">Wel:</strong> welke oefening in welk slot hoort, doelreps, rust, form-video, overload-stap. ATHLEAN-X™ alleen als de YouTube-video van Jeff Cavaliere is.</li>
             <li><strong class="text-slate-100">Wel inzichtelijk:</strong> RPE (vlot/goed/max), week 1 inregelen, week 2–6 overload, week 7 deload 70%, 1RM, PR.</li>
             <li><strong class="text-slate-100">Al in de trainer-DB:</strong> gelogde sets, cycli, profiel, lock. Dat blijft het trainingslogboek.</li>
-            <li><strong class="text-slate-100">Niet hier:</strong> Val Town. Die dump is alleen nog importeren.</li>
+            <li><strong class="text-slate-100">Niet hier:</strong> JSON-backup van de trainer (export/import). Dat blijft in het trainingsmenu.</li>
         </ul>
     </div>
 @endsection
