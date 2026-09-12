@@ -25,15 +25,19 @@ jobs:
         SSH_HOST: ${{ secrets.SSH_HOST }}
         FTP_SERVER: ${{ secrets.FTP_SERVER }}
         SSH_PORT: ${{ secrets.SSH_PORT }}
+        SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+        FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
       run: |
         HOST="${SSH_HOST:-$FTP_SERVER}"
         HOST="${HOST#ftp://}"
         HOST="${HOST#ftps://}"
         HOST="${HOST%%/*}"
         PORT="${SSH_PORT:-26}"
+        USERNAME="${SSH_USERNAME:-$FTP_USERNAME}"
         echo "SSH_TARGET_HOST=$HOST" >> "$GITHUB_ENV"
         echo "SSH_TARGET_PORT=$PORT" >> "$GITHUB_ENV"
-        echo "SSH $HOST poort $PORT"
+        echo "SSH_TARGET_USER=$USERNAME" >> "$GITHUB_ENV"
+        echo "SSH ${USERNAME}@${HOST} poort ${PORT}"
 
     - name: Host sleutel toevoegen
       run: |
@@ -47,11 +51,10 @@ jobs:
 
     - name: Server check
       env:
-        SSH_USER: ${{ secrets.FTP_USERNAME }}
         DEPLOY_PATH: ${{ secrets.SSH_PATH }}
       run: |
         TARGET="${DEPLOY_PATH:-public_html}"
-        ssh -p "$SSH_TARGET_PORT" "${SSH_USER}@${SSH_TARGET_HOST}" "TARGET='${TARGET}' bash -s" <<'EOF'
+        ssh -p "$SSH_TARGET_PORT" -o BatchMode=yes -o IdentitiesOnly=yes "${SSH_TARGET_USER}@${SSH_TARGET_HOST}" "TARGET='${TARGET}' bash -s" <<'EOF'
         set -e
         echo "home: $HOME"
         echo "php: $(php -r 'echo PHP_VERSION;')"
@@ -101,11 +104,10 @@ jobs:
 
     - name: Bestanden naar de server
       env:
-        SSH_USER: ${{ secrets.FTP_USERNAME }}
         DEPLOY_PATH: ${{ secrets.SSH_PATH }}
       run: |
         TARGET="${DEPLOY_PATH:-public_html}"
-        rsync -az --delete -e "ssh -p ${SSH_TARGET_PORT}" \
+        rsync -az --delete -e "ssh -p ${SSH_TARGET_PORT} -o BatchMode=yes -o IdentitiesOnly=yes" \
           --exclude='.git/' \
           --exclude='.github/' \
           --exclude='.env' \
@@ -117,12 +119,11 @@ jobs:
           --exclude='storage/framework/sessions/' \
           --exclude='storage/framework/views/' \
           --exclude='.phpunit.cache/' \
-          ./ "${SSH_USER}@${SSH_TARGET_HOST}:${TARGET}/"
+          ./ "${SSH_TARGET_USER}@${SSH_TARGET_HOST}:${TARGET}/"
 
     - name: Migraties en cache
       env:
-        SSH_USER: ${{ secrets.FTP_USERNAME }}
         DEPLOY_PATH: ${{ secrets.SSH_PATH }}
       run: |
         TARGET="${DEPLOY_PATH:-public_html}"
-        ssh -p "$SSH_TARGET_PORT" "${SSH_USER}@${SSH_TARGET_HOST}" "cd ${TARGET} && php artisan migrate --force && php artisan optimize && php artisan about --only=environment"
+        ssh -p "$SSH_TARGET_PORT" -o BatchMode=yes -o IdentitiesOnly=yes "${SSH_TARGET_USER}@${SSH_TARGET_HOST}" "cd ${TARGET} && php artisan migrate --force && php artisan optimize && php artisan about --only=environment"
