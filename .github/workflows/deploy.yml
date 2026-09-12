@@ -15,6 +15,70 @@ jobs:
     - name: Code ophalen uit GitHub
       uses: actions/checkout@v4
 
+    - name: SSH-key laden
+      uses: webfactory/ssh-agent@v0.9.1
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: SSH doel
+      env:
+        SSH_HOST: ${{ secrets.SSH_HOST }}
+        FTP_SERVER: ${{ secrets.FTP_SERVER }}
+        SSH_PORT: ${{ secrets.SSH_PORT }}
+      run: |
+        HOST="${SSH_HOST:-$FTP_SERVER}"
+        HOST="${HOST#ftp://}"
+        HOST="${HOST#ftps://}"
+        HOST="${HOST%%/*}"
+        PORT="${SSH_PORT:-26}"
+        echo "SSH_TARGET_HOST=$HOST" >> "$GITHUB_ENV"
+        echo "SSH_TARGET_PORT=$PORT" >> "$GITHUB_ENV"
+        echo "SSH $HOST poort $PORT"
+
+    - name: Host sleutel toevoegen
+      run: |
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        if ! ssh-keyscan -4 -T 30 -H -p "$SSH_TARGET_PORT" "$SSH_TARGET_HOST" >> ~/.ssh/known_hosts; then
+          echo "ssh-keyscan mislukt op ${SSH_TARGET_HOST}:${SSH_TARGET_PORT}."
+          echo "Zet secret SSH_HOST op je domein of serverhostname (DirectAdmin)."
+          exit 1
+        fi
+
+    - name: Server check
+      env:
+        SSH_USER: ${{ secrets.FTP_USERNAME }}
+        DEPLOY_PATH: ${{ secrets.SSH_PATH }}
+      run: |
+        TARGET="${DEPLOY_PATH:-public_html}"
+        ssh -p "$SSH_TARGET_PORT" "${SSH_USER}@${SSH_TARGET_HOST}" "TARGET='${TARGET}' bash -s" <<'EOF'
+        set -e
+        echo "home: $HOME"
+        echo "php: $(php -r 'echo PHP_VERSION;')"
+        echo "deploy-pad: $TARGET"
+        echo
+        echo "mogelijke sites:"
+        for d in public_html domains/*/public_html; do
+          if [ -d "$d" ]; then
+            if [ -f "$d/.env" ]; then
+              echo "  $d  (.env aanwezig)"
+            else
+              echo "  $d  (.env ontbreekt)"
+            fi
+          fi
+        done
+        echo
+        if [ ! -d "$TARGET" ]; then
+          echo "FOUT: $TARGET bestaat niet. Zet secret SSH_PATH naar een pad hierboven."
+          exit 1
+        fi
+        if [ ! -f "$TARGET/.env" ]; then
+          echo "FOUT: $TARGET/.env ontbreekt. Laravel kan niet booten."
+          exit 1
+        fi
+        echo "OK: $TARGET/.env gevonden"
+        EOF
+
     - name: PHP instellen
       uses: shivammathur/setup-php@v2
       with:
@@ -35,25 +99,13 @@ jobs:
         npm ci
         npm run build
 
-    - name: SSH-key laden
-      uses: webfactory/ssh-agent@v0.9.1
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-    - name: Host sleutel toevoegen
-      run: |
-        mkdir -p ~/.ssh
-        chmod 700 ~/.ssh
-        ssh-keyscan -H "${{ secrets.FTP_SERVER }}" >> ~/.ssh/known_hosts
-
     - name: Bestanden naar de server
       env:
         SSH_USER: ${{ secrets.FTP_USERNAME }}
-        SSH_HOST: ${{ secrets.FTP_SERVER }}
         DEPLOY_PATH: ${{ secrets.SSH_PATH }}
       run: |
         TARGET="${DEPLOY_PATH:-public_html}"
-        rsync -az --delete \
+        rsync -az --delete -e "ssh -p ${SSH_TARGET_PORT}" \
           --exclude='.git/' \
           --exclude='.github/' \
           --exclude='.env' \
@@ -65,13 +117,12 @@ jobs:
           --exclude='storage/framework/sessions/' \
           --exclude='storage/framework/views/' \
           --exclude='.phpunit.cache/' \
-          ./ "${SSH_USER}@${SSH_HOST}:${TARGET}/"
+          ./ "${SSH_USER}@${SSH_TARGET_HOST}:${TARGET}/"
 
     - name: Migraties en cache
       env:
         SSH_USER: ${{ secrets.FTP_USERNAME }}
-        SSH_HOST: ${{ secrets.FTP_SERVER }}
         DEPLOY_PATH: ${{ secrets.SSH_PATH }}
       run: |
         TARGET="${DEPLOY_PATH:-public_html}"
-        ssh "${SSH_USER}@${SSH_HOST}" "cd ${TARGET} && php artisan migrate --force && php artisan optimize"
+        ssh -p "$SSH_TARGET_PORT" "${SSH_USER}@${SSH_TARGET_HOST}" "cd ${TARGET} && php artisan migrate --force && php artisan optimize && php artisan about --only=environment"
