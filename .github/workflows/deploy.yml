@@ -3,11 +3,13 @@ name: Deploy naar mijn.host
 on:
   push:
     branches:
-      - main # Of de naam van jouw hoofdbranch
+      - main
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
     - name: Code ophalen uit GitHub
@@ -16,7 +18,7 @@ jobs:
     - name: PHP instellen
       uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.4' # Matcht met jouw projectvereiste
+        php-version: '8.4'
         extensions: mbstring, xml, ctype, iconv, mysql
 
     - name: Composer Packages installeren
@@ -26,21 +28,50 @@ jobs:
     - name: Node.js instellen
       uses: actions/setup-node@v4
       with:
-        node-version: '20' # Of de versie die je lokaal gebruikt
+        node-version: '20'
 
     - name: NPM installeren en Vue PWA bouwen
       run: |
         npm ci
         npm run build
 
-    - name: Bestanden uploaden naar mijn.host via FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+    - name: SSH-key laden
+      uses: webfactory/ssh-agent@v0.9.1
       with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        server-dir: /public_html/
-        port: 21
-        protocol: ftps      # Forceert een beveiligde SSL/TLS verbinding
-        security: loose     # Helpt bij firewalls van shared hosting
-        state-name: .ftp-deploy-sync-state.json # Voorkomt dubbel uploaden
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Host sleutel toevoegen
+      run: |
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        ssh-keyscan -H "${{ secrets.FTP_SERVER }}" >> ~/.ssh/known_hosts
+
+    - name: Bestanden naar de server
+      env:
+        SSH_USER: ${{ secrets.FTP_USERNAME }}
+        SSH_HOST: ${{ secrets.FTP_SERVER }}
+        DEPLOY_PATH: ${{ secrets.SSH_PATH }}
+      run: |
+        TARGET="${DEPLOY_PATH:-public_html}"
+        rsync -az --delete \
+          --exclude='.git/' \
+          --exclude='.github/' \
+          --exclude='.env' \
+          --exclude='.env.*' \
+          --exclude='node_modules/' \
+          --exclude='tests/' \
+          --exclude='storage/logs/' \
+          --exclude='storage/framework/cache/' \
+          --exclude='storage/framework/sessions/' \
+          --exclude='storage/framework/views/' \
+          --exclude='.phpunit.cache/' \
+          ./ "${SSH_USER}@${SSH_HOST}:${TARGET}/"
+
+    - name: Migraties en cache
+      env:
+        SSH_USER: ${{ secrets.FTP_USERNAME }}
+        SSH_HOST: ${{ secrets.FTP_SERVER }}
+        DEPLOY_PATH: ${{ secrets.SSH_PATH }}
+      run: |
+        TARGET="${DEPLOY_PATH:-public_html}"
+        ssh "${SSH_USER}@${SSH_HOST}" "cd ${TARGET} && php artisan migrate --force && php artisan optimize"
