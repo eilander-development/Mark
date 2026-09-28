@@ -9,6 +9,7 @@ use App\Services\Catalog;
 use App\Services\CycleFactory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -105,7 +106,7 @@ class AdminController extends Controller
             'alternatives' => ['nullable', 'string'],
         ]);
 
-        $alternatives = collect(preg_split('/\r\n|\r|\n/', (string) $data['alternatives']))
+        $alternatives = collect(preg_split('/\r\n|\r|\n/', (string) ($data['alternatives'] ?? '')))
             ->map(fn (string $line) => trim($line))
             ->filter()
             ->values()
@@ -134,15 +135,26 @@ class AdminController extends Controller
     {
         $cycle = $this->factory->ensureCurrent();
         $sessionIds = $cycle->sessions()->pluck('id');
-        WorkoutSlot::query()
-            ->whereIn('workout_session_id', $sessionIds)
-            ->where('slot_key', $slot->slot_key)
-            ->update([
-                'selected_name' => $slot->default_name,
-                'target_reps' => $slot->target_reps,
-            ]);
+        $updated = DB::transaction(function () use ($sessionIds, $slot): int {
+            $targets = WorkoutSlot::query()
+                ->whereIn('workout_session_id', $sessionIds)
+                ->where('slot_key', $slot->slot_key)
+                ->whereHas('session', fn ($query) => $query->where('skipped', false))
+                ->whereDoesntHave('session.slots.sets', fn ($query) => $query->where('completed', true))
+                ->whereDoesntHave('sets', fn ($query) => $query->whereNotNull('input_fields'))
+                ->with('sets')
+                ->get();
+            foreach ($targets as $target) {
+                $target->update(['selected_name' => $slot->default_name, 'target_reps' => $slot->target_reps, 'progression_plan' => null]);
+                foreach ($target->sets as $set) {
+                    $set->update(['weight' => '', 'reps' => '', 'exertion' => 'unknown', 'is_pr' => false]);
+                }
+            }
 
-        return back()->with('status', $slot->slot_key.' toegepast op de huidige cyclus.');
+            return $targets->count();
+        });
+
+        return back()->with('status', $slot->slot_key.' toegepast op '.$updated.' ongestarte oefeningen. Opgeslagen prestaties en eigen invoer zijn behouden.');
     }
 
     public function exercises(): View
@@ -171,7 +183,7 @@ class AdminController extends Controller
         }
 
         $exercise->youtube_id = $id;
-        $exercise->title = $data['title'] ?: $exercise->title;
+        $exercise->title = ($data['title'] ?? null) ?: $exercise->title;
         $exercise->channel = $this->catalog->isVerifiedAthlean($id) ? 'ATHLEAN-X™' : '';
         $exercise->save();
 
@@ -192,6 +204,7 @@ class AdminController extends Controller
     {
         return view('admin.preferences', [
             'prefs' => $this->factory->preferences(),
+            'totalWeeks' => (int) $this->factory->ensureCurrent()->total_weeks,
         ]);
     }
 
@@ -200,7 +213,7 @@ class AdminController extends Controller
         $data = $request->validate([
             'overload_increment' => ['required', 'numeric', 'min:0.5', 'max:10'],
             'overload_frequency' => ['required', 'in:weekly,biweekly'],
-            'current_week' => ['required', 'integer', 'min:1', 'max:14'],
+            'current_week' => ['required', 'integer', 'min:1', 'max:'.(int) $this->factory->ensureCurrent()->total_weeks],
         ]);
 
         $prefs = $this->factory->preferences();

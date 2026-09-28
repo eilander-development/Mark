@@ -50,6 +50,7 @@ class MarkerState
                 'currentDay' => $prefs->current_day,
                 'soundEnabled' => (bool) $prefs->sound_enabled,
                 'overloadIncrement' => (float) $prefs->overload_increment,
+            'exerciseIncrements' => $prefs->exercise_increments ?? [],
                 'overloadFrequency' => $prefs->overload_frequency,
                 'preferredRestTimes' => $prefs->preferred_rest_times ?? [],
                 'customExerciseVideos' => $prefs->custom_exercise_videos ?? [],

@@ -66,6 +66,8 @@ class WorkoutController extends Controller
             'routine_locked' => ['sometimes', 'boolean'],
             'show_live_video_panel' => ['sometimes', 'boolean'],
             'overload_increment' => ['sometimes', 'numeric', 'min:0.5', 'max:10'],
+            'exercise_increments' => ['sometimes', 'array', 'max:100'],
+            'exercise_increments.*' => ['required', 'numeric', 'min:0.5', 'max:10'],
             'overload_frequency' => ['sometimes', 'in:weekly,biweekly'],
             'current_week' => ['sometimes', 'integer', 'min:1', 'max:14'],
             'current_day' => ['sometimes', 'in:mon,tue,thu,fri'],

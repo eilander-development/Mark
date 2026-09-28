@@ -27,7 +27,7 @@ function setup() {
         showLiveWorkoutSummary() { context.finished = true; },
         console,
     });
-    for (const name of ['renderBenchmarkModal', 'trainingEvidenceHtml', 'getRecoveryLoad', 'recoveryCheckHtml', 'earlyRecoveryAdviceHtml', 'performanceChangeHtml', 'comparisonIndicatorHtml', 'updateWorkoutHeroButtons', 'renderLockedRoutineView', 'renderWorkloadChart', 'getPeriodDashboardData', 'periodDashboardHtml', 'updateDayTitleBanner', 'volumeComparisonClass', 'getVolumeComparison', 'calculateSessionVolume', 'calculateWeekVolume', 'canStartNewPeriod', 'executeStartNewMesocycle', 'escapeReportText', 'getExerciseHistory', 'formatHistorySets', 'compareHistoryEntries', 'exerciseHistoryHtml', 'preparationDetailsHtml', 'weekExerciseOutlookHtml', 'getOverloadOutlook', 'completedDayResultsHtml', 'getNextSplitDay', 'getLiveRestStats', 'getTrainingTiming', 'summarizeTrainingTimes', 'getCycleReport', 'getCycleHistoryReport', 'calculate1RM', 'getAllTimeRecord', 'isSetNewAllTimePR', 'lastHeavyWeekNum', 'peakSlotWeight', 'calculateSetProgress', 'getSlotProgress', 'getExerciseWeekProgress', 'getNextProgression', 'findPreviousExerciseSession', 'rememberLiveInput', 'renderProgressDetails', 'getDayCompletionStatus', 'getWeekEvaluation', 'getSameWeekExerciseLogged', 'getSlotTargetAdvice', 'autoApplyOverloadAndDeloadInheritance', 'prepareCurrentLiveSetValues', 'submitLiveSet', 'adjustLiveReps', 'setLiveRepsManual', 'setLiveWeightManual', 'updateLiveSubmitButtonText']) {
+    for (const name of ['getExerciseIncrement', 'equipmentLabels', 'profileSummaryHtml', 'equipmentSummaryHtml', 'settingsExerciseNames', 'openSettingsModal', 'saveTrainingSettings', 'saveProfileSettings', 'saveDisplaySettings', 'renderBenchmarkModal', 'trainingEvidenceHtml', 'getRecoveryLoad', 'recoveryCheckHtml', 'earlyRecoveryAdviceHtml', 'performanceChangeHtml', 'comparisonIndicatorHtml', 'updateWorkoutHeroButtons', 'renderLockedRoutineView', 'renderWorkloadChart', 'getPeriodDashboardData', 'periodDashboardHtml', 'updateDayTitleBanner', 'volumeComparisonClass', 'getVolumeComparison', 'calculateSessionVolume', 'calculateWeekVolume', 'canStartNewPeriod', 'executeStartNewMesocycle', 'escapeReportText', 'getExerciseHistory', 'formatHistorySets', 'compareHistoryEntries', 'exerciseHistoryHtml', 'preparationDetailsHtml', 'weekExerciseOutlookHtml', 'getOverloadOutlook', 'completedDayResultsHtml', 'getNextSplitDay', 'getLiveRestStats', 'getTrainingTiming', 'summarizeTrainingTimes', 'getCycleReport', 'getCycleHistoryReport', 'calculate1RM', 'getAllTimeRecord', 'isSetNewAllTimePR', 'lastHeavyWeekNum', 'peakSlotWeight', 'calculateSetProgress', 'getSlotProgress', 'getExerciseWeekProgress', 'getNextProgression', 'findPreviousExerciseSession', 'rememberLiveInput', 'renderProgressDetails', 'getDayCompletionStatus', 'getWeekEvaluation', 'getSameWeekExerciseLogged', 'getSlotTargetAdvice', 'autoApplyOverloadAndDeloadInheritance', 'prepareCurrentLiveSetValues', 'submitLiveSet', 'adjustLiveReps', 'setLiveRepsManual', 'setLiveWeightManual', 'updateLiveSubmitButtonText']) {
         const start = html.indexOf(`    function ${name}(`);
         const end = html.indexOf('\n    function ', start + 1);
         vm.runInContext(html.slice(start, end), context);
@@ -822,4 +822,53 @@ test('failed recovery save preserves the previous check and goals', async () => 
     await c.setRecoveryCheck('exhausted');
     assert.equal(c.appState.weeks[1].mon.recovery, 'tired');
     assert.equal(c.saved, undefined);
+});
+
+
+test('exercise increments apply to weekly progression and recovery while other exercises use the default', () => {
+    const { context: c } = setup();
+    c.appState.overloadIncrement = 2;
+    c.appState.exerciseIncrements = { 'dumbbell bench press': 0.5 };
+    for (const day of ['mon', 'thu']) {
+        const slot = c.appState.weeks[1][day].bench;
+        slot.progressionPlan = { weight: 6, reps: 12, minReps: 8, maxReps: 12 };
+        slot.sets.forEach(set => Object.assign(set, { weight: 6, reps: 12, completed: true, exertion: 'good' }));
+    }
+    const progress = c.getExerciseWeekProgress(1, 'Dumbbell Bench Press');
+    assert.equal(c.getNextProgression(progress, 2).weight, 6.5);
+    assert.equal(c.getNextProgression(progress, 7).weight, 4);
+    assert.equal(c.getExerciseIncrement(' DUMBBELL BENCH PRESS '), 0.5);
+    assert.equal(c.getNextProgression({ ...progress, exerciseName: 'Other exercise' }, 2).weight, 8);
+    assert.equal(c.getWeekEvaluation(1).exercises[0].next.weight, 6.5);
+});
+
+test('profile summary uses saved personal details and only selected equipment', () => {
+    const { context: c } = setup();
+    c.appState.userProfile = { birthYear: 1993, bodyWeightKg: 71, experienceLevel: 'beginner', equipment: { dumbbells: true, pullup_bar: false } };
+    assert.equal(c.profileSummaryHtml(), 'Geboortejaar 1993 · 71 kg · Beginner');
+    assert.equal(c.equipmentSummaryHtml(), 'Materiaal: Dumbbells.');
+    c.appState.userProfile = {};
+    assert.match(c.profileSummaryHtml(), /niet ingevuld/);
+    assert.equal(c.equipmentSummaryHtml(), 'Nog geen materiaal geselecteerd.');
+});
+
+test('settings save commits only after the server accepts the change and reports failures', async () => {
+    const { context: c } = setup();
+    const start = html.indexOf('    async function persistSettingsForm(');
+    const end = html.indexOf('\n    function ', start + 1);
+    vm.runInContext(html.slice(start, end), c);
+    const status = { textContent: '' }, button = { disabled: false };
+    const form = { querySelector: selector => selector.includes('status') ? status : button };
+    c.appState.overloadIncrement = 2;
+    c.jsonApi = async () => ({ ok: false });
+    await c.persistSettingsForm(form, '/api/preferences', {}, { overloadIncrement: 0.5 });
+    assert.equal(c.appState.overloadIncrement, 2);
+    assert.equal(c.saved, undefined);
+    assert.match(status.textContent, /Niet opgeslagen/);
+    assert.equal(button.disabled, false);
+    c.jsonApi = async () => ({ ok: true });
+    await c.persistSettingsForm(form, '/api/preferences', {}, { overloadIncrement: 0.5 });
+    assert.equal(c.appState.overloadIncrement, 0.5);
+    assert.equal(c.saved, true);
+    assert.match(status.textContent, /Opgeslagen/);
 });

@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         body { background: #0f172a; color: #f8fafc; font-family: system-ui, sans-serif; }
+        nav a[aria-current="page"] { background: #1e3a5f; border-color: #3b82f6; color: #bfdbfe; }
     </style>
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100">
@@ -20,11 +21,11 @@
                 </span>
             </a>
             <nav class="flex flex-wrap gap-2 text-xs font-mono font-bold">
-                <a href="{{ route('admin.dashboard') }}" class="rounded-lg border border-slate-800 px-2.5 py-1.5 hover:border-emerald-500/40">Overzicht</a>
-                <a href="{{ route('admin.program') }}" class="rounded-lg border border-slate-800 px-2.5 py-1.5 hover:border-emerald-500/40">Programma</a>
-                <a href="{{ route('admin.exercises') }}" class="rounded-lg border border-slate-800 px-2.5 py-1.5 hover:border-emerald-500/40">Oefeningen</a>
-                <a href="{{ route('admin.rules') }}" class="rounded-lg border border-slate-800 px-2.5 py-1.5 hover:border-emerald-500/40">Trainingsregels</a>
-                <a href="{{ route('admin.preferences') }}" class="rounded-lg border border-slate-800 px-2.5 py-1.5 hover:border-emerald-500/40">Voorkeuren</a>
+                <a href="{{ route('admin.dashboard') }}" aria-current="{{ request()->routeIs('admin.dashboard') ? 'page' : 'false' }}" class="rounded-lg border border-slate-800 px-2.5 py-1.5 hover:border-emerald-500/40">Overzicht</a>
+                <a href="{{ route('admin.program') }}" aria-current="{{ request()->routeIs('admin.program') ? 'page' : 'false' }}" class="rounded-lg border border-slate-800 px-2.5 py-1.5 hover:border-emerald-500/40">Programma</a>
+                <a href="{{ route('admin.exercises') }}" aria-current="{{ request()->routeIs('admin.exercises') ? 'page' : 'false' }}" class="rounded-lg border border-slate-800 px-2.5 py-1.5 hover:border-emerald-500/40">Oefeningen</a>
+                <a href="{{ route('admin.rules') }}" aria-current="{{ request()->routeIs('admin.rules') ? 'page' : 'false' }}" class="rounded-lg border border-slate-800 px-2.5 py-1.5 hover:border-emerald-500/40">Trainingsregels</a>
+                <a href="{{ route('admin.preferences') }}" aria-current="{{ request()->routeIs('admin.preferences') ? 'page' : 'false' }}" class="rounded-lg border border-slate-800 px-2.5 py-1.5 hover:border-emerald-500/40">Voorkeuren</a>
                 <a href="/" class="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-emerald-300">← Trainer</a>
                 @if ((string) config('ironforge.admin_password') !== '')
                     <form method="POST" action="{{ route('admin.logout') }}">

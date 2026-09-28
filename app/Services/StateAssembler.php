@@ -34,7 +34,7 @@ class StateAssembler
                     $cycle,
                     $session,
                     $slot,
-                    (float) $prefs->overload_increment,
+                    $prefs->incrementFor($slot->selected_name),
                     (string) $prefs->overload_frequency,
                 );
                 $isBw = $this->periodization->isBodyweight($slot->selected_name);
@@ -97,6 +97,7 @@ class StateAssembler
             'routineLocked' => (bool) $prefs->routine_locked,
             'soundEnabled' => (bool) $prefs->sound_enabled,
             'overloadIncrement' => (float) $prefs->overload_increment,
+            'exerciseIncrements' => $prefs->exercise_increments ?? [],
             'overloadFrequency' => $prefs->overload_frequency,
             'profile' => [
                 'birthYear' => $profile->birth_year,
@@ -154,7 +155,7 @@ class StateAssembler
             $exercise['progress'] = $this->advisor->exerciseProgress($cycle, $week, $name);
             $exercise['next'] = $week >= (int) $cycle->total_weeks
                 ? null
-                : $this->periodization->nextProgression($exercise['progress'], $week + 1, (float) $prefs->overload_increment, $prefs->overload_frequency);
+                : $this->periodization->nextProgression($exercise['progress'], $week + 1, $prefs->incrementFor($name), $prefs->overload_frequency);
             $exercise['nextPeriodRequired'] = $week >= (int) $cycle->total_weeks;
         }
         unset($exercise);

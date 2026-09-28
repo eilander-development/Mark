@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Exercise;
 use App\Models\ProgramSlot;
 use App\Services\Catalog;
+use App\Services\CycleFactory;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -164,5 +165,45 @@ class AdminCatalogTest extends TestCase
             ->assertOk()
             ->assertSee('2.5')
             ->assertSee('biweekly');
+    }
+
+    public function test_all_admin_edit_pages_render_with_current_recovery_rules(): void
+    {
+        $this->get('/beheer/programma')->assertOk()->assertSee('Upper A · maandag en donderdag');
+        $this->get('/beheer/oefeningen')->assertOk()->assertSee('Video wijzigen');
+        $this->get('/beheer/voorkeuren')->assertOk()->assertSee('max="7"', false)->assertSee('Herstel & deload', false)->assertDontSee('elke overload-week +kg');
+        $this->get('/beheer/regels')->assertOk()->assertSee('60%')->assertSee('80%')->assertSee('geen dubbele gewichtsstap');
+    }
+
+    public function test_admin_cannot_select_a_week_outside_the_current_period(): void
+    {
+        $this->patch('/beheer/voorkeuren', ['overload_increment' => 2, 'overload_frequency' => 'weekly', 'current_week' => 8])
+            ->assertSessionHasErrors('current_week');
+    }
+
+    public function test_applying_program_preserves_logged_sessions_and_manual_input(): void
+    {
+        $cycle = app(CycleFactory::class)->ensureCurrent();
+        $program = ProgramSlot::query()->where('slot_key', 'slot_a1')->firstOrFail();
+        $program->update(['default_name' => 'Dumbbell Bench Press', 'target_reps' => 10]);
+        $sessions = $cycle->sessions()->where('week', 1)->with('slots.sets')->get()->keyBy('day');
+        $logged = $sessions['mon']->slots->firstWhere('slot_key', 'slot_a1');
+        $manual = $sessions['thu']->slots->firstWhere('slot_key', 'slot_a1');
+        $originalName = $logged->selected_name;
+        $logged->sets[0]->update(['weight' => '20', 'reps' => '8', 'completed' => true]);
+        $manual->sets[0]->update(['weight' => '17', 'input_fields' => ['weight' => true]]);
+        $untouched = $cycle->sessions()->where('week', 2)->where('day', 'mon')->firstOrFail()->slots()->where('slot_key', 'slot_a1')->with('sets')->firstOrFail();
+        $untouched->update(['progression_plan' => ['weight' => 25, 'reps' => 8]]);
+        $untouched->sets[0]->update(['weight' => '25']);
+
+        $this->post('/beheer/programma/'.$program->id.'/toepassen')->assertRedirect();
+
+        $this->assertSame($originalName, $logged->fresh()->selected_name);
+        $this->assertSame('20', $logged->sets[0]->fresh()->weight);
+        $this->assertSame('17', $manual->sets[0]->fresh()->weight);
+        $this->assertSame($originalName, $manual->fresh()->selected_name);
+        $this->assertSame('Dumbbell Bench Press', $untouched->fresh()->selected_name);
+        $this->assertNull($untouched->fresh()->progression_plan);
+        $this->assertSame('', $untouched->sets[0]->fresh()->weight);
     }
 }

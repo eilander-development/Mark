@@ -110,6 +110,7 @@ class ValTownImporter
             'sound_enabled' => (bool) ($state['soundEnabled'] ?? true),
             'routine_locked' => (bool) ($state['routineLocked'] ?? true),
             'show_live_video_panel' => (bool) ($state['showLiveVideoPanel'] ?? true),
+            'exercise_increments' => \App\Models\Preference::normalizeIncrements(is_array($state['exerciseIncrements'] ?? null) ? $state['exerciseIncrements'] : []),
             'overload_increment' => (float) ($state['overloadIncrement'] ?? 2),
             'overload_frequency' => (string) ($state['overloadFrequency'] ?? 'weekly'),
             'preferred_rest_times' => $state['preferredRestTimes'] ?? [],

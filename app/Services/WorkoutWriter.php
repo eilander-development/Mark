@@ -151,9 +151,12 @@ class WorkoutWriter
         $prefs = $this->factory->preferences();
         $allowed = [
             'sound_enabled', 'routine_locked', 'show_live_video_panel',
-            'overload_increment', 'overload_frequency', 'current_week', 'current_day',
+            'overload_increment', 'exercise_increments', 'overload_frequency', 'current_week', 'current_day',
             'preferred_rest_times', 'custom_exercise_videos',
         ];
+        if (isset($data['exercise_increments'])) {
+            $data['exercise_increments'] = \App\Models\Preference::normalizeIncrements($data['exercise_increments']);
+        }
         $prefs->fill(collect($data)->only($allowed)->all());
         if (isset($data['current_day']) && ! in_array($data['current_day'], config('ironforge.days'), true)) {
             throw ValidationException::withMessages(['current_day' => 'Ongeldige dag.']);
@@ -168,6 +171,7 @@ class WorkoutWriter
                 'sound_enabled' => (bool) $prefs->sound_enabled,
                 'show_live_video_panel' => (bool) $prefs->show_live_video_panel,
                 'overload_increment' => (float) $prefs->overload_increment,
+                'exercise_increments' => $prefs->exercise_increments ?? [],
                 'overload_frequency' => $prefs->overload_frequency,
             ],
         ];
@@ -269,7 +273,7 @@ class WorkoutWriter
                 if (! $progress['completedSets']) {
                     continue;
                 }
-                $next = $this->periodization->nextProgression($progress, $nextWeek, (float) $prefs->overload_increment, $prefs->overload_frequency);
+                $next = $this->periodization->nextProgression($progress, $nextWeek, $prefs->incrementFor($slot->selected_name), $prefs->overload_frequency);
                 $slot->update(['progression_plan' => ['weight' => $next['weight'], 'reps' => $next['reps'], 'minReps' => $next['minReps'], 'maxReps' => $next['maxReps']], 'target_reps' => $next['reps']]);
                 foreach ($slot->sets->take($next['requiredSets']) as $set) {
                     if (! ($set->input_fields['weight'] ?? false)) {

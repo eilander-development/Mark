@@ -1,8 +1,8 @@
 @extends('admin.layout')
 @section('title', 'Overzicht')
 @section('content')
-    <h1 class="mb-1 text-xl font-black">Waar IronForge nu leeft</h1>
-    <p class="mb-6 text-sm text-slate-400">Programma, video's en overload zaten in de marker-JS en <code>config/ironforge.php</code>. Dat is nu beheerbaar. Sets en cycli stonden al in MySQL.</p>
+    <h1 class="mb-1 text-xl font-black">Beheer overzicht</h1>
+    <p class="mb-6 text-sm text-slate-400">Pas je standaardprogramma, oefenvideo’s en opbouwvoorkeuren aan. De actuele uitleg staat bij Trainingsregels.</p>
 
     <div class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <a href="{{ route('admin.program') }}" class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
@@ -17,8 +17,8 @@
         </a>
         <a href="{{ route('admin.rules') }}" class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
             <div class="text-[10px] font-mono uppercase text-slate-500">Overload</div>
-            <div class="text-2xl font-black text-amber-300">+{{ $overloadIncrement }} kg</div>
-            <p class="mt-1 text-xs text-slate-400">{{ $overloadFrequency === 'weekly' ? 'Wekelijks' : 'Tweewekelijks' }} · week {{ $currentWeek }}</p>
+            <div class="text-2xl font-black text-amber-300">Stap: {{ $overloadIncrement }} kg</div>
+            <p class="mt-1 text-xs text-slate-400">Eerst reps · {{ $overloadFrequency === 'weekly' ? 'wekelijks beoordelen' : 'tweewekelijks beoordelen' }}</p>
         </a>
         <a href="{{ route('admin.preferences') }}" class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
             <div class="text-[10px] font-mono uppercase text-slate-500">Voorkeuren</div>

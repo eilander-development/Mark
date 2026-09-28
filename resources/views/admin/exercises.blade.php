@@ -40,13 +40,15 @@
                             @endif
                         </td>
                         <td class="px-3 py-3 align-top" colspan="2">
+                            <details><summary class="cursor-pointer text-xs text-blue-300">Video wijzigen</summary>
                             <form method="post" action="{{ route('admin.exercises.update', $exercise) }}" class="flex flex-wrap items-end gap-2">
                                 @csrf
                                 @method('PATCH')
-                                <input name="youtube_url" value="{{ $exercise->youtube_id ? 'https://www.youtube.com/watch?v='.$exercise->youtube_id : '' }}" placeholder="https://youtube.com/watch?v=..." class="min-w-56 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 font-mono text-xs">
-                                <input name="title" value="{{ $exercise->title }}" placeholder="Titel" class="w-48 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs">
+                                <input aria-label="YouTube-link" name="youtube_url" value="{{ $exercise->youtube_id ? 'https://www.youtube.com/watch?v='.$exercise->youtube_id : '' }}" placeholder="https://youtube.com/watch?v=..." class="min-w-56 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 font-mono text-xs">
+                                <input aria-label="Videotitel" name="title" value="{{ $exercise->title }}" placeholder="Titel" class="w-48 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs">
                                 <button class="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-bold">Opslaan</button>
                             </form>
+                            </details>
                         </td>
                     </tr>
                 @endforeach

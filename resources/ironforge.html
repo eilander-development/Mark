@@ -997,6 +997,99 @@
   </div>
 
   <!-- ========================================================== -->
+  <dialog id="settingsModal" aria-labelledby="settingsTitle" class="m-auto max-h-[90dvh] w-[min(95vw,48rem)] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 text-slate-100 backdrop:bg-black/80 sm:p-6">
+    <header class="mb-5 flex items-center justify-between gap-3"><h2 id="settingsTitle" class="text-xl font-bold">Instellingen</h2><button type="button" onclick="closeSettingsModal()" autofocus class="rounded-lg bg-slate-800 px-3 py-2 text-sm">Sluiten ✕</button></header>
+    <div class="space-y-5"><div id="trainingSettingsContent"></div><div id="profileSettingsContent"></div>
+      <!-- Sectie 2: Thuisgym Voorkeuren -->
+      <div>
+        <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Weergave & geluid</div>
+        <form onsubmit="saveDisplaySettings(event)" class="mb-3 space-y-2"><label class="flex items-center gap-2 text-sm"><input type="checkbox" id="settingsVideoPanel"> Video naast de training tonen</label><button type="submit" class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Weergave opslaan</button><p role="status" data-settings-status class="text-xs text-slate-300"></p></form>
+        <div class="space-y-1.5">
+          <button id="wakeLockBtn" onclick="toggleWakeLock()" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center justify-between cursor-pointer">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center text-base flex-shrink-0">
+                💡
+              </div>
+              <div>
+                <div class="text-xs font-bold text-slate-200">Scherm aan</div>
+                <div class="text-[10px] text-slate-400">Niet dimmen tijdens sets</div>
+              </div>
+            </div>
+            <span id="wakeLockStatus" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-slate-700 text-slate-300">Uit</span>
+          </button>
+
+          <button id="soundToggleBtn" onclick="toggleSound()" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center justify-between cursor-pointer">
+            <div class="flex items-center gap-3">
+              <div id="soundToggleIcon" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center text-base flex-shrink-0">
+                🔊
+              </div>
+              <div>
+                <div class="text-xs font-bold text-slate-200">Geluid</div>
+                <div class="text-[10px] text-slate-400">Buzzer aan het eind van rust</div>
+              </div>
+            </div>
+            <span id="soundStatusText" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Aan</span>
+          </button>
+
+          <button id="pwaInstallBtn" onclick="closeSettingsModal(); handlePwaInstallClick()" class="w-full p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-left border border-emerald-500/30 transition flex items-center gap-3 cursor-pointer">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-base flex-shrink-0">
+              📲
+            </div>
+            <div class="flex-1">
+              <div id="pwaInstallLabel" class="text-xs font-bold text-emerald-300">Installeren</div>
+              <div class="text-[10px] text-emerald-400/80">Volledig scherm, geen browserbalk</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+
+      <div>
+        <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Data & back-ups</div>
+        <div class="space-y-1.5">
+          <button onclick="closeSettingsModal(); exportTrainingBackup();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-300 flex items-center justify-center text-base flex-shrink-0">
+              📤
+            </div>
+            <div class="flex-1">
+              <div class="text-xs font-bold text-slate-200">Backup exporteren</div>
+              <div class="text-[10px] text-slate-400">Download JSON voor later importeren</div>
+            </div>
+          </button>
+
+          <button onclick="closeSettingsModal(); openBackupModal();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-300 flex items-center justify-center text-base flex-shrink-0">
+              📥
+            </div>
+            <div class="flex-1">
+              <div class="text-xs font-bold text-slate-200">Backup importeren</div>
+              <div class="text-[10px] text-slate-400">Overschrijft alle trainingsdata</div>
+            </div>
+          </button>
+
+          <button onclick="closeSettingsModal(); clearCurrentDay();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
+            <div class="w-8 h-8 rounded-lg bg-rose-500/15 text-rose-300 flex items-center justify-center text-base flex-shrink-0">
+              🔄
+            </div>
+            <div class="flex-1">
+              <div class="text-xs font-bold text-slate-200">Dag resetten</div>
+              <div class="text-[10px] text-slate-400">Sets van vandaag wissen</div>
+            </div>
+          </button>
+
+          <a href="/beheer" class="w-full p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-left border border-emerald-500/30 transition flex items-center gap-3 cursor-pointer">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-base flex-shrink-0">
+              🛠️
+            </div>
+            <div class="flex-1">
+              <div class="text-xs font-bold text-emerald-200">Beheer</div>
+              <div class="text-[10px] text-emerald-400/80">Oefeningen, video, overload</div>
+            </div>
+          </a>
+        </div>
+      </div>    </div>
+  </dialog>
+
   <!-- SLIDE-OVER DRAWER MENU (MOBIEL & DESKTOP HEADER NAVIGATIE) -->
   <!-- ========================================================== -->
   <div id="menuDrawerBackdrop" class="hidden fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm transition-opacity" onclick="closeMenuDrawer()"></div>
@@ -1066,93 +1159,8 @@
         </div>
       </div>
 
-      <!-- Sectie 2: Thuisgym Voorkeuren -->
-      <div>
-        <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Gym</div>
-        <div class="space-y-1.5">
-          <button id="wakeLockBtn" onclick="toggleWakeLock()" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center justify-between cursor-pointer">
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center text-base flex-shrink-0">
-                💡
-              </div>
-              <div>
-                <div class="text-xs font-bold text-slate-200">Scherm aan</div>
-                <div class="text-[10px] text-slate-400">Niet dimmen tijdens sets</div>
-              </div>
-            </div>
-            <span id="wakeLockStatus" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-slate-700 text-slate-300">Uit</span>
-          </button>
-
-          <button id="soundToggleBtn" onclick="toggleSound()" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center justify-between cursor-pointer">
-            <div class="flex items-center gap-3">
-              <div id="soundToggleIcon" class="w-8 h-8 rounded-lg bg-purple-500/15 text-purple-400 flex items-center justify-center text-base flex-shrink-0">
-                🔊
-              </div>
-              <div>
-                <div class="text-xs font-bold text-slate-200">Geluid</div>
-                <div class="text-[10px] text-slate-400">Buzzer aan het eind van rust</div>
-              </div>
-            </div>
-            <span id="soundStatusText" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Aan</span>
-          </button>
-
-          <button id="pwaInstallBtn" onclick="handlePwaInstallClick()" class="w-full p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-left border border-emerald-500/30 transition flex items-center gap-3 cursor-pointer">
-            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-base flex-shrink-0">
-              📲
-            </div>
-            <div class="flex-1">
-              <div id="pwaInstallLabel" class="text-xs font-bold text-emerald-300">Installeren</div>
-              <div class="text-[10px] text-emerald-400/80">Volledig scherm, geen browserbalk</div>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <!-- Sectie 3: Gegevens & Back-up -->
-      <div>
-        <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Systeem</div>
-        <div class="space-y-1.5">
-          <button onclick="closeMenuDrawer(); exportTrainingBackup();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
-            <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-300 flex items-center justify-center text-base flex-shrink-0">
-              📤
-            </div>
-            <div class="flex-1">
-              <div class="text-xs font-bold text-slate-200">Backup exporteren</div>
-              <div class="text-[10px] text-slate-400">Download JSON voor later importeren</div>
-            </div>
-          </button>
-
-          <button onclick="closeMenuDrawer(); openBackupModal();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
-            <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-300 flex items-center justify-center text-base flex-shrink-0">
-              📥
-            </div>
-            <div class="flex-1">
-              <div class="text-xs font-bold text-slate-200">Backup importeren</div>
-              <div class="text-[10px] text-slate-400">Overschrijft alle trainingsdata</div>
-            </div>
-          </button>
-
-          <button onclick="closeMenuDrawer(); clearCurrentDay();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
-            <div class="w-8 h-8 rounded-lg bg-rose-500/15 text-rose-300 flex items-center justify-center text-base flex-shrink-0">
-              🔄
-            </div>
-            <div class="flex-1">
-              <div class="text-xs font-bold text-slate-200">Dag resetten</div>
-              <div class="text-[10px] text-slate-400">Sets van vandaag wissen</div>
-            </div>
-          </button>
-
-          <a href="/beheer" class="w-full p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-left border border-emerald-500/30 transition flex items-center gap-3 cursor-pointer">
-            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-base flex-shrink-0">
-              🛠️
-            </div>
-            <div class="flex-1">
-              <div class="text-xs font-bold text-emerald-200">Beheer</div>
-              <div class="text-[10px] text-emerald-400/80">Oefeningen, video, overload</div>
-            </div>
-          </a>
-        </div>
-      </div>
+      <button onclick="closeMenuDrawer(); openSettingsModal()" class="w-full rounded-xl border border-slate-700 bg-slate-800 p-3 text-left text-sm font-bold text-blue-300">⚙ Instellingen <span class="block text-xs font-normal text-slate-400">Training, profiel, weergave en data</span></button>
+      <a href="/beheer" class="block p-3 text-sm text-blue-300">Beheer</a>
     </div>
 
     <!-- Drawer Footer -->
@@ -3266,7 +3274,8 @@
       totalWeeks: 7, // Standaard 7-weken mesocycle (6 weken overload + 1 week deload)
       currentDay: "mon",
       soundEnabled: true,
-      overloadIncrement: 2.0, // Standaard 2.0 kg ipv 2.5 kg
+      overloadIncrement: 2.0,
+      exerciseIncrements: {},
       overloadFrequency: "weekly", // "weekly" (wekelijks) of "biweekly" (2-weken consolidatie)
       preferredRestTimes: {},
       customExerciseVideos: {},
@@ -3515,6 +3524,7 @@
         if (next.soundEnabled !== prev.soundEnabled) prefBody.sound_enabled = !!next.soundEnabled;
         if (next.routineLocked !== prev.routineLocked) prefBody.routine_locked = !!next.routineLocked;
         if (next.showLiveVideoPanel !== prev.showLiveVideoPanel) prefBody.show_live_video_panel = !!next.showLiveVideoPanel;
+        if (JSON.stringify(next.exerciseIncrements || {}) !== JSON.stringify(prev.exerciseIncrements || {})) prefBody.exercise_increments = next.exerciseIncrements || {};
         if (Number(next.overloadIncrement) !== Number(prev.overloadIncrement)) prefBody.overload_increment = Number(next.overloadIncrement);
         if (next.overloadFrequency !== prev.overloadFrequency) prefBody.overload_frequency = next.overloadFrequency;
         if (JSON.stringify(next.preferredRestTimes || {}) !== JSON.stringify(prev.preferredRestTimes || {})) {
@@ -4079,6 +4089,106 @@
       return { ...calculateSetProgress(slot.sets, Number(plan.weight), Number(plan.reps), isDeloadWeek(weekNum) ? 2 : 3, isBW), minReps, maxReps };
     }
 
+    function getExerciseIncrement(exerciseName) {
+      const own = Number((appState.exerciseIncrements || {})[String(exerciseName || '').trim().toLowerCase()]);
+      return own >= 0.5 && own <= 10 ? own : (Number(appState.overloadIncrement) || 2);
+    }
+
+    function equipmentLabels() {
+      return { dumbbells: 'Dumbbells', barbell: 'Barbell', bench: 'Bankje', bodyweight: 'Lichaamsgewicht', pullup_bar: 'Optrekstang', bands: 'Weerstandsbanden' };
+    }
+
+    function profileSummaryHtml() {
+      const profile = appState.userProfile || {};
+      const experience = { beginner: 'Beginner', intermediate: 'Enige ervaring', advanced: 'Gevorderd' };
+      return [profile.birthYear ? `Geboortejaar ${escapeReportText(profile.birthYear)}` : 'Geboortejaar niet ingevuld', profile.bodyWeightKg ? `${escapeReportText(profile.bodyWeightKg)} kg` : 'Gewicht niet ingevuld', experience[profile.experienceLevel] || 'Ervaring niet ingevuld'].join(' · ');
+    }
+
+    function equipmentSummaryHtml() {
+      const equipment = appState.userProfile?.equipment || {};
+      const available = Object.entries(equipmentLabels()).filter(([key]) => equipment[key]).map(([, label]) => label);
+      return available.length ? 'Materiaal: ' + available.join(', ') + '.' : 'Nog geen materiaal geselecteerd.';
+    }
+
+    function settingsExerciseNames() {
+      const names = new Map();
+      Object.values(EXERCISE_CATALOG).forEach(item => names.set(item.defaultName.trim().toLowerCase(), item.defaultName));
+      Object.values(appState.weeks || {}).forEach(week => Object.values(week).forEach(day => Object.values(day || {}).forEach(slot => {
+        if (slot?.selectedName) names.set(slot.selectedName.trim().toLowerCase(), slot.selectedName);
+      })));
+      Object.keys(appState.exerciseIncrements || {}).forEach(name => { if (!names.has(name)) names.set(name, name); });
+      return [...names.values()].filter(name => !isExerciseBodyweight(name)).sort((a, b) => a.localeCompare(b));
+    }
+
+    function openSettingsModal() {
+      const inputClass = 'mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100';
+      const button = '<button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Opslaan</button>';
+      const profile = appState.userProfile || {};
+      document.getElementById('trainingSettingsContent').innerHTML = `<form onsubmit="saveTrainingSettings(event)" class="space-y-3 rounded-xl border border-slate-700 p-4">
+        <h3 class="font-bold">Training & progressie</h3>
+        <div class="grid gap-3 sm:grid-cols-2"><label class="text-sm">Standaard gewichtsstap (kg)<input name="increment" type="number" min="0.5" max="10" step="0.5" required value="${Number(appState.overloadIncrement) || 2}" class="${inputClass}"></label>
+        <label class="text-sm">Opbouwritme<select name="frequency" class="${inputClass}"><option value="weekly" ${appState.overloadFrequency !== 'biweekly' ? 'selected' : ''}>Wekelijks beoordelen</option><option value="biweekly" ${appState.overloadFrequency === 'biweekly' ? 'selected' : ''}>Tweewekelijks beoordelen</option></select></label></div>
+        <details><summary class="cursor-pointer text-sm text-blue-300">Gewichtsstap per oefening</summary><p class="my-2 text-xs text-slate-400">Kies een stap die je materiaal toelaat. Voor dumbbells: per dumbbell. Leeg = standaard. Lichaamsgewicht bouwt op via reps.</p><div class="grid gap-3 sm:grid-cols-2">${settingsExerciseNames().map(name => `<label class="text-xs">${escapeReportText(name)}<input data-exercise="${escapeReportText(name.trim().toLowerCase())}" type="number" min="0.5" max="10" step="0.5" placeholder="Standaard" value="${Number(appState.exerciseIncrements?.[name.trim().toLowerCase()]) || ''}" class="${inputClass}"></label>`).join('')}</div></details>
+        <details><summary class="cursor-pointer text-sm text-blue-300">Hoe worden deze instellingen gebruikt?</summary><p class="mt-2 text-xs text-slate-400">Eerst reps opbouwen, daarna gewicht. Een eigen oefeningstap gaat voor de standaard, ook bij deload en de knoppen tijdens training. Tweewekelijks herhaalt het doel in even opbouwweken. Opgeslagen sets en vastgelegde doelen veranderen niet. Nieuwe adviezen gebruiken je nieuwe instellingen.</p></details>
+        ${button}<p role="status" class="text-xs text-slate-300" data-settings-status></p></form>`;
+      document.getElementById('profileSettingsContent').innerHTML = `<form onsubmit="saveProfileSettings(event)" class="space-y-3 rounded-xl border border-slate-700 p-4">
+        <h3 class="font-bold">Persoonlijk profiel & materiaal</h3><div class="grid gap-3 sm:grid-cols-2">
+        <label class="text-sm">Geboortejaar<input name="birthYear" type="number" min="1940" max="2015" required value="${Number(profile.birthYear) || ''}" class="${inputClass}"></label>
+        <label class="text-sm">Lichaamsgewicht (kg)<input name="bodyWeightKg" type="number" min="40" max="200" step="1" required value="${Number(profile.bodyWeightKg) || ''}" class="${inputClass}"></label>
+        <label class="text-sm">Trainingservaring<select name="experienceLevel" class="${inputClass}">${Object.entries({ beginner: 'Beginner', intermediate: 'Enige ervaring', advanced: 'Gevorderd' }).map(([key, label]) => `<option value="${key}" ${profile.experienceLevel === key ? 'selected' : ''}>${label}</option>`).join('')}</select></label></div>
+        <fieldset><legend class="mb-2 text-sm">Beschikbaar materiaal</legend><div class="grid gap-2 sm:grid-cols-2">${Object.entries(equipmentLabels()).map(([key, label]) => `<label class="flex items-center gap-2 text-sm"><input type="checkbox" name="equipment_${key}" ${profile.equipment?.[key] ? 'checked' : ''}>${label}</label>`).join('')}</div></fieldset>
+        <p class="text-xs text-slate-400">Profielgegevens helpen bij schemareferenties; het zijn geen gevalideerde persoonlijke krachtnormen. Je gekozen oefeningen blijven staan.</p>${button}<p role="status" class="text-xs text-slate-300" data-settings-status></p></form>`;
+      document.getElementById('settingsVideoPanel').checked = appState.showLiveVideoPanel !== false;
+      const modal = document.getElementById('settingsModal');
+      if (!modal.open) modal.showModal();
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').close();
+    }
+
+    async function persistSettingsForm(form, url, payload, changes) {
+      const status = form.querySelector('[data-settings-status]');
+      const button = form.querySelector('[type="submit"]');
+      if (button.disabled) return;
+      button.disabled = true;
+      status.textContent = 'Opslaan…';
+      try {
+        const response = await jsonApi(url, 'PATCH', payload);
+        if (!response.ok) throw new Error('Opslaan mislukt');
+        Object.assign(appState, changes);
+        saveState();
+        renderExercises(); updateDashboard();
+        status.textContent = '✓ Opgeslagen';
+      } catch (error) {
+        status.textContent = '⚠ Niet opgeslagen. Controleer je invoer en verbinding en probeer opnieuw.';
+      } finally { button.disabled = false; }
+    }
+
+    function saveTrainingSettings(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const increments = {};
+      form.querySelectorAll('[data-exercise]').forEach(input => { if (input.value !== '') increments[input.dataset.exercise] = Number(input.value); });
+      const increment = Number(form.elements.increment.value);
+      const frequency = form.elements.frequency.value;
+      return persistSettingsForm(form, '/api/preferences', { overload_increment: increment, overload_frequency: frequency, exercise_increments: increments }, { overloadIncrement: increment, overloadFrequency: frequency, exerciseIncrements: increments });
+    }
+
+    function saveProfileSettings(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const profile = { birthYear: Number(form.elements.birthYear.value), bodyWeightKg: Number(form.elements.bodyWeightKg.value), experienceLevel: form.elements.experienceLevel.value,
+        equipment: Object.fromEntries(Object.keys(equipmentLabels()).map(key => [key, form.elements['equipment_' + key].checked])) };
+      return persistSettingsForm(form, '/api/profile', { birth_year: profile.birthYear, body_weight_kg: profile.bodyWeightKg, experience_level: profile.experienceLevel, equipment: profile.equipment }, { userProfile: profile });
+    }
+
+    function saveDisplaySettings(event) {
+      event.preventDefault();
+      const show = document.getElementById('settingsVideoPanel').checked;
+      return persistSettingsForm(event.currentTarget, '/api/preferences', { show_live_video_panel: show }, { showLiveVideoPanel: show });
+    }
+
     function getExerciseWeekProgress(weekNum, exerciseName) {
       const sessions = [];
       const sets = [];
@@ -4099,7 +4209,7 @@
       const achieved = sessions.length > 0 && sessions.every(session => session.progress.achieved);
       const counts = sets.reduce((result, set) => { result[set.exertion || 'unknown']++; return result; }, { unknown: 0, easy: 0, good: 0, max: 0 });
       const exertion = counts.max > 0 ? 'max' : counts.unknown > 0 ? 'unknown' : (sets.length > 0 && counts.easy >= Math.ceil(sets.length / 2) ? 'easy' : 'good');
-      return { skippedSets: sessions.reduce((sum, session) => sum + (session.skipped ? Math.max(0, session.progress.requiredSets - session.progress.completedSets) : 0), 0), unknownSets: counts.unknown, maxSets: counts.max, sessions, sets, achieved, exertion, completedSets: sum('completedSets'), achievedSets: sum('achievedSets'), requiredSets: sum('requiredSets'),
+      return { exerciseName, skippedSets: sessions.reduce((sum, session) => sum + (session.skipped ? Math.max(0, session.progress.requiredSets - session.progress.completedSets) : 0), 0), unknownSets: counts.unknown, maxSets: counts.max, sessions, sets, achieved, exertion, completedSets: sum('completedSets'), achievedSets: sum('achievedSets'), requiredSets: sum('requiredSets'),
         remainingReps: sum('remainingReps'), requiredReps, creditedReps: sum('creditedReps'),
         percent: requiredReps ? Math.floor(100 * sum('creditedReps') / requiredReps) : 0,
         targetReps: Math.max(0, ...sessions.map(session => session.progress.targetReps)),
@@ -4125,7 +4235,7 @@
     }
 
     function getNextProgression(progress, nextWeek) {
-      const increment = Number(appState.overloadIncrement) > 0 ? Number(appState.overloadIncrement) : 2;
+      const increment = getExerciseIncrement(progress.exerciseName);
       let weight = progress.targetWeight;
       let reps = progress.targetReps;
       const minReps = Number(progress.minReps ?? 8);
@@ -4839,35 +4949,9 @@
           </div>
         </div>
 
-        <!-- Overload Instellingen Bar -->
-        <div class="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2.5">
-          <div class="flex items-center justify-between text-xs">
-            <span class="font-bold text-slate-200 flex items-center gap-1.5">
-              <span>⚙️</span> Overload Instellingen & Strategie:
-            </span>
-            <span class="text-[11px] font-mono text-slate-400">Direct aanpasbaar</span>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <!-- Overload Stap -->
-            <div class="space-y-1">
-              <span class="text-slate-400 text-[11px]">Gewichtsverhoging per cyclus:</span>
-              <div class="grid grid-cols-3 gap-1.5">
-                <button onclick="setOverloadIncrement(1.0)" class="py-1 rounded-lg text-xs font-mono font-bold border transition cursor-pointer ${inc === 1.0 ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-900 text-slate-400 border-slate-800'}">1.0 kg</button>
-                <button onclick="setOverloadIncrement(2.0)" class="py-1 rounded-lg text-xs font-mono font-bold border transition cursor-pointer ${inc === 2.0 ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-900 text-slate-400 border-slate-800'}">2.0 kg ⭐</button>
-                <button onclick="setOverloadIncrement(2.5)" class="py-1 rounded-lg text-xs font-mono font-bold border transition cursor-pointer ${inc === 2.5 ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-900 text-slate-400 border-slate-800'}">2.5 kg</button>
-              </div>
-            </div>
-
-            <!-- Overload Frequentie / Tempo -->
-            <div class="space-y-1">
-              <span class="text-slate-400 text-[11px]">Overload Tempo (Wekelijks vs 2-Weken):</span>
-              <div class="grid grid-cols-2 gap-1.5">
-                <button onclick="setOverloadFrequency('weekly')" class="py-1 px-1 rounded-lg text-[11px] font-mono font-bold border transition cursor-pointer ${freq === 'weekly' ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-900 text-slate-400 border-slate-800'}">Wekelijks bij Doel</button>
-                <button onclick="setOverloadFrequency('biweekly')" class="py-1 px-1 rounded-lg text-[11px] font-mono font-bold border transition cursor-pointer ${freq === 'biweekly' ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-900 text-slate-400 border-slate-800'}">2 Weken Consolidatie</button>
-              </div>
-            </div>
-          </div>
+        <div class="p-3 rounded-xl border border-slate-800 bg-slate-950 text-xs text-slate-300 flex flex-wrap items-center justify-between gap-2">
+          <span>Standaard stap: ${inc} kg · ${freq === 'biweekly' ? 'Tweewekelijks beoordelen' : 'Wekelijks beoordelen'} · eigen oefeningstappen gaan voor</span>
+          <button onclick="closeWeekReportModal(); openSettingsModal()" class="text-blue-300 underline">Instellingen aanpassen</button>
         </div>
 
         <!-- Overzicht per Oefening -->
@@ -6068,10 +6152,10 @@
             <span class="text-base flex-shrink-0 mt-0.5">👤</span>
             <div class="space-y-0.5 leading-relaxed">
               <div class="font-bold text-slate-200">
-                Thuisgym Profiel: <span class="text-blue-400">Man, ~42 jaar, 82 kg</span>
+                Thuisgym Profiel: <span class="text-blue-400">${profileSummaryHtml()}</span>
               </div>
               <div class="text-[11px] text-slate-400">
-                Beschikbaar materiaal: Dumbbells tot 32kg, Barbell tot 100kg+, Verstelbaar bankje, Pull-up bar & Dip station. Oefeningen zijn 100% geoptimaliseerd voor thuissporters.
+                ${equipmentSummaryHtml()} <button onclick="openSettingsModal()" class="text-blue-300 underline">Profiel aanpassen</button>
               </div>
             </div>
           </div>
@@ -6686,7 +6770,7 @@
           ? appState.weeks[appState.currentWeek - 1][appState.currentDay][slotKey] 
           : null;
 
-        const inc = Number(appState.overloadIncrement) || 2.0;
+        const inc = getExerciseIncrement(selectedName);
 
         const adviceHtml = renderProgressDetails(appState.currentWeek, appState.currentDay, slotKey);
 
@@ -9063,7 +9147,7 @@
           </div>
         `;
 
-        const inc = Number(appState.overloadIncrement) || 2.0;
+        const inc = getExerciseIncrement(exerciseName);
 
         // Advies HTML voorbereiden
         let adviceCardHtml = "";
@@ -9085,10 +9169,10 @@
                 </span>
               </div>
               <div class="flex items-center gap-1.5 sm:gap-2">
-                <button onclick="openGuideModal('${slotKey}')" class="text-xs text-emerald-400 hover:text-emerald-300 font-mono font-bold flex items-center gap-1 transition cursor-pointer">
+                <button onclick="openGuideModal('${slotKey}')" class="text-xs text-blue-400 hover:text-blue-300 font-mono font-bold flex items-center gap-1 transition cursor-pointer">
                   <span>📖</span> Tips
                 </button>
-                <button onclick="focusOrToggleLiveVideo('${exerciseName.replace(/'/g, "\\'")}')" class="text-xs text-rose-400 hover:text-rose-300 font-mono font-bold flex items-center gap-1 transition cursor-pointer" title="Toon video instructie direct naast je training">
+                <button onclick="focusOrToggleLiveVideo('${exerciseName.replace(/'/g, "\\'")}')" class="text-xs text-blue-400 hover:text-blue-300 font-mono font-bold flex items-center gap-1 transition cursor-pointer" title="Toon video instructie direct naast je training">
                   <span>▶</span> Video Ernaast
                 </button>
                 <a href="${getExerciseVideoData(exerciseName).url}" target="_blank" rel="noopener noreferrer" class="text-xs text-slate-400 hover:text-slate-200 font-mono flex items-center gap-0.5 transition cursor-pointer" title="Open rechtstreeks in YouTube">
@@ -9115,7 +9199,7 @@
           </div>
 
           <!-- ADVIES BANNER (PROGRESSIVE OVERLOAD / HERHALEN / DELOAD / STARTGEWICHT) -->
-          ${adviceCardHtml}
+          <p class="text-xs text-slate-300">${isDeloadWeek(liveWorkout.weekNum) ? '☾ Hersteldoel' : '🎯 Gepland'}: ${maxSetsPerSlot} × ${isBW ? 'BW' : advice.advisedWeight + ' kg'} × ${targetReps} reps</p>
 
           <!-- SLIMME COACH NOTITIE OVER RUSTTIJD -->
           ${advice.coachRestNote ? `
@@ -9185,16 +9269,16 @@
                     placeholder="${(advice.hasPriorData && advice.advisedWeight) ? advice.advisedWeight : '0.0'}"
                     value="${liveWorkout.tempWeight > 0 ? liveWorkout.tempWeight : ''}" 
                     oninput="setLiveWeightManual(this.value)"
-                    class="w-full text-center text-2xl sm:text-3xl font-bold font-mono text-emerald-400 bg-slate-900 border border-slate-700/80 rounded-xl py-2 focus:outline-none focus:border-emerald-400 shadow-inner"
+                    class="w-full text-center text-2xl sm:text-3xl font-bold font-mono text-slate-100 bg-slate-900 border border-slate-700/80 rounded-xl py-2 focus:outline-none focus:border-emerald-400 shadow-inner"
                   />
                 </div>
 
                 <!-- Sneltoetsen Gewicht -->
                 <div class="grid grid-cols-4 gap-1.5">
-                  <button onclick="adjustLiveWeight(-2.0)" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-mono font-bold text-slate-300 border border-slate-800 active:scale-95 transition cursor-pointer">-2.0</button>
-                  <button onclick="adjustLiveWeight(-1.0)" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-mono font-bold text-slate-300 border border-slate-800 active:scale-95 transition cursor-pointer">-1.0</button>
-                  <button onclick="adjustLiveWeight(1.0)" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-mono font-bold text-slate-300 border border-slate-800 active:scale-95 transition cursor-pointer">+1.0</button>
-                  <button onclick="adjustLiveWeight(2.0)" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-mono font-bold text-emerald-400 border border-slate-800 active:scale-95 transition cursor-pointer">+2.0 ⭐</button>
+                  <button onclick="adjustLiveWeight(${-2 * inc})" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-mono font-bold text-slate-300 border border-slate-800 active:scale-95 transition cursor-pointer">−${2 * inc}</button>
+                  <button onclick="adjustLiveWeight(${-inc})" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-mono font-bold text-slate-300 border border-slate-800 active:scale-95 transition cursor-pointer">−${inc}</button>
+                  <button onclick="adjustLiveWeight(${inc})" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-mono font-bold text-slate-300 border border-slate-800 active:scale-95 transition cursor-pointer">+${inc}</button>
+                  <button onclick="adjustLiveWeight(${2 * inc})" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-mono font-bold text-emerald-400 border border-slate-800 active:scale-95 transition cursor-pointer">+${2 * inc}</button>
                 </div>
               `}
             </div>
@@ -9216,7 +9300,7 @@
                   min="1" 
                   value="${liveWorkout.tempReps}" 
                   oninput="setLiveRepsManual(this.value)"
-                  class="w-full text-center text-2xl sm:text-3xl font-bold font-mono text-blue-400 bg-slate-900 border border-slate-700/80 rounded-xl py-2 focus:outline-none focus:border-blue-400 shadow-inner"
+                  class="w-full text-center text-2xl sm:text-3xl font-bold font-mono text-slate-100 bg-slate-900 border border-slate-700/80 rounded-xl py-2 focus:outline-none focus:border-blue-400 shadow-inner"
                 />
               </div>
 
@@ -9262,10 +9346,10 @@
                 id="lwExertionBtn_good" 
                 class="py-2.5 px-2 rounded-xl text-center border transition-all cursor-pointer flex flex-col items-center gap-1 ${
                   (liveWorkout.tempExertion === 'good')
-                    ? 'bg-amber-950/80 border-amber-500 text-amber-300 shadow-md shadow-amber-950/50 ring-2 ring-amber-500/40' 
+                    ? 'bg-blue-950/80 border-blue-500 text-blue-300 ring-2 ring-blue-500/40' 
                     : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-amber-500/40 hover:text-slate-200'
                 }">
-                <span class="text-base">🟡</span>
+                <span class="text-base">✓</span>
                 <span class="text-xs font-black uppercase tracking-tight">GOED</span>
                 <span class="text-[9px] text-slate-400 leading-tight">Stevig & strak</span>
               </button>
@@ -9670,7 +9754,7 @@
 
       // Render of ververs Athlean-X video companion paneel (tablet & desktop side-by-side)
       renderLiveVideoCompanion();
-      if (liveWorkout.phase === 'set') container.innerHTML += recoveryCheckHtml(liveWorkout.weekNum, liveWorkout.dayKey);
+      if (liveWorkout.phase === 'set') container.innerHTML += `<details class="rounded-xl border border-slate-700 bg-slate-950/60 p-3 text-xs"><summary class="cursor-pointer font-bold text-blue-300">ⓘ Voortgang, vorige trainingen & uitleg</summary><div class="mt-3 space-y-3">${renderProgressDetails(liveWorkout.weekNum, liveWorkout.dayKey, liveWorkout.slots[liveWorkout.currentSlotIndex])}${recoveryCheckHtml(liveWorkout.weekNum, liveWorkout.dayKey)}</div></details>`;
     }
 
     /* 11. DASHBOARD & WORKLOAD GRAFIEK MET PERIODISERING */
@@ -10595,6 +10679,7 @@
     /* 13. START */
     async function startApp() {
       await initAppState();
+      if (window.location.hash === "#instellingen") openSettingsModal();
       document.getElementById("ironforgeBootOverlay")?.remove();
       renderWeekPills();
       switchDay(appState.currentDay || "mon");
