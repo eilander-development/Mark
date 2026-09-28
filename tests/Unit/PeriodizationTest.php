@@ -47,9 +47,9 @@ class PeriodizationTest extends TestCase
         $this->assertSame(80.0, $this->periodization->advisedWeight(80, 3, 2.5, 'biweekly', 'easy', true));
     }
 
-    public function test_missed_max_set_drops_one_increment(): void
+    public function test_isolated_missed_max_set_keeps_weight_until_confirmed(): void
     {
-        $this->assertSame(77.5, $this->periodization->advisedWeight(80, 3, 2.5, 'weekly', 'max', false));
+        $this->assertSame(80.0, $this->periodization->advisedWeight(80, 3, 2.5, 'weekly', 'max', false));
         $this->assertSame(80.0, $this->periodization->advisedWeight(80, 3, 2.5, 'weekly', 'good', false));
     }
 

@@ -10,8 +10,8 @@
             <details class="mt-3 text-sm text-slate-300"><summary class="cursor-pointer text-blue-300">Reps, gewicht en inspanning</summary>
                 <ul class="mt-3 list-disc space-y-2 pl-5">
                     <li>Alle weeksets worden samen beoordeeld. Extra reps compenseren geen te lichte of ontbrekende set.</li>
-                    <li>Na behaalde doelen: maximaal twee reps erbij binnen 8–12 of 12–15. Aan de bovengrens: één gewichtsstap van {{ $increment }} kg, dan opnieuw opbouwen vanaf de ondergrens.</li>
-                    <li>Vlot (easy) en goed (good) geven geen dubbele gewichtsstap. Eén maximale set blokkeert verhogen; bij gemiste doelen kan een lager positief gewicht worden geadviseerd.</li>
+                    <li>Per periodedoel: spiergroei 8–12 of 12–15 reps, maximaal twee reps erbij. Krachtaccent: 4–6 reps, maximaal één rep erbij. Combinatie gebruikt krachtaccent voor de eerste twee Upper A-oefeningen. Aan de bovengrens: één gewichtsstap van {{ $increment }} kg, dan opnieuw opbouwen vanaf de ondergrens.</li>
+                    <li>Vlot (easy) en goed (good) geven geen dubbele gewichtsstap. Een maximale set vraagt bevestiging in een volgende opbouwweek. Pas bij herhaald gemiste doelen met maximale inspanning wordt een lager positief gewicht geadviseerd.</li>
                     <li>Niet beoordeeld of training overgeslagen: geen verhoging. Uitgevoerde sets blijven wel meetellen als werk.</li>
                     <li>Ritme: {{ $frequency === 'weekly' ? 'wekelijks beoordelen' : 'tweewekelijks; even opbouwweken consolideren' }}. Inspanning is zelfrapportage, geen gemeten RPE.</li>
                 </ul>

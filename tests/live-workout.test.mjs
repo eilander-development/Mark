@@ -27,7 +27,7 @@ function setup() {
         showLiveWorkoutSummary() { context.finished = true; },
         console,
     });
-    for (const name of ['getExerciseIncrement', 'equipmentLabels', 'profileSummaryHtml', 'equipmentSummaryHtml', 'settingsExerciseNames', 'openSettingsModal', 'saveTrainingSettings', 'saveProfileSettings', 'saveDisplaySettings', 'renderBenchmarkModal', 'trainingEvidenceHtml', 'getRecoveryLoad', 'recoveryCheckHtml', 'earlyRecoveryAdviceHtml', 'performanceChangeHtml', 'comparisonIndicatorHtml', 'updateWorkoutHeroButtons', 'renderLockedRoutineView', 'renderWorkloadChart', 'getPeriodDashboardData', 'periodDashboardHtml', 'updateDayTitleBanner', 'volumeComparisonClass', 'getVolumeComparison', 'calculateSessionVolume', 'calculateWeekVolume', 'canStartNewPeriod', 'executeStartNewMesocycle', 'escapeReportText', 'getExerciseHistory', 'formatHistorySets', 'compareHistoryEntries', 'exerciseHistoryHtml', 'preparationDetailsHtml', 'weekExerciseOutlookHtml', 'getOverloadOutlook', 'completedDayResultsHtml', 'getNextSplitDay', 'getLiveRestStats', 'getTrainingTiming', 'summarizeTrainingTimes', 'getCycleReport', 'getCycleHistoryReport', 'calculate1RM', 'getAllTimeRecord', 'isSetNewAllTimePR', 'lastHeavyWeekNum', 'peakSlotWeight', 'calculateSetProgress', 'getSlotProgress', 'getExerciseWeekProgress', 'getNextProgression', 'findPreviousExerciseSession', 'rememberLiveInput', 'renderProgressDetails', 'getDayCompletionStatus', 'getWeekEvaluation', 'getSameWeekExerciseLogged', 'getSlotTargetAdvice', 'autoApplyOverloadAndDeloadInheritance', 'prepareCurrentLiveSetValues', 'submitLiveSet', 'adjustLiveReps', 'setLiveRepsManual', 'setLiveWeightManual', 'updateLiveSubmitButtonText']) {
+    for (const name of ['applyGoalOrdering', 'goalRepetitionRange', 'trainingGoalLabel', 'weekMuscleSets', 'muscleSetsHtml', 'getExerciseIncrement', 'equipmentLabels', 'profileSummaryHtml', 'equipmentSummaryHtml', 'settingsExerciseNames', 'openSettingsModal', 'saveTrainingSettings', 'saveProfileSettings', 'saveDisplaySettings', 'renderBenchmarkModal', 'trainingEvidenceHtml', 'getRecoveryLoad', 'recoveryCheckHtml', 'earlyRecoveryAdviceHtml', 'performanceChangeHtml', 'comparisonIndicatorHtml', 'updateWorkoutHeroButtons', 'renderLockedRoutineView', 'renderWorkloadChart', 'getPeriodDashboardData', 'periodDashboardHtml', 'updateDayTitleBanner', 'volumeComparisonClass', 'getVolumeComparison', 'calculateSessionVolume', 'calculateWeekVolume', 'canStartNewPeriod', 'executeStartNewMesocycle', 'escapeReportText', 'getExerciseHistory', 'formatHistorySets', 'compareHistoryEntries', 'exerciseHistoryHtml', 'preparationDetailsHtml', 'weekExerciseOutlookHtml', 'getOverloadOutlook', 'completedDayResultsHtml', 'getNextSplitDay', 'getLiveRestStats', 'getTrainingTiming', 'summarizeTrainingTimes', 'getCycleReport', 'getCycleHistoryReport', 'calculate1RM', 'getAllTimeRecord', 'isSetNewAllTimePR', 'lastHeavyWeekNum', 'peakSlotWeight', 'calculateSetProgress', 'getSlotProgress', 'getExerciseWeekProgress', 'getNextProgression', 'findPreviousExerciseSession', 'rememberLiveInput', 'renderProgressDetails', 'getDayCompletionStatus', 'getWeekEvaluation', 'getSameWeekExerciseLogged', 'getSlotTargetAdvice', 'autoApplyOverloadAndDeloadInheritance', 'prepareCurrentLiveSetValues', 'submitLiveSet', 'adjustLiveReps', 'setLiveRepsManual', 'setLiveWeightManual', 'updateLiveSubmitButtonText']) {
         const start = html.indexOf(`    function ${name}(`);
         const end = html.indexOf('\n    function ', start + 1);
         vm.runInContext(html.slice(start, end), context);
@@ -893,4 +893,83 @@ test('settings opens with saved profile and unique exercise overrides and escape
     assert.equal((elements.trainingSettingsContent.innerHTML.match(/data-exercise="dumbbell bench press"/g) || []).length, 1);
     assert.doesNotMatch(elements.trainingSettingsContent.innerHTML, /<script>/);
     assert.match(elements.trainingSettingsContent.innerHTML, /&lt;script&gt;/);
+});
+
+
+test('muscle sets separate direct and supporting work and keep missed-target work in the count', () => {
+    const { context: c } = setup();
+    c.appState.trainingRules = { muscles: { chest: 'Borst', triceps: 'Triceps' }, exerciseMuscles: { 'dumbbell bench press': { primary: 'chest', secondary: ['triceps'] } } };
+    Object.assign(c.appState.weeks[1].mon.bench.sets[0], { weight: 15, reps: 3, completed: true });
+    Object.assign(c.appState.weeks[1].mon.bench.sets[1], { weight: 15, reps: 12, completed: false });
+    Object.assign(c.appState.weeks[1].mon.bench.sets[2], { weight: 0, reps: 12, completed: true });
+    const report = c.weekMuscleSets(1);
+    assert.equal(report.groups.chest.completed, 1);
+    assert.equal(report.groups.chest.planned, 6);
+    assert.equal(report.groups.triceps.completed, 0);
+    assert.equal(report.groups.triceps.indirect, 1);
+    assert.match(c.muscleSetsHtml(1), /1\/6/);
+    c.appState.weeks[7] = JSON.parse(JSON.stringify(c.appState.weeks[1]));
+    const deload = c.weekMuscleSets(7);
+    assert.equal(deload.groups.chest.planned, 4);
+    assert.equal(deload.isDeload, true);
+    assert.match(c.muscleSetsHtml(7), /Herstelsets/);
+    assert.doesNotMatch(c.muscleSetsHtml(7), /Rond 10/);
+    c.appState.weeks[1].thu.bench.selectedName = '<Unknown>';
+    assert.match(c.muscleSetsHtml(1), /&lt;Unknown&gt;/);
+    assert.equal(c.weekMuscleSets(1).groups.chest.planned, 3);
+});
+
+test('one maximal set can be confirmed next week but repeated missed maximal sessions reduce the goal', () => {
+    const { context: c } = setup();
+    c.appState.weeks[2] = JSON.parse(JSON.stringify(c.appState.weeks[1]));
+    for (const week of [1, 2]) for (const day of ['mon', 'thu']) {
+        const slot = c.appState.weeks[week][day].bench;
+        slot.progressionPlan = { weight: 15, reps: 8, minReps: 8, maxReps: 12 };
+        slot.sets.forEach((set, index) => Object.assign(set, { weight: 15, reps: 8, completed: true, exertion: day === 'mon' && index === 2 ? 'max' : 'good' }));
+    }
+    const first = c.getExerciseWeekProgress(1, 'Dumbbell Bench Press');
+    assert.equal(c.getNextProgression(first, 2).change, 'repeat');
+    const confirmed = c.getExerciseWeekProgress(2, 'Dumbbell Bench Press');
+    assert.equal(confirmed.confirmedEffort, true);
+    assert.equal(c.getNextProgression(confirmed, 3).reps, 10);
+    c.appState.weeks[2].mon.bench.progressionPlan.reps = 10;
+    c.appState.weeks[2].thu.bench.progressionPlan.reps = 10;
+    for (const day of ['mon', 'thu']) c.appState.weeks[2][day].bench.sets.forEach(set => { set.reps = 10; });
+    assert.equal(c.getExerciseWeekProgress(2, 'Dumbbell Bench Press').confirmedEffort, false);
+    c.appState.weeks[2].thu.bench.sets[0].exertion = 'max';
+    assert.equal(c.getExerciseWeekProgress(2, 'Dumbbell Bench Press').confirmedEffort, false);
+    for (const day of ['mon', 'thu']) c.appState.weeks[2][day].bench.sets.forEach(set => Object.assign(set, { reps: 6, exertion: 'max' }));
+    const missed = c.getExerciseWeekProgress(2, 'Dumbbell Bench Press');
+    assert.equal(missed.repeatedMaxMisses, true);
+    assert.equal(c.getNextProgression(missed, 3).weight, 13);
+});
+
+test('strength and combined goals change only designated ranges and preserve frozen plans', () => {
+    const { context: c } = setup();
+    assert.deepEqual(JSON.parse(JSON.stringify(c.goalRepetitionRange('strength', 'slot_a1', 8))), { minReps: 4, maxReps: 6 });
+    assert.equal(c.goalRepetitionRange('combined', 'slot_b2', 8).minReps, 8);
+    assert.equal(c.goalRepetitionRange('strength', 'slot_a1', 8, true).minReps, 8);
+    const progress = { targetWeight: 20, targetReps: 4, minReps: 4, maxReps: 6, completedSets: 6, requiredSets: 6, achieved: true, exertion: 'good', isBodyweight: false };
+    assert.equal(c.getNextProgression(progress, 2).reps, 5);
+    assert.equal(c.getNextProgression({ ...progress, targetReps: 6 }, 2).reps, 4);
+    assert.equal(c.getNextProgression({ ...progress, targetReps: 6 }, 2).weight, 22);
+    c.appState.trainingGoal = 'strength';
+    c.appState.weeks[1].mon.bench.progressionPlan = { weight: 15, reps: 10, minReps: 8, maxReps: 12 };
+    assert.equal(c.getSlotProgress(1, 'mon', 'bench').minReps, 8);
+    c.SPLIT_INFO.tue = { slots: ['slot_b1', 'slot_b2', 'slot_b3'] };
+    c.applyGoalOrdering();
+    assert.equal(c.SPLIT_INFO.tue.slots[0], 'slot_b2');
+    c.appState.trainingGoal = 'hypertrophy';
+    c.applyGoalOrdering();
+    assert.equal(c.SPLIT_INFO.tue.slots[0], 'slot_b1');
+});
+
+test('week report uses a single focusable scroll container constrained to the viewport', () => {
+    const start = html.indexOf('<div id="weekReportModal"');
+    const end = html.indexOf('<!--', start);
+    const modal = html.slice(start, end);
+    assert.match(modal, /id="weekReportScrollArea"[^>]*tabindex="0"/);
+    assert.match(modal, /max-h-\[calc\(100dvh-2rem\)\]/);
+    assert.equal((modal.match(/overflow-y-auto/g) || []).length, 1);
+    assert.doesNotMatch(modal, /overflow-hidden|no-scrollbar/);
 });

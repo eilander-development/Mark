@@ -28,6 +28,16 @@
                     <tr>
                         <td class="px-3 py-3 align-top">
                             <div class="font-bold text-slate-100">{{ $exercise->name }}</div>
+                            @php($classification = $trainingRules['exerciseMuscles'][mb_strtolower(trim($exercise->name))] ?? null)
+                            <details class="mt-1 text-xs text-slate-400"><summary class="cursor-pointer text-blue-300">Indeling weeksets</summary>
+                                @if ($classification)
+                                    <p>Direct: {{ $trainingRules['muscles'][$classification['primary']] }}.</p>
+                                    <p>Ondersteunend: {{ collect($classification['secondary'])->map(fn ($key) => $trainingRules['muscles'][$key])->join(', ') ?: 'Geen ingedeeld' }}.</p>
+                                @else
+                                    <p>Niet ingedeeld; telt niet mee in het spiergroepoverzicht.</p>
+                                @endif
+                                <p>Praktische indeling; de uitvoering beïnvloedt de belasting.</p>
+                            </details>
                             <div class="text-[11px] text-slate-500">{{ $exercise->channel ?: 'Geen kanaal' }}</div>
                         </td>
                         <td class="px-3 py-3 align-top">

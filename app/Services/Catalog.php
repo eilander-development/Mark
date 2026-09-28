@@ -46,9 +46,16 @@ class Catalog
     /**
      * @return array<string, array<string, mixed>>
      */
-    public function splits(): array
+    public function splits(string $goal = 'hypertrophy'): array
     {
-        return config('ironforge.splits');
+        $splits = config('ironforge.splits');
+        if ($goal === 'strength') {
+            foreach (['tue', 'fri'] as $day) {
+                $splits[$day]['slots'] = ['slot_b2', 'slot_b1', 'slot_b3', 'slot_b4', 'slot_b5', 'slot_b6'];
+            }
+        }
+
+        return $splits;
     }
 
     /**

@@ -160,6 +160,7 @@ class TrainingBackup
 
             Cycle::query()->create([
                 'number' => $number,
+                'training_goal' => in_array($item['trainingGoal'] ?? $item['snapshot']['trainingGoal'] ?? null, array_keys(TrainingPrescription::GOALS), true) ? ($item['trainingGoal'] ?? $item['snapshot']['trainingGoal']) : null,
                 'is_current' => false,
                 'total_weeks' => (int) config('ironforge.total_weeks', 7),
                 'started_at' => $started,

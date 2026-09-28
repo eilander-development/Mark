@@ -222,22 +222,24 @@ class Periodization
         } elseif ($progress['achieved'] && $this->isBiweeklyHoldWeek($nextWeek, $frequency)) {
             $status = 'Consolideren';
             $reason = 'Doel gehaald; nog een week hetzelfde gewicht en dezelfde reps volgens je 2-weken schema.';
-        } elseif ($progress['exertion'] === 'max') {
-            $reason = 'Minstens een set was maximaal; eerst herhalen met controle. Nog geen extra reps of gewicht.';
+        } elseif ($progress['exertion'] === 'max' && ! ($progress['confirmedEffort'] ?? false)) {
+            $status = $progress['achieved'] ? 'Doel gehaald, maar zwaar' : 'Doel nog bevestigen';
+            $reason = 'Een maximale set is een signaal, geen automatische achteruitgang. Herhaal het doel; bevestiging in een volgende opbouwweek kan alsnog opbouw toestaan.';
             $reduced = round($weight - $increment, 1);
-            if (! $progress['achieved'] && ! $progress['isBodyweight'] && $reduced > 0 && $reduced < $weight) {
+            if (! $progress['achieved'] && ($progress['repeatedMaxMisses'] ?? false) && ! $progress['isBodyweight'] && $reduced > 0 && $reduced < $weight) {
                 $weight = $reduced;
                 $status = 'Lichter herhalen';
                 $change = 'reduce';
-                $reason = 'Doel gemist met maximale inspanning: één ingestelde gewichtsstap terug.';
+                $reason = 'Herhaald doelen gemist met maximale inspanning: één ingestelde gewichtsstap terug.';
             }
         } elseif ($progress['achieved']) {
             $achievedReps = max($reps, (int) ($progress['achievedReps'] ?? $reps));
+            $repStep = $minReps < 8 ? 1 : 2;
             if ($progress['isBodyweight'] || $achievedReps < $maxReps) {
-                $reps = $progress['isBodyweight'] ? $achievedReps + 2 : min($maxReps, $achievedReps + 2);
+                $reps = $progress['isBodyweight'] ? $achievedReps + $repStep : min($maxReps, $achievedReps + $repStep);
                 $status = 'Reps opbouwen';
                 $change = 'reps';
-                $reason = 'Doel gehaald. Zelfde gewicht, maximaal 2 herhalingen per set erbij'.($progress['isBodyweight'] ? '.' : ' richting '.$maxReps.' reps.');
+                $reason = 'Doel gehaald. Zelfde gewicht, maximaal '.$repStep.' herhalingen per set erbij'.($progress['isBodyweight'] ? '.' : ' richting '.$maxReps.' reps.');
             } else {
                 $weight = round($weight + $increment, 1);
                 $reps = $minReps;

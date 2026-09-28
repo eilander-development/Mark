@@ -32,10 +32,11 @@ class MarkerState
             ->map(fn (Cycle $item) => [
                 'id' => $item->id,
                 'number' => $item->number,
+                'trainingGoal' => $item->training_goal,
                 'started_at' => optional($item->started_at)?->toDateString(),
                 'completed_at' => optional($item->completed_at)?->toDateString(),
                 'snapshot' => $item->sessions->isNotEmpty()
-                    ? array_merge($item->snapshot ?? [], ['weeksSnapshot' => $this->weeksForCycle($item)])
+                    ? array_merge($item->snapshot ?? [], ['weeksSnapshot' => $this->weeksForCycle($item), 'trainingGoal' => $item->training_goal])
                     : $item->snapshot,
             ])
             ->all();
@@ -43,6 +44,8 @@ class MarkerState
         return [
             'appState' => [
                 'currentCycle' => (int) $cycle->number,
+                'trainingGoal' => $cycle->training_goal ?? 'hypertrophy',
+                'trainingRules' => app(TrainingPrescription::class)->rules(),
                 'cyclesHistory' => $history,
                 'cycleStartedAt' => optional($cycle->started_at)?->toDateString() ?? now()->toDateString(),
                 'currentWeek' => (int) $prefs->current_week,
@@ -50,7 +53,7 @@ class MarkerState
                 'currentDay' => $prefs->current_day,
                 'soundEnabled' => (bool) $prefs->sound_enabled,
                 'overloadIncrement' => (float) $prefs->overload_increment,
-            'exerciseIncrements' => $prefs->exercise_increments ?? [],
+                'exerciseIncrements' => $prefs->exercise_increments ?? [],
                 'overloadFrequency' => $prefs->overload_frequency,
                 'preferredRestTimes' => $prefs->preferred_rest_times ?? [],
                 'customExerciseVideos' => $prefs->custom_exercise_videos ?? [],

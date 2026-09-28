@@ -33,9 +33,9 @@ class CycleFactory
     /**
      * @param  array<string, array<string, array<string, mixed>>>|null  $schema
      */
-    public function createCycle(int $number, bool $carryForward = false, ?Cycle $from = null, ?array $schema = null): Cycle
+    public function createCycle(int $number, bool $carryForward = false, ?Cycle $from = null, ?array $schema = null, string $goal = 'hypertrophy'): Cycle
     {
-        return DB::transaction(function () use ($number, $carryForward, $from, $schema) {
+        return DB::transaction(function () use ($number, $carryForward, $from, $schema, $goal) {
             Cycle::query()->where('is_current', true)->update([
                 'is_current' => false,
                 'completed_at' => now(),
@@ -43,6 +43,7 @@ class CycleFactory
 
             $cycle = Cycle::query()->create([
                 'number' => $number,
+                'training_goal' => $goal,
                 'is_current' => true,
                 'total_weeks' => (int) config('ironforge.total_weeks', 7),
                 'started_at' => now()->toDateString(),
@@ -106,7 +107,7 @@ class CycleFactory
         }
 
         $catalog = $this->catalog->allSlots();
-        $splits = $this->catalog->splits();
+        $splits = $this->catalog->splits($cycle->training_goal ?? 'hypertrophy');
         $setCount = (int) config('ironforge.sets_per_slot', 3);
         for ($week = 1; $week <= $cycle->total_weeks; $week++) {
             $isDeload = $this->periodization->isDeloadWeek($week);
@@ -126,7 +127,8 @@ class CycleFactory
                         [
                             'selected_name' => $item['defaultName'],
                             'note' => $isDeload ? 'Deload Week: 70% intensiteit, 2 sets' : '',
-                            'target_reps' => $item['targetReps'],
+                            'target_reps' => app(TrainingPrescription::class)->range($cycle->training_goal ?? 'hypertrophy', $slotKey, (int) $item['targetReps'], $this->periodization->isBodyweight($item['defaultName']))['minReps'] < 8
+                                ? 4 : $item['targetReps'],
                         ],
                     );
                     for ($i = 1; $i <= $setCount; $i++) {
@@ -173,9 +175,9 @@ class CycleFactory
                     continue;
                 }
                 $slot->selected_name = $name;
-                if (isset($item['targetReps'])) {
-                    $slot->target_reps = (int) $item['targetReps'];
-                }
+                $range = app(TrainingPrescription::class)->range($to->training_goal ?? 'hypertrophy', $slot->slot_key, (int) $this->catalog->slot($slot->slot_key)['targetReps'], $this->periodization->isBodyweight($name));
+                $requestedReps = (int) ($item['targetReps'] ?? $range['minReps']);
+                $slot->target_reps = $range['minReps'] < 8 && $requestedReps > $range['maxReps'] ? $range['minReps'] : max($range['minReps'], min($range['maxReps'], $requestedReps));
                 $slot->save();
 
                 $weight = isset($item['weight']) ? (float) $item['weight'] : 0.0;

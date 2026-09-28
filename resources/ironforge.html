@@ -362,8 +362,8 @@
 
   <!-- WEEK AFRONDINGSRAPPORT & OVERLOAD ANALYSE MODAL -->
   <div id="weekReportModal" class="hidden fixed inset-0 z-[75] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md" style="z-index: 75;" onclick="if(event.target === this) closeWeekReportModal()">
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col overflow-hidden text-slate-200" onclick="event.stopPropagation()">
-      <div id="weekReportModalContent" class="flex-1 overflow-y-auto no-scrollbar space-y-4">
+    <div id="weekReportScrollArea" role="dialog" aria-modal="true" aria-label="Weekrapport" tabindex="0" class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl p-4 sm:p-6 shadow-2xl space-y-4 max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain text-slate-200" onclick="event.stopPropagation()">
+      <div id="weekReportModalContent" class="space-y-4">
         <!-- Wordt dynamisch gerenderd door renderWeekReportModal() -->
       </div>
     </div>
@@ -3198,6 +3198,8 @@
       if (typeof appState !== "undefined" && appState.bodyweightTargetReps && appState.bodyweightTargetReps[w] && appState.bodyweightTargetReps[w][exerciseName]) {
         return Number(appState.bodyweightTargetReps[w][exerciseName]);
       }
+      const goalRange = goalRepetitionRange(appState.trainingGoal, slotKey, EXERCISE_CATALOG[slotKey]?.targetReps || 8, isExerciseBodyweight(exerciseName));
+      if (goalRange.minReps < 8) return goalRange.minReps;
       const details = getExerciseDetails(exerciseName, slotKey);
       if (details && details.targetReps) return details.targetReps;
       const catalogItem = slotKey && EXERCISE_CATALOG[slotKey] ? EXERCISE_CATALOG[slotKey] : null;
@@ -3324,6 +3326,8 @@
       if (appState.soundEnabled === undefined) appState.soundEnabled = true;
       if (!appState.preferredRestTimes) appState.preferredRestTimes = {};
       if (!appState.overloadIncrement) appState.overloadIncrement = 2.0;
+      if (!appState.trainingGoal) appState.trainingGoal = 'hypertrophy';
+      applyGoalOrdering();
       if (!appState.overloadFrequency) appState.overloadFrequency = "weekly";
       if (!appState.userProfile) {
         appState.userProfile = {
@@ -3505,7 +3509,7 @@
         const next = appState;
         if ((next.currentCycle || 1) > (prev.currentCycle || 1)) {
           const schema = next.pendingCycleSchema || null;
-          const started = await jsonApi("/api/cycles", "POST", schema ? { schema, close_current_period: true } : { close_current_period: true });
+          const started = await jsonApi("/api/cycles", "POST", schema ? { schema, close_current_period: true, training_goal: next.trainingGoal || 'hypertrophy' } : { close_current_period: true, training_goal: next.trainingGoal || 'hypertrophy' });
           if (!started.ok) throw new Error("cycles HTTP " + started.status);
           delete next.pendingCycleSchema;
           const fresh = await fetch("/api/marker-state", { headers: { Accept: "application/json" }, cache: "no-store" });
@@ -4084,9 +4088,67 @@
       const firstPlanned = slot.sets.find(set => Number(set.weight) > 0);
       const plan = slot.progressionPlan || { weight: isBW ? 0 : Number(firstLogged?.weight || firstPlanned?.weight || 0), reps: getExerciseTargetReps(name, slotKey, weekNum, dayKey) };
       const baseReps = Number(EXERCISE_CATALOG[slotKey].targetReps || 8);
-      const minReps = Number(plan.minReps || (baseReps >= 12 ? 12 : 8));
-      const maxReps = Number(plan.maxReps || (baseReps >= 12 ? 15 : 12));
+      const range = goalRepetitionRange(appState.trainingGoal, slotKey, baseReps, isBW);
+      const minReps = Number(plan.minReps || range.minReps);
+      const maxReps = Number(plan.maxReps || range.maxReps);
       return { ...calculateSetProgress(slot.sets, Number(plan.weight), Number(plan.reps), isDeloadWeek(weekNum) ? 2 : 3, isBW), minReps, maxReps };
+    }
+
+    function applyGoalOrdering() {
+      for (const day of ['tue', 'fri']) {
+        if (!SPLIT_INFO[day]) continue;
+        const first = appState.trainingGoal === 'strength' ? ['slot_b2', 'slot_b1'] : ['slot_b1', 'slot_b2'];
+        SPLIT_INFO[day].slots = [...first, ...SPLIT_INFO[day].slots.filter(key => !first.includes(key))];
+      }
+    }
+
+    function trainingGoalLabel(goal = appState.trainingGoal) {
+      return ({ hypertrophy: 'Spiergroei', strength: 'Kracht', combined: 'Combinatie' })[goal] || 'Niet vastgelegd';
+    }
+
+    function goalRepetitionRange(goal, slotKey, baseReps, bodyweight = false) {
+      const strengthSlots = goal === 'strength' ? ['slot_a1', 'slot_a2', 'slot_b2'] : goal === 'combined' ? ['slot_a1', 'slot_a2'] : [];
+      return !bodyweight && strengthSlots.includes(slotKey) ? { minReps: 4, maxReps: 6 } : baseReps >= 12 ? { minReps: 12, maxReps: 15 } : { minReps: 8, maxReps: 12 };
+    }
+
+    function weekMuscleSets(weekNum, weeks = appState.weeks) {
+      const map = appState.trainingRules?.exerciseMuscles || {};
+      const groups = {}, unknown = new Set();
+      const required = isDeloadWeek(weekNum) ? 2 : 3;
+      for (const dayKey of ['mon', 'tue', 'thu', 'fri']) {
+        const day = weeks[weekNum]?.[dayKey];
+        for (const key of SPLIT_INFO[dayKey]?.slots || []) {
+          const slot = day?.[key];
+          if (!slot) continue;
+          const name = slot.selectedName || EXERCISE_CATALOG[key]?.defaultName || '';
+          const classification = map[name.trim().toLowerCase()];
+          if (!classification) { unknown.add(name); continue; }
+          const completed = (slot.sets || []).slice(0, required).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(name) || Number(set.weight) > 0)).length;
+          for (const group of [classification.primary, ...classification.secondary]) {
+            groups[group] ||= { planned: 0, completed: 0, indirect: 0, exercises: [] };
+            const direct = group === classification.primary;
+            groups[group].planned += direct ? required : 0;
+            groups[group].completed += direct ? completed : 0;
+            groups[group].indirect += direct ? 0 : completed;
+            groups[group].exercises.push({ name, day: dayKey, direct, completed, planned: required, skipped: !!day.skipped });
+          }
+        }
+      }
+      return { groups, unclassified: [...unknown], isDeload: isDeloadWeek(weekNum) };
+    }
+
+    function muscleSetsHtml(weekNum) {
+      const data = weekMuscleSets(weekNum);
+      const labels = appState.trainingRules?.muscles || {};
+      const color = data.isDeload ? 'bg-purple-400' : 'bg-blue-500';
+      return `<section class="rounded-2xl border ${data.isDeload ? 'border-purple-700 bg-purple-950/30' : 'border-slate-700 bg-slate-950/60'} p-4 space-y-3"><div class="flex flex-wrap justify-between gap-2"><h4 class="font-bold text-sm">${data.isDeload ? '☾ Herstelsets' : 'Weeksets per spiergroep'}</h4><span class="text-xs text-slate-400">Week ${weekNum} · uitgevoerd / gepland</span></div>
+        <div class="grid gap-3 sm:grid-cols-2">${Object.entries(labels).map(([key, label]) => {
+          const row = data.groups[key] || { completed: 0, planned: 0, indirect: 0, exercises: [] };
+          const percent = row.planned ? Math.min(100, Math.round(100 * row.completed / row.planned)) : 0;
+          return `<details class="rounded-xl border border-slate-800 p-3"><summary class="cursor-pointer text-sm"><span class="font-bold">${escapeReportText(label)}</span> <span class="float-right ${!data.isDeload && row.planned && row.completed >= row.planned ? 'text-emerald-300' : 'text-slate-200'}">${row.planned && row.completed >= row.planned ? '✓ ' : ''}${row.completed}/${row.planned}</span><span class="mt-2 block h-1.5 rounded bg-slate-800"><span class="block h-full rounded ${color}" style="width:${percent}%"></span></span></summary><p class="mt-2 text-xs text-slate-400">${row.indirect} opgeslagen sets met ondersteunende belasting, apart van directe sets.</p><ul class="mt-2 space-y-1 text-xs text-slate-300">${row.exercises.map(ex => `<li>${escapeReportText(SPLIT_INFO[ex.day]?.title.split(':')[0] || ex.day)} · ${escapeReportText(ex.name)}: ${ex.completed}/${ex.planned} ${ex.direct ? 'direct' : 'ondersteunend'}${ex.skipped ? ' · training overgeslagen' : ''}</li>`).join('') || '<li>Geen oefeningen ingedeeld.</li>'}</ul></details>`;
+        }).join('')}</div>
+        ${data.unclassified.length ? `<p class="text-xs text-amber-300">Niet ingedeeld: ${data.unclassified.map(escapeReportText).join(', ')}. Deze oefeningen tellen niet mee in de spiertelling.</p>` : ''}
+        <details class="text-xs text-slate-400"><summary class="cursor-pointer text-blue-300">ⓘ Wat telt mee?</summary><p class="mt-2">Opgeslagen werksets tellen mee, ook als het repdoel niet is gehaald. Opwarmsets horen hier niet in. De indeling is een praktische schatting: uitvoering kan de spierbelasting veranderen. Ondersteunende sets worden niet omgerekend naar halve of hele directe sets. ${data.isDeload ? 'Deze herstelweek wordt niet met een opbouwdoel vergeleken.' : 'Rond 10 of meer weeksets per spiergroep is een onderzoeksrichtpunt voor spiergroei, geen minimum of persoonlijke norm. De teller meet je planuitvoering, geen spiergroei.'}</p></details></section>`;
     }
 
     function getExerciseIncrement(exerciseName) {
@@ -4125,11 +4187,11 @@
       const button = '<button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Opslaan</button>';
       const profile = appState.userProfile || {};
       document.getElementById('trainingSettingsContent').innerHTML = `<form onsubmit="saveTrainingSettings(event)" class="space-y-3 rounded-xl border border-slate-700 p-4">
-        <h3 class="font-bold">Training & progressie</h3>
+        <h3 class="font-bold">Training & progressie</h3><p class="text-sm text-slate-300">Periodedoel: <strong>${trainingGoalLabel()}</strong>. Een nieuw doel kies je bij de volgende periode.</p>
         <div class="grid gap-3 sm:grid-cols-2"><label class="text-sm">Standaard gewichtsstap (kg)<input name="increment" type="number" min="0.5" max="10" step="0.5" required value="${Number(appState.overloadIncrement) || 2}" class="${inputClass}"></label>
         <label class="text-sm">Opbouwritme<select name="frequency" class="${inputClass}"><option value="weekly" ${appState.overloadFrequency !== 'biweekly' ? 'selected' : ''}>Wekelijks beoordelen</option><option value="biweekly" ${appState.overloadFrequency === 'biweekly' ? 'selected' : ''}>Tweewekelijks beoordelen</option></select></label></div>
         <details><summary class="cursor-pointer text-sm text-blue-300">Gewichtsstap per oefening</summary><p class="my-2 text-xs text-slate-400">Kies een stap die je materiaal toelaat. Voor dumbbells: per dumbbell. Leeg = standaard. Lichaamsgewicht bouwt op via reps.</p><div class="grid gap-3 sm:grid-cols-2">${settingsExerciseNames().map(name => `<label class="text-xs">${escapeReportText(name)}<input data-exercise="${escapeReportText(name.trim().toLowerCase())}" type="number" min="0.5" max="10" step="0.5" placeholder="Standaard" value="${Number(appState.exerciseIncrements?.[name.trim().toLowerCase()]) || ''}" class="${inputClass}"></label>`).join('')}</div></details>
-        <details><summary class="cursor-pointer text-sm text-blue-300">Hoe worden deze instellingen gebruikt?</summary><p class="mt-2 text-xs text-slate-400">Eerst reps opbouwen, daarna gewicht. Een eigen oefeningstap gaat voor de standaard, ook bij deload en de knoppen tijdens training. Tweewekelijks herhaalt het doel in even opbouwweken. Opgeslagen sets en vastgelegde doelen veranderen niet. Nieuwe adviezen gebruiken je nieuwe instellingen.</p></details>
+        <details><summary class="cursor-pointer text-sm text-blue-300">Hoe worden deze instellingen gebruikt?</summary><p class="mt-2 text-xs text-slate-400">Eerst reps opbouwen binnen het repbereik van je periodedoel, daarna gewicht. Een eigen oefeningstap gaat voor de standaard, ook bij deload en de knoppen tijdens training. Tweewekelijks herhaalt het doel in even opbouwweken. Opgeslagen sets en vastgelegde doelen veranderen niet. Nieuwe adviezen gebruiken je nieuwe instellingen.</p></details>
         ${button}<p role="status" class="text-xs text-slate-300" data-settings-status></p></form>`;
       document.getElementById('profileSettingsContent').innerHTML = `<form onsubmit="saveProfileSettings(event)" class="space-y-3 rounded-xl border border-slate-700 p-4">
         <h3 class="font-bold">Persoonlijk profiel & materiaal</h3><div class="grid gap-3 sm:grid-cols-2">
@@ -4189,7 +4251,7 @@
       return persistSettingsForm(event.currentTarget, '/api/preferences', { show_live_video_panel: show }, { showLiveVideoPanel: show });
     }
 
-    function getExerciseWeekProgress(weekNum, exerciseName) {
+    function getExerciseWeekProgress(weekNum, exerciseName, includePrevious = true) {
       const sessions = [];
       const sets = [];
       for (const dayKey of ["mon", "tue", "thu", "fri"]) {
@@ -4198,7 +4260,7 @@
           const slot = day?.[slotKey];
           if (!slot || (slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName).trim().toLowerCase() !== exerciseName.trim().toLowerCase()) continue;
           const progress = getSlotProgress(weekNum, dayKey, slotKey);
-          sessions.push({ dayKey, slotKey, progress, skipped: !!day.skipped });
+          sessions.push({ dayKey, slotKey, progress, skipped: !!day.skipped, maxMiss: !progress.achieved && progress.completedSets >= progress.requiredSets && slot.sets.slice(0, progress.requiredSets).some(set => set.completed && set.exertion === 'max') });
           sets.push(...slot.sets.slice(0, progress.requiredSets).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(exerciseName) || Number(set.weight) > 0)));
         }
       }
@@ -4209,7 +4271,11 @@
       const achieved = sessions.length > 0 && sessions.every(session => session.progress.achieved);
       const counts = sets.reduce((result, set) => { result[set.exertion || 'unknown']++; return result; }, { unknown: 0, easy: 0, good: 0, max: 0 });
       const exertion = counts.max > 0 ? 'max' : counts.unknown > 0 ? 'unknown' : (sets.length > 0 && counts.easy >= Math.ceil(sets.length / 2) ? 'easy' : 'good');
-      return { exerciseName, skippedSets: sessions.reduce((sum, session) => sum + (session.skipped ? Math.max(0, session.progress.requiredSets - session.progress.completedSets) : 0), 0), unknownSets: counts.unknown, maxSets: counts.max, sessions, sets, achieved, exertion, completedSets: sum('completedSets'), achievedSets: sum('achievedSets'), requiredSets: sum('requiredSets'),
+      const previous = includePrevious && weekNum > 1 && !isDeloadWeek(weekNum - 1) ? getExerciseWeekProgress(weekNum - 1, exerciseName, false) : null;
+      const confirmedEffort = !!(previous && previous.achieved && !previous.unknownSets && !previous.skippedSets && previous.maxSets <= 1 && achieved && counts.max <= 1 && previous.targetWeight >= Math.min(...sets.map(set => Number(set.weight))) && previous.achievedReps >= Math.max(...sessions.map(session => session.progress.targetReps)));
+      const maxMisses = sessions.filter(session => session.maxMiss).length;
+      const repeatedMaxMisses = maxMisses >= 2 || !!(maxMisses > 0 && previous && !previous.achieved && previous.completedSets >= previous.requiredSets && !previous.skippedSets && previous.maxSets > 0);
+      return { confirmedEffort, repeatedMaxMisses, exerciseName, skippedSets: sessions.reduce((sum, session) => sum + (session.skipped ? Math.max(0, session.progress.requiredSets - session.progress.completedSets) : 0), 0), unknownSets: counts.unknown, maxSets: counts.max, sessions, sets, achieved, exertion, completedSets: sum('completedSets'), achievedSets: sum('achievedSets'), requiredSets: sum('requiredSets'),
         remainingReps: sum('remainingReps'), requiredReps, creditedReps: sum('creditedReps'),
         percent: requiredReps ? Math.floor(100 * sum('creditedReps') / requiredReps) : 0,
         targetReps: Math.max(0, ...sessions.map(session => session.progress.targetReps)),
@@ -4274,22 +4340,24 @@
       } else if (progress.achieved && isBiweeklyHoldWeek(nextWeek)) {
         status = 'Consolideren';
         reason = 'Doel gehaald; nog een week hetzelfde gewicht en dezelfde reps volgens je 2-weken schema.';
-      } else if (progress.exertion === 'max') {
-        reason = 'Minstens een set was maximaal; eerst herhalen met controle. Nog geen extra reps of gewicht.';
+      } else if (progress.exertion === 'max' && !progress.confirmedEffort) {
+        status = progress.achieved ? 'Doel gehaald, maar zwaar' : 'Doel nog bevestigen';
+        reason = 'Een maximale set is een signaal, geen automatische achteruitgang. Herhaal het doel; bevestiging in een volgende opbouwweek kan alsnog opbouw toestaan.';
         const reduced = Math.round((weight - increment) * 10) / 10;
-        if (!progress.achieved && !progress.isBodyweight && reduced > 0 && reduced < weight) {
+        if (!progress.achieved && progress.repeatedMaxMisses && !progress.isBodyweight && reduced > 0 && reduced < weight) {
           weight = reduced;
           status = 'Lichter herhalen';
           change = 'reduce';
-          reason = 'Doel gemist met maximale inspanning: één ingestelde gewichtsstap terug.';
+          reason = 'Herhaald doelen gemist met maximale inspanning: één ingestelde gewichtsstap terug.';
         }
       } else if (progress.achieved) {
         const achievedReps = Math.max(reps, Number(progress.achievedReps || reps));
+        const repStep = minReps < 8 ? 1 : 2;
         if (progress.isBodyweight || achievedReps < maxReps) {
-          reps = progress.isBodyweight ? achievedReps + 2 : Math.min(maxReps, achievedReps + 2);
+          reps = progress.isBodyweight ? achievedReps + repStep : Math.min(maxReps, achievedReps + repStep);
           status = 'Reps opbouwen';
           change = 'reps';
-          reason = 'Doel gehaald. Zelfde gewicht, maximaal 2 herhalingen per set erbij' + (progress.isBodyweight ? '.' : ` richting ${maxReps} reps.`);
+          reason = `Doel gehaald. Zelfde gewicht, maximaal ${repStep} herhalingen per set erbij` + (progress.isBodyweight ? '.' : ` richting ${maxReps} reps.`);
         } else {
           weight = Math.round((weight + increment) * 10) / 10;
           reps = minReps;
@@ -4354,7 +4422,7 @@
         ${remaining ? `<div class="text-amber-300">${remaining}</div>` : ''}
         ${previous ? `<div class="text-slate-400">Vorige training (week ${previous.week}, ${SPLIT_INFO[previous.day].title.split(':')[0]}): ${format(previous.sets)}</div>` : ''}
         ${comparisons.length ? `<div class="text-slate-300">${isDeloadWeek(weekNum) ? 'Hersteltraining · ' : ''}Verschil met vorige training: ${comparisons.join(' · ')}</div>` : ''}
-        <div class="text-slate-400">De balk meet je geplande gewicht en reps. Een lichtere set telt wel als uitgevoerd. Inspanning: standaard ‘niet beoordeeld’; één ‘maximaal’ blokkeert extra reps of gewicht deze week.</div>
+        <div class="text-slate-400">De balk meet je geplande gewicht en reps. Een lichtere set telt wel als uitgevoerd. Inspanning: standaard ‘niet beoordeeld’; ‘maximaal’ vraagt bevestiging; herhaald gemiste zware doelen kunnen tot verlagen leiden.</div>
         <div class="border-t border-slate-800 pt-2 text-slate-300">Weekdoel: ${week.achievedSets}/${week.requiredSets} sets. ${nextText}</div>
       </div>`;
     }
@@ -4453,8 +4521,8 @@
         advisedReps: slot?.progressionPlan?.reps || (sameWeek ? (previous.slot.progressionPlan?.reps || previous.slot.targetReps || targetReps) : next?.reps) || targetReps,
         prevMax: priorProgress?.targetWeight ?? null, prevWeekFound: previous ? `Week ${previous.week}` : null,
         prevOverload: priorProgress?.achieved || false, adviceType,
-        minReps: slot?.progressionPlan?.minReps || priorProgress?.minReps || (Number(EXERCISE_CATALOG[slotKey].targetReps) >= 12 ? 12 : 8),
-        maxReps: slot?.progressionPlan?.maxReps || priorProgress?.maxReps || (Number(EXERCISE_CATALOG[slotKey].targetReps) >= 12 ? 15 : 12),
+        minReps: slot?.progressionPlan?.minReps || priorProgress?.minReps || goalRepetitionRange(appState.trainingGoal, slotKey, Number(EXERCISE_CATALOG[slotKey].targetReps), isBW).minReps,
+        maxReps: slot?.progressionPlan?.maxReps || priorProgress?.maxReps || goalRepetitionRange(appState.trainingGoal, slotKey, Number(EXERCISE_CATALOG[slotKey].targetReps), isBW).maxReps,
         adviceTitle: sameWeek ? 'Deze week herhalen' : next?.status || 'Startdoel',
         adviceText: sameWeek ? 'Herhaal de prestatie van eerder deze week. Opbouw wordt na de week beoordeeld.' : slot?.progressionPlan && next && (Number(slot.progressionPlan.weight) !== Number(next.weight) || Number(slot.progressionPlan.reps) !== Number(next.reps)) ? 'Je volgt het bij de start vastgelegde doel. Je opgeslagen prestaties bepalen de volgende stap.' : next?.reason || 'Leg eerst je startprestatie vast.',
         sameWeekDay: sameWeek ? SPLIT_INFO[previous.day].title.split(':')[0] : null,
@@ -4884,7 +4952,7 @@
             <span class="text-lg flex-shrink-0">💡</span>
             <div>
               <b class="text-slate-200 block mb-0.5">Einde Week Overload Toepassing:</b>
-              Eerst maximaal 2 reps per set erbij binnen je repbereik. Pas aan de bovengrens van alle weeksets: +${inc} kg en terug naar de ondergrens. Eén maximale set blokkeert de verhoging; je ingestelde consolidatie- en herstelweken blijven gelden.
+              Eerst reps opbouwen binnen je repbereik: maximaal 1 bij krachtaccent, anders maximaal 2. Pas aan de bovengrens van alle weeksets: +${inc} kg en terug naar de ondergrens. Een maximale set vraagt eerst bevestiging. Consolidatie- en herstelweken blijven gelden.
             </div>
           </div>
         `}
@@ -4954,6 +5022,7 @@
           <button onclick="closeWeekReportModal(); openSettingsModal()" class="text-blue-300 underline">Instellingen aanpassen</button>
         </div>
 
+        ${muscleSetsHtml(weekNum)}
         <!-- Overzicht per Oefening -->
         <div class="space-y-2">
           <div class="flex items-center justify-between text-xs">
@@ -5089,7 +5158,7 @@
       cycleBtn.className = "flex-shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 transition flex items-center gap-1.5 shadow-sm cursor-pointer";
       cycleBtn.title = "Bekijk Trainingshistorie & Periodes";
       cycleBtn.onclick = openCycleHistoryModal;
-      cycleBtn.innerHTML = `<span>🏛️</span><span>Periode ${appState.currentCycle || 1}</span>`;
+      cycleBtn.innerHTML = `<span>🏛️</span><span>Periode ${appState.currentCycle || 1} · ${trainingGoalLabel()}</span>`;
       container.appendChild(cycleBtn);
 
       const divider1 = document.createElement("div");
@@ -5161,6 +5230,9 @@
     function enrichNextCycleAdvice(advice) {
       (advice.days || []).forEach((day) => {
         (day.slots || []).forEach((slot) => {
+          const range = goalRepetitionRange(appState.nextTrainingGoal || appState.trainingGoal || 'hypertrophy', slot.slotKey, EXERCISE_CATALOG[slot.slotKey]?.targetReps || 8, slot.isBodyweight);
+          slot.targetReps = range.minReps < 8 ? range.minReps : Math.max(range.minReps, Math.min(range.maxReps, Number(slot.targetReps) || range.minReps));
+          if (advice.schema?.[day.day]?.[slot.slotKey]) advice.schema[day.day][slot.slotKey].targetReps = slot.targetReps;
           if (slot.isBodyweight) {
             return;
           }
@@ -5276,6 +5348,7 @@
 
     function startNewMesocyclePrompt() {
       const curCycle = appState.currentCycle || 1;
+      appState.nextTrainingGoal ||= appState.trainingGoal || 'hypertrophy';
       const modal = document.getElementById("startCycleModal");
       const content = document.getElementById("startCycleModalContent");
       if (!modal || !content) return;
@@ -5312,6 +5385,8 @@
             ${advice.reason || "Nabije varianten, startgewichten van piek of norm, dezelfde herhalingen."}
           </p>
         </div>
+        <label class="block text-sm font-bold">Doel voor deze nieuwe periode<select onchange="appState.nextTrainingGoal=this.value; startNewMesocyclePrompt()" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white">${['hypertrophy', 'strength', 'combined'].map(goal => `<option value="${goal}" ${appState.nextTrainingGoal === goal ? 'selected' : ''}>${trainingGoalLabel(goal)}</option>`).join('')}</select></label>
+        <p class="text-xs text-slate-400">${appState.nextTrainingGoal === 'hypertrophy' ? 'Spiergroei: 8–12 of 12–15 reps, weeksets per spiergroep en maximaal 2 reps per opbouwstap.' : appState.nextTrainingGoal === 'strength' ? 'Kracht: hoofdlifts 4–6 reps, maximaal 1 rep per stap; accessoires 8–12 of 12–15. Shoulder press krijgt voorrang op Upper B.' : 'Combinatie: eerste twee oefeningen van Upper A 4–6 reps; overige oefeningen met spiergroeiaccent.'} Dit zijn praktische schemakeuzes. Startgewichten zijn referenties; regel ze in op nette uitvoering.</p>
         <div class="space-y-2 max-h-[45vh] overflow-y-auto pr-0.5">
           ${renderNextCycleAdviceSlots(advice)}
         </div>
@@ -5408,6 +5483,7 @@
       // Sla de cyclus op in het archief
       const cycleRecord = {
         cycleNumber: curCycleNum,
+        trainingGoal: appState.trainingGoal || 'hypertrophy',
         title: `Mesocycle ${curCycleNum}`,
         totalWeeks: appState.totalWeeks,
         completedAt: new Date().toISOString(),
@@ -5421,6 +5497,9 @@
 
       // Initialiseer nieuwe cyclus (standaard 7 weken)
       appState.currentCycle = curCycleNum + 1;
+      appState.trainingGoal = appState.nextTrainingGoal || appState.trainingGoal || 'hypertrophy';
+      delete appState.nextTrainingGoal;
+      applyGoalOrdering();
       appState.pendingCycleSchema = customSchema || null;
       appState.totalWeeks = 7;
       appState.currentWeek = 1;
@@ -5441,6 +5520,9 @@
               for (let w = 1; w <= 7; w++) {
                 if (appState.weeks[w] && appState.weeks[w][d] && appState.weeks[w][d][sKey]) {
                   appState.weeks[w][d][sKey].selectedName = item.selectedName;
+                  const range = goalRepetitionRange(appState.trainingGoal, sKey, EXERCISE_CATALOG[sKey].targetReps, isExerciseBodyweight(item.selectedName));
+                  appState.weeks[w][d][sKey].targetReps = range.minReps < 8 ? range.minReps : Math.max(range.minReps, Math.min(range.maxReps, Number(item.targetReps) || range.minReps));
+                  item.targetReps = appState.weeks[w][d][sKey].targetReps;
                 }
               }
               const wVal = Number(item.weight);
@@ -5544,7 +5626,7 @@
       const maxVolume = Math.max(1, ...data.weeks.map(w => w.volume));
       const colors = { Voltooid: 'text-emerald-300', Overgeslagen: 'text-slate-400', Bezig: 'text-amber-300', Open: 'text-slate-300' };
       return `<section class="rounded-2xl border border-indigo-500/40 bg-slate-950/60 p-4 space-y-4">
-        <h4 class="font-bold text-indigo-200">Periode ${appState.currentCycle || 1} — ${Math.round(data.completed / data.total * 100)}% voltooid</h4>
+        <h4 class="font-bold text-indigo-200">Periode ${appState.currentCycle || 1} · ${trainingGoalLabel()} — ${Math.round(data.completed / data.total * 100)}% voltooid</h4>
         <p class="text-xs text-slate-300">${data.completed}/${data.total} trainingen voltooid · ${data.skipped} overgeslagen · ${data.total - data.completed - data.skipped} open of bezig</p>
         ${trainingEvidenceHtml()}
         <h5 class="text-sm font-bold">Trainingskalender</h5>
@@ -5630,6 +5712,7 @@
         </div>
 
         ${periodDashboardHtml()}
+        ${muscleSetsHtml(appState.currentWeek)}
 
         <!-- GEARCHIVEERDE MESOCYCLES SECTIE -->
         <div class="space-y-3">
@@ -5660,7 +5743,7 @@
                           <span>🏆</span> ${c.title || `Mesocycle ${c.cycleNumber}`}
                         </div>
                         <div class="text-[10px] text-slate-400 font-mono mt-0.5">
-                          Gestart: ${c.startDate || '-'} • Afgerond op: ${dateStr}
+                          Doel: ${trainingGoalLabel(c.trainingGoal || c.training_goal || null)} · Gestart: ${c.startDate || '-'} • Afgerond op: ${dateStr}
                         </div>
                       </div>
                       <span class="text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-bold">
@@ -6348,9 +6431,9 @@
       if (week.unknownSets > 0) return { title: 'Inspanning niet beoordeeld', reason: 'Beoordeel de opgeslagen sets voor een onderbouwd verhogingsadvies.', remaining, next: null, provisional: true };
       if (!week.completedSets) return { title: 'Nog onvoldoende gegevens', reason: 'Sla eerst een uitvoering van deze oefening op.', remaining, next: null, provisional: true };
 
-      if (week.exertion === 'max' || week.achievedSets < week.completedSets) {
+      if ((week.exertion === 'max' && !week.confirmedEffort) || week.achievedSets < week.completedSets) {
         return { title: 'Voorlopig herhalen', reason: week.exertion === 'max'
-          ? 'Minstens één set is als maximaal opgeslagen. Met deze gegevens geen verhoging; het definitieve advies volgt na alle weeksets.'
+          ? 'Een maximale set vraagt eerst bevestiging. Het definitieve advies gebruikt ook de vorige opbouwweek.'
           : 'Niet alle uitgevoerde sets haalden hun doel. Meer gewicht of reps wordt met deze gegevens nog niet geadviseerd.', remaining, next: null, provisional: true };
       }
       // Remaining sets are projected at their own planned targets, never as already achieved.
@@ -6365,7 +6448,7 @@
       const projected = getNextProgression({ ...week, achieved: true, completedSets: week.requiredSets,
         targetWeight: week.isBodyweight ? 0 : Math.min(...weights), achievedReps: Math.min(...reps) }, weekNum + 1);
       return { title: projected.change === 'weight' ? 'Op koers voor meer gewicht' : projected.change === 'reps' ? 'Op koers voor extra reps' : 'Consolidatieweek gepland',
-        reason: projected.change === 'repeat' ? projected.reason : 'Als de overige weeksets hun doel halen en geen set als maximaal wordt opgeslagen.',
+        reason: projected.change === 'repeat' ? projected.reason : 'Als de overige weeksets hun doel halen en de inspanningsbeoordeling opbouw ondersteunt.',
         remaining, next: projected, provisional: true };
     }
 
@@ -6410,7 +6493,7 @@
       return `<section class="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 sm:p-6 space-y-5">
         ${recoveryCheckHtml(weekNum, dayKey)}<header><h3 class="font-black text-slate-100 text-lg">Resultaten & vooruitblik</h3><p class="text-sm text-emerald-300 mt-1">${escape(SPLIT_INFO[dayKey].title.split(':')[0])} afgerond</p><p class="text-xs text-slate-300 mt-1">${status.completedSets}/${status.totalSets} sets uitgevoerd · ${achieved}/${status.totalSets} setdoelen gehaald</p></header>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${cards}</div>
-        <p class="text-xs text-slate-400">De verwachting gebruikt alle opgeslagen sets van deze oefening in deze week. Inspanning telt mee: standaard ‘niet beoordeeld’; één maximale set blokkeert verhogen.</p>
+        <p class="text-xs text-slate-400">De verwachting gebruikt alle opgeslagen sets van deze oefening in deze week. Inspanning telt mee: standaard ‘niet beoordeeld’; maximale inspanning vraagt bevestiging en wordt samen met eerdere prestaties beoordeeld.</p>
         <footer class="flex flex-wrap items-center gap-3 border-t border-slate-800 pt-4">
           ${nextDay.nextDayKey ? `<button onclick="switchDay('${nextDay.nextDayKey}')" class="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold">Bekijk ${escape(nextDay.nextDayLabel.toLowerCase())}</button>` : `<button onclick="openWeekReportModal(${weekNum})" class="px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold">Bekijk weekrapport</button>`}
           <button onclick="openCompletedWorkoutView()" class="px-3 py-2 text-xs text-slate-300 hover:text-white">Volledig dagrapport</button>
@@ -6464,7 +6547,7 @@
     function trainingEvidenceHtml() {
       return `<details class="rounded-xl border border-slate-700 bg-slate-950/60 p-3 text-xs space-y-3"><summary class="cursor-pointer font-bold text-blue-300">ⓘ Hoe en waarom? Onderbouwing & bronnen</summary>
         <p><strong class="text-slate-100">Onderzoek · trainen en opbouwen.</strong> Regelmatig trainen en afstemmen op je doel zijn belangrijker dan een ingewikkeld schema. Altijd tot spierfalen trainen is niet nodig. <a class="text-blue-300 underline" href="https://acsm.org/resistance-training-guidelines-update-2026/" target="_blank" rel="noopener noreferrer">ACSM-richtlijn (2026)</a>.</p>
-        <p><strong class="text-slate-100">Appregels · progressive overload.</strong> Eerst reps opbouwen binnen 8–12 of 12–15, daarna een ingestelde gewichtsstap. Maximaal 2 reps erbij, alle weekdoelen halen en niet verhogen na een maximale of onbeoordeelde set zijn conservatieve schemakeuzes. Deze exacte combinatie is niet als persoonlijk optimaal bewezen. ‘Vlot / goed / maximaal’ zijn jouw inschattingen, geen gemeten RPE.</p>
+        <p><strong class="text-slate-100">Appregels · progressive overload.</strong> Eerst reps opbouwen binnen het repbereik van je periodedoel, daarna een ingestelde gewichtsstap. Bij spiergroei maximaal 2 reps erbij; bij krachtaccent 4–6 reps en maximaal 1 rep erbij. Onbeoordeelde sets blokkeren opbouw. Eén maximale set vraagt bevestiging: twee opeenvolgende opbouwweken met alle doelen gehaald, maximaal één maximale set per week, geen ontbrekende beoordelingen en het huidige gewicht en repdoel al eerder gehaald. Verlagen vraagt gemiste doelen met maximale inspanning in twee volledige trainingen of twee opeenvolgende volledige opbouwweken. Dit zijn conservatieve appregels. Deze exacte combinatie is niet als persoonlijk optimaal bewezen. ‘Vlot / goed / maximaal’ zijn jouw inschattingen, geen gemeten RPE.</p>
         <p><strong class="text-slate-100">Expertconsensus · deload.</strong> Een tijdelijke verlaging van de trainingsbelasting kan ruimte voor herstel geven. De optimale timing en grootte zijn niet vastgesteld. <a class="text-blue-300 underline" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10511399/" target="_blank" rel="noopener noreferrer">Delphi-onderzoek (2023)</a>. Week 7, twee sets en de 60/70/80%-regels zijn instellingen van deze app. Je herstelcheck is zelfrapportage. Het vroege herstelvoorstel gebruikt twee opeenvolgende dalingen bij minstens twee oefeningen, met gelijke gewichten en aantallen sets, maximale inspanning én gemelde vermoeidheid. Dat is een signaleringsregel, geen gevalideerde vermoeidheidstest.</p>
         <p><strong class="text-slate-100">Schatting · 1RM.</strong> De app gebruikt gewicht × (1 + reps / 30), behalve bij één rep. Dit is de Epley-schatting, geen gemeten maximum. De fout hangt onder meer af van oefening, repaantal en hoe dicht je bij falen kwam. <a class="text-blue-300 underline" href="https://pubmed.ncbi.nlm.nih.gov/39495260/" target="_blank" rel="noopener noreferrer">Validatieonderzoek (2025)</a>. Vergelijk ook je echte gewicht en reps.</p>
         <p><strong class="text-slate-100">Registratie · rapportages.</strong> Volume is de som van opgeslagen gewicht × reps. Lichaamsgewicht telt niet mee als externe kilo’s. Dezelfde dagen en hetzelfde schema worden vergeleken; onvolledige weken en herstelweken krijgen geen oordeel over krachtverlies. Groen en rood geven de richting van een getal aan. Een zwaardere set met minder reps heeft twee afzonderlijke verschillen.</p>
@@ -9319,9 +9402,9 @@
               <span class="text-[10px] text-slate-400 font-mono">Standaard: niet beoordeeld</span>
             </div>
 
-            <p class="text-[11px] text-slate-400">Jouw beoordeling bepaalt het advies. Eén maximale set houdt de verhoging voor deze oefening deze week tegen.</p>
+            <p class="text-[11px] text-slate-400">Kies wat je merkte; je hoeft geen resterende reps te raden. Maximaal vraagt eerst bevestiging, herhaald zwaar én gemist kan tot verlagen leiden.</p>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="lwExertionGroup">
-              <button type="button" onclick="setLiveExertion('unknown')" id="lwExertionBtn_unknown" class="py-2.5 px-2 rounded-xl border text-xs ${!liveWorkout.tempExertion || liveWorkout.tempExertion === 'unknown' ? 'border-slate-300 text-white bg-slate-700' : 'border-slate-800 text-slate-400 bg-slate-950'}">⚪ Niet beoordeeld</button>
+              <button type="button" onclick="setLiveExertion('unknown')" id="lwExertionBtn_unknown" class="py-2.5 px-2 rounded-xl border text-xs ${!liveWorkout.tempExertion || liveWorkout.tempExertion === 'unknown' ? 'border-slate-300 text-white bg-slate-700' : 'border-slate-800 text-slate-400 bg-slate-950'}">⚪ Niet beoordeeld<span class="block text-[9px] mt-1">Twijfel of niet op gelet</span></button>
               <button 
                 type="button" 
                 onclick="setLiveExertion('easy')" 
@@ -9333,7 +9416,7 @@
                 }">
                 <span class="text-base">🟢</span>
                 <span class="text-xs font-black uppercase tracking-tight">VLOT</span>
-                <span class="text-[9px] text-slate-400 leading-tight">Kon makkelijk door</span>
+                <span class="text-[9px] text-slate-400 leading-tight">Hele set gemakkelijk en gecontroleerd</span>
               </button>
 
               <button 
@@ -9347,7 +9430,7 @@
                 }">
                 <span class="text-base">✓</span>
                 <span class="text-xs font-black uppercase tracking-tight">GOED</span>
-                <span class="text-[9px] text-slate-400 leading-tight">Stevig & strak</span>
+                <span class="text-[9px] text-slate-400 leading-tight">Laatste reps zwaar, maar netjes</span>
               </button>
 
               <button 
@@ -9361,7 +9444,7 @@
                 }">
                 <span class="text-base">🔴</span>
                 <span class="text-xs font-black uppercase tracking-tight">MAXIMAAL</span>
-                <span class="text-[9px] text-slate-400 leading-tight">Tegen falen aan</span>
+                <span class="text-[9px] text-slate-400 leading-tight">Nog een nette rep leek nauwelijks haalbaar</span>
               </button>
             </div>
           </div>
@@ -10655,6 +10738,7 @@
             throw new Error("Trainerstate kon niet opnieuw geladen worden.");
           }
           appState = payload.appState;
+          applyGoalOrdering();
           lastPersisted = clonePersistedState(appState);
           renderWeekPills();
           switchDay(appState.currentDay || "mon");

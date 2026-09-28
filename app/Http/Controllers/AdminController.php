@@ -7,6 +7,7 @@ use App\Models\ProgramSlot;
 use App\Models\WorkoutSlot;
 use App\Services\Catalog;
 use App\Services\CycleFactory;
+use App\Services\TrainingPrescription;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -163,6 +164,7 @@ class AdminController extends Controller
 
         return view('admin.exercises', [
             'exercises' => $exercises,
+            'trainingRules' => app(TrainingPrescription::class)->rules(),
             'missingVideos' => $this->catalog->missingVideoCount(),
             'athleanCount' => $exercises->filter(
                 fn ($exercise) => str_contains((string) $exercise->channel, 'ATHLEAN'),
@@ -205,6 +207,7 @@ class AdminController extends Controller
         return view('admin.preferences', [
             'prefs' => $this->factory->preferences(),
             'totalWeeks' => (int) $this->factory->ensureCurrent()->total_weeks,
+            'trainingGoal' => TrainingPrescription::GOALS[$this->factory->ensureCurrent()->training_goal ?? 'hypertrophy'] ?? 'Niet vastgelegd',
         ]);
     }
 

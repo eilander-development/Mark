@@ -134,6 +134,7 @@ class WorkoutController extends Controller
     public function startCycle(Request $request): JsonResponse
     {
         $data = $request->validate([
+            'training_goal' => ['sometimes', 'in:hypertrophy,strength,combined'],
             'close_current_period' => ['sometimes', 'boolean'],
             'schema' => ['sometimes', 'array'],
             'schema.*' => ['sometimes', 'array'],
@@ -143,6 +144,6 @@ class WorkoutController extends Controller
             'schema.*.*.targetReps' => ['sometimes', 'integer', 'min:1', 'max:30'],
         ]);
 
-        return response()->json($this->writer->startNextCycle($data['schema'] ?? null, (bool) ($data['close_current_period'] ?? false)));
+        return response()->json($this->writer->startNextCycle($data['schema'] ?? null, (bool) ($data['close_current_period'] ?? false), $data['training_goal'] ?? 'hypertrophy'));
     }
 }

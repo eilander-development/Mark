@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['number', 'is_current', 'total_weeks', 'started_at', 'completed_at', 'snapshot'])]
+#[Fillable(['number', 'is_current', 'total_weeks', 'started_at', 'completed_at', 'snapshot', 'training_goal'])]
 class Cycle extends Model
 {
     protected function casts(): array

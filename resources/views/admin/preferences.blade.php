@@ -3,6 +3,7 @@
 @section('content')
     <h1 class="mb-1 text-xl font-black">Trainingsvoorkeuren</h1>
     <p class="mb-6 text-sm text-slate-400">Deze instellingen gelden ook in de trainer. Een wijziging geeft geen automatische gewichtsverhoging.</p>
+    <p class="mb-4 text-sm text-slate-300">Periodedoel: <strong>{{ $trainingGoal }}</strong>. Kies een nieuw doel bij het voorbereiden van de volgende periode in de trainer.</p>
     <form method="post" action="{{ route('admin.preferences.update') }}" class="max-w-2xl space-y-5">
         @csrf
         @method('PATCH')
@@ -19,7 +20,7 @@
                     <option value="biweekly" @selected(old('overload_frequency', $prefs->overload_frequency) === 'biweekly')>Tweewekelijks: opbouwdoel in even weken herhalen</option>
                 </select>
             </label>
-            <details class="text-xs text-slate-400"><summary class="cursor-pointer text-blue-300">Wanneer krijg ik een verhoging?</summary><p class="mt-2">Alle weekdoelen moeten zijn gehaald en de inspanning moet beoordeeld zijn. Een maximale set, ontbrekende beoordeling of overgeslagen training blokkeert verhoging. Deload heeft een apart hersteladvies.</p></details>
+            <details class="text-xs text-slate-400"><summary class="cursor-pointer text-blue-300">Wanneer krijg ik een verhoging?</summary><p class="mt-2">Alle weekdoelen moeten zijn gehaald en de inspanning moet beoordeeld zijn. Een maximale set vraagt bevestiging. Een ontbrekende beoordeling of overgeslagen training blokkeert verhoging. Deload heeft een apart hersteladvies.</p></details>
         </fieldset>
         <fieldset class="space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-5">
             <legend class="px-2 font-bold">Navigatie in deze periode</legend>

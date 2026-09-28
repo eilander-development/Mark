@@ -85,13 +85,15 @@ class StateAssembler
         $history = Cycle::query()
             ->where('is_current', false)
             ->orderByDesc('number')
-            ->get(['id', 'number', 'started_at', 'completed_at', 'snapshot']);
+            ->get(['id', 'number', 'started_at', 'completed_at', 'snapshot', 'training_goal']);
 
         return [
             'currentWeek' => (int) $prefs->current_week,
             'currentDay' => $prefs->current_day,
             'totalWeeks' => (int) $cycle->total_weeks,
             'currentCycle' => (int) $cycle->number,
+            'trainingGoal' => $cycle->training_goal ?? 'hypertrophy',
+            'trainingRules' => app(TrainingPrescription::class)->rules(),
             'cycleId' => $cycle->id,
             'cycleStartedAt' => optional($cycle->started_at)?->toDateString(),
             'routineLocked' => (bool) $prefs->routine_locked,
@@ -106,7 +108,7 @@ class StateAssembler
                 'equipment' => $profile->equipment,
             ],
             'weeks' => $weeks,
-            'splits' => $this->catalog->splits(),
+            'splits' => $this->catalog->splits($cycle->training_goal ?? 'hypertrophy'),
             'catalog' => $this->catalog->allSlots(),
             'days' => config('ironforge.days'),
             'cyclesHistory' => $history,
@@ -162,6 +164,8 @@ class StateAssembler
 
         return [
             'week' => $week,
+            'trainingGoal' => $cycle->training_goal ?? 'hypertrophy',
+            'muscleSets' => app(TrainingPrescription::class)->weekMuscles($cycle, $week),
             'isDeload' => $this->periodization->isDeloadWeek($week),
             'volume' => round($volume, 1),
             'completedSets' => $completedSets,

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Preference;
 use App\Models\WorkoutSession;
 use App\Models\WorkoutSet;
 use App\Models\WorkoutSlot;
@@ -155,7 +156,7 @@ class WorkoutWriter
             'preferred_rest_times', 'custom_exercise_videos',
         ];
         if (isset($data['exercise_increments'])) {
-            $data['exercise_increments'] = \App\Models\Preference::normalizeIncrements($data['exercise_increments']);
+            $data['exercise_increments'] = Preference::normalizeIncrements($data['exercise_increments']);
         }
         $prefs->fill(collect($data)->only($allowed)->all());
         if (isset($data['current_day']) && ! in_array($data['current_day'], config('ironforge.days'), true)) {
@@ -294,7 +295,7 @@ class WorkoutWriter
      * @param  array<string, array<string, array<string, mixed>>>|null  $schema
      * @return array<string, mixed>
      */
-    public function startNextCycle(?array $schema = null, bool $closeCurrentPeriod = false): array
+    public function startNextCycle(?array $schema = null, bool $closeCurrentPeriod = false, string $goal = 'hypertrophy'): array
     {
         $current = $this->factory->ensureCurrent();
         $prefs = $this->factory->preferences();
@@ -316,6 +317,7 @@ class WorkoutWriter
             true,
             $current,
             $schema ?: $advice['schema'],
+            $goal,
         );
 
         return $this->state->payload();

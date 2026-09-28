@@ -23,14 +23,14 @@ class SlotAdvisor
         $weight = $isBw ? 0.0 : (float) ($plan['weight'] ?? $first?->weight ?? $planned?->weight ?? 0);
         $reps = (int) ($plan['reps'] ?? $slot->target_reps ?: ($this->catalog->slot($slot->slot_key)['targetReps'] ?? 8));
 
-        $range = $this->periodization->repetitionRange((int) ($this->catalog->slot($slot->slot_key)['targetReps'] ?? 8));
+        $range = app(TrainingPrescription::class)->range($slot->session->cycle->training_goal ?? 'hypertrophy', $slot->slot_key, (int) ($this->catalog->slot($slot->slot_key)['targetReps'] ?? 8), $isBw);
         $range = ['minReps' => (int) ($plan['minReps'] ?? $range['minReps']), 'maxReps' => (int) ($plan['maxReps'] ?? $range['maxReps'])];
 
         return $this->periodization->progress($slot->sets, $weight, $reps, $this->periodization->requiredSets($week), $isBw) + $range;
     }
 
     /** @return array<string, mixed> */
-    public function exerciseProgress(Cycle $cycle, int $week, string $name): array
+    public function exerciseProgress(Cycle $cycle, int $week, string $name, bool $includePrevious = true): array
     {
         $cycle->loadMissing('sessions.slots.sets');
         $isBw = $this->periodization->isBodyweight($name);
@@ -39,7 +39,9 @@ class SlotAdvisor
         $skippedSets = 0;
         foreach (config('ironforge.days') as $day) {
             $session = $cycle->sessions->first(fn ($session): bool => (int) $session->week === $week && $session->day === $day);
+            $session?->setRelation('cycle', $cycle);
             foreach ($session?->slots ?? [] as $slot) {
+                $slot->setRelation('session', $session);
                 if (mb_strtolower(trim($slot->selected_name)) !== mb_strtolower(trim($name))) {
                     continue;
                 }
@@ -47,7 +49,7 @@ class SlotAdvisor
                 if ($session->skipped) {
                     $skippedSets += max(0, $progress['requiredSets'] - $progress['completedSets']);
                 }
-                $sessions[] = ['skipped' => (bool) $session->skipped, 'dayKey' => $day, 'slotKey' => $slot->slot_key, 'progress' => $progress];
+                $sessions[] = ['maxMiss' => ! $progress['achieved'] && $progress['completedSets'] >= $progress['requiredSets'] && $slot->sets->take($progress['requiredSets'])->contains(fn ($set): bool => $set->completed && $set->exertion === 'max'), 'skipped' => (bool) $session->skipped, 'dayKey' => $day, 'slotKey' => $slot->slot_key, 'progress' => $progress];
                 $sets = $sets->concat($slot->sets->take($progress['requiredSets'])->filter(fn ($set): bool => $set->completed && (int) $set->reps > 0 && ($isBw || (float) $set->weight > 0)));
             }
         }
@@ -57,7 +59,17 @@ class SlotAdvisor
         $exertion = ($counts['max'] ?? 0) > 0 ? 'max' : (($counts['unknown'] ?? 0) > 0 ? 'unknown' : ($sets->isNotEmpty() && ($counts['easy'] ?? 0) >= ceil($sets->count() / 2) ? 'easy' : 'good'));
         $requiredReps = (int) $progresses->sum('requiredReps');
 
-        return ['skippedSets' => $skippedSets, 'unknownSets' => (int) ($counts['unknown'] ?? 0), 'maxSets' => (int) ($counts['max'] ?? 0), 'sessions' => $sessions, 'achieved' => $achieved, 'exertion' => $exertion,
+        $previous = $includePrevious && $week > 1 && ! $this->periodization->isDeloadWeek($week - 1)
+            ? $this->exerciseProgress($cycle, $week - 1, $name, false) : null;
+        $confirmedEffort = $previous && $previous['achieved'] && ! $previous['unknownSets'] && ! $previous['skippedSets']
+            && $previous['maxSets'] <= 1 && $achieved && ($counts['max'] ?? 0) <= 1
+            && (float) $previous['targetWeight'] >= (float) $sets->min(fn ($set): float => (float) $set->weight)
+            && $previous['achievedReps'] >= (int) $progresses->max('targetReps');
+        $maxMisses = collect($sessions)->where('maxMiss', true)->count();
+        $repeatedMaxMisses = $maxMisses >= 2 || ($maxMisses > 0 && $previous && ! $previous['achieved']
+            && $previous['completedSets'] >= $previous['requiredSets'] && ! $previous['skippedSets'] && $previous['maxSets'] > 0);
+
+        return ['confirmedEffort' => (bool) $confirmedEffort, 'repeatedMaxMisses' => (bool) $repeatedMaxMisses, 'skippedSets' => $skippedSets, 'unknownSets' => (int) ($counts['unknown'] ?? 0), 'maxSets' => (int) ($counts['max'] ?? 0), 'sessions' => $sessions, 'achieved' => $achieved, 'exertion' => $exertion,
             'completedSets' => (int) $progresses->sum('completedSets'), 'achievedSets' => (int) $progresses->sum('achievedSets'),
             'requiredSets' => (int) $progresses->sum('requiredSets'), 'remainingReps' => (int) $progresses->sum('remainingReps'),
             'requiredReps' => $requiredReps, 'creditedReps' => (int) $progresses->sum('creditedReps'),
@@ -73,6 +85,8 @@ class SlotAdvisor
     public function forSlot(Cycle $cycle, WorkoutSession $session, WorkoutSlot $slot, float $increment, string $frequency): array
     {
         $cycle->loadMissing('sessions.slots.sets');
+        $session->setRelation('cycle', $cycle);
+        $slot->setRelation('session', $session);
         $week = (int) $session->week;
         $name = $slot->selected_name;
         $isBw = $this->periodization->isBodyweight($name);

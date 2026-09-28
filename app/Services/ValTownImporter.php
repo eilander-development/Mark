@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Cycle;
+use App\Models\Preference;
 use App\Models\WorkoutSession;
 use App\Models\WorkoutSet;
 use Illuminate\Support\Facades\DB;
@@ -110,7 +111,7 @@ class ValTownImporter
             'sound_enabled' => (bool) ($state['soundEnabled'] ?? true),
             'routine_locked' => (bool) ($state['routineLocked'] ?? true),
             'show_live_video_panel' => (bool) ($state['showLiveVideoPanel'] ?? true),
-            'exercise_increments' => \App\Models\Preference::normalizeIncrements(is_array($state['exerciseIncrements'] ?? null) ? $state['exerciseIncrements'] : []),
+            'exercise_increments' => Preference::normalizeIncrements(is_array($state['exerciseIncrements'] ?? null) ? $state['exerciseIncrements'] : []),
             'overload_increment' => (float) ($state['overloadIncrement'] ?? 2),
             'overload_frequency' => (string) ($state['overloadFrequency'] ?? 'weekly'),
             'preferred_rest_times' => $state['preferredRestTimes'] ?? [],
@@ -129,6 +130,9 @@ class ValTownImporter
             $profile->save();
         }
 
+        if (in_array($state['trainingGoal'] ?? null, array_keys(TrainingPrescription::GOALS), true)) {
+            $cycle->training_goal = $state['trainingGoal'];
+        }
         $cycle->number = (int) ($state['currentCycle'] ?? $cycle->number);
         if (! empty($state['cycleStartedAt']) && preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $state['cycleStartedAt'])) {
             $cycle->started_at = substr((string) $state['cycleStartedAt'], 0, 10);
