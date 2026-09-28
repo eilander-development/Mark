@@ -27,7 +27,7 @@ function setup() {
         showLiveWorkoutSummary() { context.finished = true; },
         console,
     });
-    for (const name of ['trainingEvidenceHtml', 'getRecoveryLoad', 'recoveryCheckHtml', 'earlyRecoveryAdviceHtml', 'performanceChangeHtml', 'comparisonIndicatorHtml', 'updateWorkoutHeroButtons', 'renderLockedRoutineView', 'renderWorkloadChart', 'getPeriodDashboardData', 'periodDashboardHtml', 'updateDayTitleBanner', 'volumeComparisonClass', 'getVolumeComparison', 'calculateSessionVolume', 'calculateWeekVolume', 'canStartNewPeriod', 'executeStartNewMesocycle', 'escapeReportText', 'getExerciseHistory', 'formatHistorySets', 'compareHistoryEntries', 'exerciseHistoryHtml', 'preparationDetailsHtml', 'weekExerciseOutlookHtml', 'getOverloadOutlook', 'completedDayResultsHtml', 'getNextSplitDay', 'getLiveRestStats', 'getTrainingTiming', 'summarizeTrainingTimes', 'getCycleReport', 'getCycleHistoryReport', 'calculate1RM', 'getAllTimeRecord', 'isSetNewAllTimePR', 'lastHeavyWeekNum', 'peakSlotWeight', 'calculateSetProgress', 'getSlotProgress', 'getExerciseWeekProgress', 'getNextProgression', 'findPreviousExerciseSession', 'rememberLiveInput', 'renderProgressDetails', 'getDayCompletionStatus', 'getWeekEvaluation', 'getSameWeekExerciseLogged', 'getSlotTargetAdvice', 'autoApplyOverloadAndDeloadInheritance', 'prepareCurrentLiveSetValues', 'submitLiveSet', 'adjustLiveReps', 'setLiveRepsManual', 'setLiveWeightManual', 'updateLiveSubmitButtonText']) {
+    for (const name of ['renderBenchmarkModal', 'trainingEvidenceHtml', 'getRecoveryLoad', 'recoveryCheckHtml', 'earlyRecoveryAdviceHtml', 'performanceChangeHtml', 'comparisonIndicatorHtml', 'updateWorkoutHeroButtons', 'renderLockedRoutineView', 'renderWorkloadChart', 'getPeriodDashboardData', 'periodDashboardHtml', 'updateDayTitleBanner', 'volumeComparisonClass', 'getVolumeComparison', 'calculateSessionVolume', 'calculateWeekVolume', 'canStartNewPeriod', 'executeStartNewMesocycle', 'escapeReportText', 'getExerciseHistory', 'formatHistorySets', 'compareHistoryEntries', 'exerciseHistoryHtml', 'preparationDetailsHtml', 'weekExerciseOutlookHtml', 'getOverloadOutlook', 'completedDayResultsHtml', 'getNextSplitDay', 'getLiveRestStats', 'getTrainingTiming', 'summarizeTrainingTimes', 'getCycleReport', 'getCycleHistoryReport', 'calculate1RM', 'getAllTimeRecord', 'isSetNewAllTimePR', 'lastHeavyWeekNum', 'peakSlotWeight', 'calculateSetProgress', 'getSlotProgress', 'getExerciseWeekProgress', 'getNextProgression', 'findPreviousExerciseSession', 'rememberLiveInput', 'renderProgressDetails', 'getDayCompletionStatus', 'getWeekEvaluation', 'getSameWeekExerciseLogged', 'getSlotTargetAdvice', 'autoApplyOverloadAndDeloadInheritance', 'prepareCurrentLiveSetValues', 'submitLiveSet', 'adjustLiveReps', 'setLiveRepsManual', 'setLiveWeightManual', 'updateLiveSubmitButtonText']) {
         const start = html.indexOf(`    function ${name}(`);
         const end = html.indexOf('\n    function ', start + 1);
         vm.runInContext(html.slice(start, end), context);
@@ -775,4 +775,51 @@ test('early recovery proposal requires repeated comparable declines and fatigue 
     entries[2].sets[0].weight = 22;
     assert.equal(c.earlyRecoveryAdviceHtml(4, 'mon'), '');
     assert.equal(c.earlyRecoveryAdviceHtml(7, 'mon'), '');
+});
+
+
+test('evidence explanation distinguishes studies from app rules and removes fabricated strength norms', () => {
+    const { context: c, elements } = setup();
+    elements.strengthBenchmarkContent = { innerHTML: '' };
+    c.renderBenchmarkModal();
+    const output = elements.strengthBenchmarkContent.innerHTML;
+    assert.match(output, /geen wetenschappelijk gevalideerde normen/);
+    assert.match(output, /ACSM-richtlijn \(2026\)/);
+    assert.match(output, /geen gevalideerde vermoeidheidstest/);
+    assert.doesNotMatch(output, /40% meer stabilisatiewerk|Evidence-based standaarden gekalibreerd/);
+});
+
+
+test('explicit recovery check recalculates week seven from the build week while manual set input wins', () => {
+    const { context: c } = setup();
+    c.appState.weeks[6] = JSON.parse(JSON.stringify(c.appState.weeks[1]));
+    for (const day of ['mon', 'thu']) c.appState.weeks[6][day].bench.sets.forEach(set => Object.assign(set, { completed: true, weight: 20, reps: 8, exertion: 'good' }));
+    c.appState.weeks[7] = JSON.parse(JSON.stringify(c.appState.weeks[1]));
+    Object.assign(c.appState.weeks[7].mon.bench.sets[0], { completed: true, weight: 14, reps: 8, exertion: 'good' });
+    c.appState.weeks[7].thu.recovery = 'exhausted';
+    c.liveWorkout.weekNum = 7;
+    c.liveWorkout.dayKey = 'thu';
+    c.prepareCurrentLiveSetValues();
+    assert.equal(c.liveWorkout.tempWeight, 12);
+    assert.equal(c.getSlotTargetAdvice(7, 'thu', 'bench').prevWeekFound, 'Week 6');
+    c.setLiveWeightManual('13');
+    c.prepareCurrentLiveSetValues();
+    assert.equal(c.liveWorkout.tempWeight, 13);
+});
+
+
+test('failed recovery save preserves the previous check and goals', async () => {
+    const { context: c } = setup();
+    c.appState.currentWeek = 1;
+    c.appState.currentDay = 'mon';
+    c.appState.weeks[1].mon.sessionId = 123;
+    c.appState.weeks[1].mon.recovery = 'tired';
+    c.jsonApi = async () => ({ ok: false });
+    c.showToast = () => {};
+    const start = html.indexOf('    async function setRecoveryCheck(');
+    const end = html.indexOf('\n    function ', start + 1);
+    vm.runInContext(html.slice(start, end), c);
+    await c.setRecoveryCheck('exhausted');
+    assert.equal(c.appState.weeks[1].mon.recovery, 'tired');
+    assert.equal(c.saved, undefined);
 });

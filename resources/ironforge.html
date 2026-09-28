@@ -874,7 +874,7 @@
           </div>
           <div>
             <h3 class="font-black text-sm uppercase tracking-wider text-slate-100">
-              Fysiologische Kracht- & Doelen Benchmark
+              Startgewichten & onderbouwing
             </h3>
             <p class="text-[11px] text-slate-400">
               Gekalibreerd op leeftijd (~42 jr), lichaamsgewicht en duurzame spieropbouw
@@ -3683,7 +3683,7 @@
       return true;
     }
 
-    /* Evidenced-based fysiologische standaarden gekalibreerd voor 42-jarige man van 82 kg */
+    /* Schemareferenties; niet persoonlijk wetenschappelijk gevalideerd. */
     function getStrengthBenchmark(exerciseName, profile = null) {
       const p = profile || (appState && appState.userProfile ? appState.userProfile : { birthYear: 1984, bodyWeightKg: 82, experienceLevel: "intermediate" });
       const curYear = new Date().getFullYear();
@@ -3710,7 +3710,7 @@
           suggestedStart: Math.max(16, baseInter - 2), // 24 kg
           cycleGoal: baseInter + 2, // 28 kg
           normText: `${baseInter} kg per dumbbell`,
-          explanation: `Voor een man van ~${age} jr en ${bw} kg is 26-28 kg per dumbbell een fysiologisch ideale intermediate norm. Het levert maximale claviculaire borstgroei zonder de schouderpezen overmatig te belasten.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -3728,7 +3728,7 @@
           suggestedStart: Math.max(18, baseInter - 2), // 26 kg
           cycleGoal: baseInter + 2, // 30 kg
           normText: `${baseInter} kg per dumbbell`,
-          explanation: `Vlakke dumbbell press met 28-30 kg per dumbbell bouwt massieve borstkracht op met een neutrale, veilige polshoek.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -3746,7 +3746,7 @@
           suggestedStart: Math.max(50, baseInter - 5), // 70 kg
           cycleGoal: baseInter + 5, // 80 kg
           normText: `${baseInter} kg totaal`,
-          explanation: `75-80 kg Barbell Bench Press (0.9-1.0x lichaamsgewicht) is de gouden standaard voor een fitte sporter van 82 kg.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -3764,7 +3764,7 @@
           suggestedStart: Math.max(45, baseInter - 5),
           cycleGoal: baseInter + 5,
           normText: `${baseInter} kg totaal`,
-          explanation: `Incline Barbell Press met 65-70 kg legt sterke focus op de claviculaire borstspier.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -3782,7 +3782,7 @@
             suggestedStart: 12,
             cycleGoal: 18,
             normText: `16-18 strikte reps`,
-            explanation: `Decline push-ups verplaatsen ~72% van je lichaamsgewicht naar de bovenborst. 16-18 reps toont hoge romp- en duwkracht.`
+            explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
           };
         }
         if (name.includes("diamond") || name.includes("close")) {
@@ -3798,7 +3798,7 @@
             suggestedStart: 10,
             cycleGoal: 16,
             normText: `15-18 reps`,
-            explanation: `Diamond push-ups vereisen flinke tricepskracht en borstcompressie.`
+            explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
           };
         }
         return {
@@ -3813,7 +3813,7 @@
           suggestedStart: 15,
           cycleGoal: 25,
           normText: `20-25 strikte reps`,
-          explanation: `20 tot 25 strikte herhalingen (borst raakt bijna de grond, strakke plank) is de ultieme indicator voor relatieve kracht.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -3830,7 +3830,7 @@
           suggestedStart: 6,
           cycleGoal: 10,
           normText: `8-10 strikte reps`,
-          explanation: `8 tot 10 strikte optrek-reps bij 82 kg lichaamsgewicht is een uitstekende krachtstandaard.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -3848,7 +3848,7 @@
           suggestedStart: Math.max(45, baseInter - 5), // 65 kg
           cycleGoal: baseInter + 5, // 75 kg
           normText: `${baseInter} kg totaal`,
-          explanation: `Barbell Rows met 70-75 kg garandeert een sterke, dikke rug en een gezonde voor/achter schouderbalans.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -3866,7 +3866,7 @@
           suggestedStart: Math.max(18, baseInter - 4), // 26 kg
           cycleGoal: baseInter + 2, // 32 kg
           normText: `${baseInter} kg per dumbbell`,
-          explanation: `Met 30-32 kg dumbbell roeien biedt maximale lat-rek en contractie terwijl de bank de lumbale wervelkolom ontziet.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -3884,7 +3884,7 @@
           suggestedStart: Math.max(16, baseInter - 2), // 24 kg
           cycleGoal: baseInter + 2, // 28 kg
           normText: `${baseInter} kg`,
-          explanation: `Dumbbell Pullover met 24-26 kg levert diepe rek op de lats en activeert de ribbenkastspieren (serratus).`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -3903,7 +3903,7 @@
             suggestedStart: Math.max(35, baseInter - 5),
             cycleGoal: baseInter + 5,
             normText: `${baseInter} kg totaal`,
-            explanation: `50 kg Barbell Overhead Press is een respectabele krachtprestatie voor schouders en triceps.`
+            explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
           };
         }
         const baseInter = Math.round(22 * bwFactor * ageFactor);
@@ -3919,7 +3919,7 @@
           suggestedStart: Math.max(14, baseInter - 2), // 20 kg
           cycleGoal: baseInter + 2, // 24 kg
           normText: `${baseInter} kg per dumbbell`,
-          explanation: `Seated DB Shoulder Press met 22 kg per dumbbell levert sterke schouderkoppen zonder overmatige wervelbelasting.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -3937,7 +3937,7 @@
           suggestedStart: Math.max(6, baseInter - 2), // 8 kg
           cycleGoal: baseInter + 2, // 12 kg
           normText: `${baseInter} kg per dumbbell`,
-          explanation: `Bij lateral raises is strikte vorm en een pauze bovenin cruciaal. 10-12 kg per dumbbell met gecontroleerd zakken bouwt brede schouders.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -3955,7 +3955,7 @@
           suggestedStart: Math.max(6, baseInter - 2),
           cycleGoal: baseInter + 2,
           normText: `${baseInter} kg per dumbbell`,
-          explanation: `Achterkant schouders met 8-10 kg dumbbells beschermt de schoudergewrichten tegen blessures en verbetert je houding.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -3974,7 +3974,7 @@
           suggestedStart: Math.max(10, baseInter - 2), // 12-14 kg
           cycleGoal: baseInter + 2, // 16-18 kg
           normText: `${baseInter} kg per dumbbell`,
-          explanation: `14-16 kg strikte Dumbbell Curls garandeert krachtige armen zonder te compenseren vanuit de rug.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -3991,7 +3991,7 @@
           suggestedStart: 15,
           cycleGoal: 25,
           normText: `20-25 reps`,
-          explanation: `Bench Dips met 20-25 reps pompt de triceps maximaal vol en versterkt de elleboogpezen.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -4009,7 +4009,7 @@
           suggestedStart: Math.max(16, baseInter - 4),
           cycleGoal: baseInter + 4,
           normText: `${baseInter} kg`,
-          explanation: `Gecontroleerde triceps extensies met 24-28 kg bouwt de hoefijzervorm op de achterkant van de arm.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -4027,7 +4027,7 @@
           suggestedStart: Math.max(50, baseInter - 10),
           cycleGoal: baseInter + 10,
           normText: `${baseInter} kg`,
-          explanation: `Shrugs met 75 kg en 2 seconden vasthouden bovenin bouwt sterke, blessurebestendige trapeziusspieren.`
+          explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
         };
       }
 
@@ -4044,7 +4044,7 @@
         suggestedStart: isBW ? 12 : 22,
         cycleGoal: isBW ? 20 : 28,
         normText: isBW ? "18-20 reps" : "25 kg",
-        explanation: `Fysiologische standaard voor een fitte man van ~${age} jaar en ${bw} kg.`
+        explanation: 'Richtwaarde uit dit schema; niet persoonlijk wetenschappelijk gevalideerd. Je eigen opgeslagen prestaties bepalen de opbouw.'
       };
     }
 
@@ -4914,6 +4914,7 @@
           </button>
         </div>
       `;
+      container.innerHTML += trainingEvidenceHtml();
     }
 
     /* 5. WEKEN & MESOCYCLES NAVIGATIE */
@@ -6058,7 +6059,7 @@
 
             <button onclick="openBenchmarkModal()" class="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer self-start sm:self-auto">
               <span>📊</span>
-              <span>Bekijk Fysiologische Normen</span>
+              <span>Startgewichten & onderbouwing</span>
             </button>
           </div>
 
@@ -6138,246 +6139,7 @@
     function renderBenchmarkModal() {
       const content = document.getElementById("strengthBenchmarkContent") || document.getElementById("strengthBenchmarkModalContent");
       if (!content) return;
-
-      content.innerHTML = `
-        <!-- HEADER & PERSOONLIJKE NORMGRAAD -->
-        <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-base sm:text-lg font-black text-amber-400 font-mono flex items-center gap-2">
-                <span>📊</span> Fysiologische Krachtnormen & Doelgewichten
-              </h3>
-              <p class="text-xs text-slate-400 mt-0.5">
-                Evidence-based standaarden gekalibreerd voor een man van <b>~42 jaar, 82 kg</b> met een thuisgym.
-              </p>
-            </div>
-            <span class="text-xs px-2.5 py-1 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 font-mono font-bold hidden sm:inline">
-              Intermediate Norm
-            </span>
-          </div>
-
-          <!-- DE VERGELIJKING: DUMBBELLS VS BARBELLS -->
-          <div class="p-3.5 rounded-xl bg-gradient-to-r from-blue-950/40 via-indigo-950/40 to-slate-900 border border-blue-500/30 space-y-2 text-xs leading-relaxed text-blue-100">
-            <div class="font-bold text-blue-300 flex items-center gap-2">
-              <span>💡</span> Waarom 26 kg Dumbbells fysiologisch gelijkstaat aan 75 kg Barbell:
-            </div>
-            <p class="text-slate-300 text-[11px]">
-              Veel lifters vragen zich af waarom hun dumbbell press 'lager' lijkt dan hun stang:
-            </p>
-            <ul class="space-y-1.5 text-[11px] text-slate-300 list-disc list-inside">
-              <li>
-                <strong class="text-slate-100">3D Stabilisatie:</strong> Bij een halterstang (75-80 kg) ondersteunen beide armen elkaar en beweegt het gewicht in een vast spoor. Bij 2 dumbbells van 26 kg (52 kg totaal) moeten je rotatorenmanchet, serratus en buikspieren <b>40% meer stabilisatiewerk</b> leveren.
-              </li>
-              <li>
-                <strong class="text-slate-100">Grotere Range of Motion (ROM):</strong> Met dumbbells zak je dieper en knijp je bovenin samen. Dit levert <b>meer spiervezelactivatie</b> op bij een lager absoluut gewicht, wat je gewrichten ontziet.
-              </li>
-              <li>
-                <strong class="text-slate-100">Gezonde Schouders op je 42e:</strong> Een neutrale of semi-inclinatie dumbbellgreep spaart de pezen en het AC-gewricht aanzienlijk beter dan een stijve rechte halterstang.
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- BENCHMARK MATRIX PER SPIERGROEP -->
-        <div class="space-y-3">
-          <!-- BORST -->
-          <div class="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2.5">
-            <div class="flex items-center justify-between">
-              <h4 class="font-bold text-xs font-mono uppercase text-emerald-400 flex items-center gap-1.5">
-                <span>🛡️</span> Borst Oefeningen (Doelen voor 3 × 6-8 reps)
-              </h4>
-              <span class="text-[10px] text-slate-500 font-mono">Man 82 kg / 42 jr</span>
-            </div>
-
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs font-mono">
-                <thead>
-                  <tr class="text-slate-500 border-b border-slate-800 text-[10px]">
-                    <th class="py-1.5">Oefening</th>
-                    <th class="py-1.5">Start (Wk 1)</th>
-                    <th class="py-1.5 text-blue-400">Norm (42j)</th>
-                    <th class="py-1.5 text-amber-400">Piekdoel (Wk 6)</th>
-                    <th class="py-1.5 text-slate-400">Gevorderd</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-900 text-slate-300">
-                  <tr>
-                    <td class="py-2 font-bold text-slate-200">Incline Dumbbell Press</td>
-                    <td class="py-2 text-slate-400">22 kg</td>
-                    <td class="py-2 text-blue-400 font-bold">26 kg ⭐</td>
-                    <td class="py-2 text-amber-400 font-bold">28 kg</td>
-                    <td class="py-2 text-slate-400">32 kg</td>
-                  </tr>
-                  <tr>
-                    <td class="py-2 font-bold text-slate-200">Flat Dumbbell Press</td>
-                    <td class="py-2 text-slate-400">24 kg</td>
-                    <td class="py-2 text-blue-400 font-bold">28 kg</td>
-                    <td class="py-2 text-amber-400 font-bold">30 kg</td>
-                    <td class="py-2 text-slate-400">34 kg</td>
-                  </tr>
-                  <tr>
-                    <td class="py-2 font-bold text-slate-200">Barbell Bench Press</td>
-                    <td class="py-2 text-slate-400">65 kg</td>
-                    <td class="py-2 text-blue-400 font-bold">75 kg</td>
-                    <td class="py-2 text-amber-400 font-bold">80 kg</td>
-                    <td class="py-2 text-slate-400">95 kg</td>
-                  </tr>
-                  <tr>
-                    <td class="py-2 font-bold text-slate-200">Opdrukken (Push-ups)</td>
-                    <td class="py-2 text-slate-400">15 reps</td>
-                    <td class="py-2 text-blue-400 font-bold">22 reps</td>
-                    <td class="py-2 text-amber-400 font-bold">28 reps</td>
-                    <td class="py-2 text-slate-400">35+ reps</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- RUG -->
-          <div class="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2.5">
-            <div class="flex items-center justify-between">
-              <h4 class="font-bold text-xs font-mono uppercase text-blue-400 flex items-center gap-1.5">
-                <span>🏹</span> Rug Oefeningen (Doelen voor 3 × 6-8 reps)
-              </h4>
-              <span class="text-[10px] text-slate-500 font-mono">Man 82 kg / 42 jr</span>
-            </div>
-
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs font-mono">
-                <thead>
-                  <tr class="text-slate-500 border-b border-slate-800 text-[10px]">
-                    <th class="py-1.5">Oefening</th>
-                    <th class="py-1.5">Start (Wk 1)</th>
-                    <th class="py-1.5 text-blue-400">Norm (42j)</th>
-                    <th class="py-1.5 text-amber-400">Piekdoel (Wk 6)</th>
-                    <th class="py-1.5 text-slate-400">Gevorderd</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-900 text-slate-300">
-                  <tr>
-                    <td class="py-2 font-bold text-slate-200">Barbell Bent-Over Row</td>
-                    <td class="py-2 text-slate-400">60 kg</td>
-                    <td class="py-2 text-blue-400 font-bold">70 kg</td>
-                    <td class="py-2 text-amber-400 font-bold">75 kg</td>
-                    <td class="py-2 text-slate-400">90 kg</td>
-                  </tr>
-                  <tr>
-                    <td class="py-2 font-bold text-slate-200">1-Arm Dumbbell Row</td>
-                    <td class="py-2 text-slate-400">26 kg</td>
-                    <td class="py-2 text-blue-400 font-bold">30 kg</td>
-                    <td class="py-2 text-amber-400 font-bold">32 kg</td>
-                    <td class="py-2 text-slate-400">38 kg</td>
-                  </tr>
-                  <tr>
-                    <td class="py-2 font-bold text-slate-200">Pull-ups / Chin-ups</td>
-                    <td class="py-2 text-slate-400">4-5 reps</td>
-                    <td class="py-2 text-blue-400 font-bold">8-10 reps</td>
-                    <td class="py-2 text-amber-400 font-bold">12 reps</td>
-                    <td class="py-2 text-slate-400">15+ reps</td>
-                  </tr>
-                  <tr>
-                    <td class="py-2 font-bold text-slate-200">Dumbbell Pullover</td>
-                    <td class="py-2 text-slate-400">20 kg</td>
-                    <td class="py-2 text-blue-400 font-bold">24 kg</td>
-                    <td class="py-2 text-amber-400 font-bold">26 kg</td>
-                    <td class="py-2 text-slate-400">32 kg</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- SCHOUDERS & ARMEN -->
-          <div class="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2.5">
-            <div class="flex items-center justify-between">
-              <h4 class="font-bold text-xs font-mono uppercase text-purple-400 flex items-center gap-1.5">
-                <span>⚡</span> Schouders & Armen (Doelen voor 3 × 8-12 reps)
-              </h4>
-              <span class="text-[10px] text-slate-500 font-mono">Man 82 kg / 42 jr</span>
-            </div>
-
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs font-mono">
-                <thead>
-                  <tr class="text-slate-500 border-b border-slate-800 text-[10px]">
-                    <th class="py-1.5">Oefening</th>
-                    <th class="py-1.5">Start (Wk 1)</th>
-                    <th class="py-1.5 text-blue-400">Norm (42j)</th>
-                    <th class="py-1.5 text-amber-400">Piekdoel (Wk 6)</th>
-                    <th class="py-1.5 text-slate-400">Gevorderd</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-900 text-slate-300">
-                  <tr>
-                    <td class="py-2 font-bold text-slate-200">Seated Dumbbell OHP</td>
-                    <td class="py-2 text-slate-400">18 kg</td>
-                    <td class="py-2 text-blue-400 font-bold">20-22 kg</td>
-                    <td class="py-2 text-amber-400 font-bold">24 kg</td>
-                    <td class="py-2 text-slate-400">28 kg</td>
-                  </tr>
-                  <tr>
-                    <td class="py-2 font-bold text-slate-200">Standing Barbell OHP</td>
-                    <td class="py-2 text-slate-400">42.5 kg</td>
-                    <td class="py-2 text-blue-400 font-bold">50 kg</td>
-                    <td class="py-2 text-amber-400 font-bold">55 kg</td>
-                    <td class="py-2 text-slate-400">65 kg</td>
-                  </tr>
-                  <tr>
-                    <td class="py-2 font-bold text-slate-200">Dumbbell Lateral Raise</td>
-                    <td class="py-2 text-slate-400">8 kg</td>
-                    <td class="py-2 text-blue-400 font-bold">10 kg (strikte vorm)</td>
-                    <td class="py-2 text-amber-400 font-bold">12 kg</td>
-                    <td class="py-2 text-slate-400">14 kg</td>
-                  </tr>
-                  <tr>
-                    <td class="py-2 font-bold text-slate-200">Dumbbell Biceps Curls</td>
-                    <td class="py-2 text-slate-400">12 kg</td>
-                    <td class="py-2 text-blue-400 font-bold">15 kg</td>
-                    <td class="py-2 text-amber-400 font-bold">16 kg</td>
-                    <td class="py-2 text-slate-400">20 kg</td>
-                  </tr>
-                  <tr>
-                    <td class="py-2 font-bold text-slate-200">Dumbbell Hammer Curls</td>
-                    <td class="py-2 text-slate-400">14 kg</td>
-                    <td class="py-2 text-blue-400 font-bold">16 kg</td>
-                    <td class="py-2 text-amber-400 font-bold">18 kg</td>
-                    <td class="py-2 text-slate-400">22 kg</td>
-                  </tr>
-                  <tr>
-                    <td class="py-2 font-bold text-slate-200">Overhead Triceps Extension</td>
-                    <td class="py-2 text-slate-400">20 kg</td>
-                    <td class="py-2 text-blue-400 font-bold">24 kg</td>
-                    <td class="py-2 text-amber-400 font-bold">26 kg</td>
-                    <td class="py-2 text-slate-400">30 kg</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- PROGRESSIVE OVERLOAD VUISTREGEL -->
-        <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 flex items-start gap-2.5">
-          <span class="text-base flex-shrink-0">🎯</span>
-          <div class="space-y-1">
-            <div class="font-bold text-slate-200">Thuisgym Overload Vuistregel:</div>
-            <p class="leading-relaxed text-[11px] text-slate-400">
-              Verhoog pas in gewicht (+1 of +2 kg per dumbbell / +2.5 kg barbell) wanneer je alle 3 de geplande sets voltooit én je beleving minimaal 🟢 Vlot of 🟡 Goed is. Forceer nooit een gewichtsverhoging als de reps slordig worden; consolidatie geeft ruimte om dezelfde belasting met controle te herhalen; blessurevrij trainen is daarmee niet gegarandeerd.
-            </p>
-          </div>
-        </div>
-
-        <!-- FOOTER -->
-        <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
-          <button onclick="closeBenchmarkModal(); openSetupRoutineModal();" class="px-4 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-            <span>🎯</span> Naar Schema Inrichten
-          </button>
-          <button onclick="closeBenchmarkModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition border border-slate-700 cursor-pointer">
-            Sluiten
-          </button>
-        </div>
-      `;
+      content.innerHTML = `<section class="space-y-4 text-sm text-slate-300"><h3 class="font-bold text-amber-300">Startgewichten & onderbouwing</h3><p>De start- en richtgewichten in dit schema zijn hulpmiddelen bij het kiezen van je eerste belasting. Ze zijn geen wetenschappelijk gevalideerde normen voor jouw leeftijd, lichaamsgewicht of ervaring, en geen verplicht einddoel.</p><p>Gebruik je opgeslagen gewicht, reps en inspanning om verder op te bouwen. Dumbbell- en barbellprestaties hebben geen vaste persoonlijke omrekenfactor; volg ze als afzonderlijke oefeningen.</p>${trainingEvidenceHtml()}<div class="flex gap-3"><button onclick="closeBenchmarkModal(); openSetupRoutineModal();" class="rounded-xl bg-blue-600 px-4 py-2 text-white">Schema inrichten</button><button onclick="closeBenchmarkModal()" class="rounded-xl bg-slate-800 px-4 py-2">Sluiten</button></div></section>`;
     }
 
     function switchWeek(weekNum) {
@@ -6593,13 +6355,15 @@
     async function setRecoveryCheck(value) {
       const week = appState.currentWeek, dayKey = appState.currentDay;
       const day = appState.weeks[week]?.[dayKey];
-      if (!day || !['unknown', 'recovered', 'tired', 'exhausted'].includes(value)) return;
+      if (!day || !['unknown', 'recovered', 'tired', 'exhausted'].includes(value) || value === (day.recovery || 'unknown')) return;
+      if (setRecoveryCheck.pending) { renderExercises(); return; }
       if (liveWorkout.active || Object.values(day).some(slot => slot?.sets?.some(set => set.completed))) {
         showToast('De herstelcheck staat vast zodra je training is gestart.', 'error'); return;
       }
       const sessionId = day.sessionId || Object.values(day).find(slot => slot?.sessionId)?.sessionId;
       if (!sessionId) { showToast('Training kan nog niet worden opgeslagen.', 'error'); return; }
       try {
+        setRecoveryCheck.pending = true;
         const response = await jsonApi('/api/sessions/' + sessionId, 'PATCH', { recovery: value });
         if (!response.ok) throw new Error('Opslaan mislukt');
         day.recovery = value;
@@ -6609,7 +6373,8 @@
           slot.sets.forEach(set => { for (const field of ['weight', 'reps']) if (!set.inputFields?.[field]) set[field] = ''; });
         });
         saveState(); renderExercises(); updateDashboard();
-      } catch (error) { showToast('Herstelcheck niet opgeslagen. Probeer opnieuw.', 'error'); }
+      } catch (error) { renderExercises(); showToast('Herstelcheck niet opgeslagen. Probeer opnieuw.', 'error'); }
+      finally { setRecoveryCheck.pending = false; }
     }
 
     function trainingEvidenceHtml() {
@@ -6973,7 +6738,7 @@
               </button>
 
               ${slotAdvice.cycleGoal ? `
-                <button onclick="openBenchmarkModal()" class="px-2 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-mono text-[11px] border border-amber-500/30 flex items-center gap-1 transition cursor-pointer" title="Bekijk fysiologische benchmark en doelen voor man 42jr, 82kg">
+                <button onclick="openBenchmarkModal()" class="px-2 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-mono text-[11px] border border-amber-500/30 flex items-center gap-1 transition cursor-pointer" title="Bekijk uitleg over startgewichten en schemareferenties">
                   <span>🎯 Doel: <b>${slotAdvice.cycleGoal} ${slotAdvice.unit || 'kg'}</b></span>
                 </button>
               ` : ''}

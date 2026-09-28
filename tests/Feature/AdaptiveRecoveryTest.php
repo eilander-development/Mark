@@ -59,6 +59,15 @@ class AdaptiveRecoveryTest extends TestCase
         }
     }
 
+    public function test_recovery_survives_marker_state_round_trip(): void
+    {
+        $state = $this->getJson('/api/marker-state')->assertOk()->json('appState');
+        $state['weeks'][6]['mon']['recovery'] = 'tired';
+        $this->putJson('/api/marker-state', ['appState' => $state])->assertOk()
+            ->assertJsonPath('appState.weeks.6.mon.recovery', 'tired');
+        $this->getJson('/api/marker-state')->assertOk()->assertJsonPath('appState.weeks.6.mon.recovery', 'tired');
+    }
+
     public function test_unknown_or_incomplete_evidence_never_selects_the_lightest_deload(): void
     {
         $periodization = app(Periodization::class);
