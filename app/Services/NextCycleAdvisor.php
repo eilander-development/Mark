@@ -57,7 +57,10 @@ class NextCycleAdvisor
                 $nextName = $this->catalog->nextAlternative($slot->slot_key, $fromName);
                 $rotated = $nextName !== $fromName;
                 $peakWeight = 0.0;
-                foreach ($slot->sets as $set) {
+                foreach ($slot->sets->take($this->periodization->requiredSets($peakWeek)) as $set) {
+                    if (! $set->completed || (int) $set->reps <= 0) {
+                        continue;
+                    }
                     $peakWeight = max($peakWeight, (float) $set->weight);
                 }
 

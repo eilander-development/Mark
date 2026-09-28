@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\ProgramSlot;
 use App\Models\WorkoutSlot;
 use App\Services\CycleFactory;
+use App\Services\TrainingBackup;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class WorkoutProgressionTest extends TestCase
@@ -185,5 +188,55 @@ class WorkoutProgressionTest extends TestCase
         $this->patchJson('/api/slots/'.$slot->id, ['progressionPlan' => ['weight' => 6, 'reps' => 14, 'minReps' => 12]])
             ->assertUnprocessable()->assertJsonValidationErrors('progressionPlan.maxReps');
         $this->assertSame(15, $slot->fresh()->progression_plan['maxReps']);
+    }
+
+    public function test_rest_measurement_count_survives_session_update_and_marker_round_trip(): void
+    {
+        $slot = $this->bench(1, 'mon');
+        $session = $slot->session;
+        $this->patchJson('/api/sessions/'.$session->id, [
+            'actual_duration' => 120, 'actual_avg_rest' => 75, 'actual_rest_count' => 4,
+        ])->assertOk()->assertJsonPath('session.actual_rest_count', 4);
+        $this->assertDatabaseHas('workout_sessions', ['id' => $session->id, 'actual_rest_count' => 4, 'actual_avg_rest' => 75]);
+        $payload = $this->getJson('/api/marker-state')->assertOk()
+            ->assertJsonPath('appState.weeks.1.mon.actualRestCount', 4)->json();
+        $this->putJson('/api/marker-state', $payload)->assertOk()
+            ->assertJsonPath('appState.weeks.1.mon.actualRestCount', 4);
+        $this->patchJson('/api/sessions/'.$session->id, ['actual_rest_count' => -1])
+            ->assertUnprocessable()->assertJsonValidationErrors('actual_rest_count');
+        $this->patchJson('/api/sessions/'.$session->id, ['actual_rest_count' => 0])->assertOk();
+        $this->assertDatabaseHas('workout_sessions', ['id' => $session->id, 'actual_rest_count' => 0, 'actual_avg_rest' => null]);
+    }
+
+    public function test_archived_sets_are_exported_and_records_survive_backup_restore(): void
+    {
+        Storage::fake('local');
+        $slot = $this->bench(1, 'mon');
+        $slot->sets->first()->update(['weight' => '20', 'reps' => '12', 'completed' => true]);
+        $this->patchJson('/api/preferences', ['current_week' => 7])->assertOk();
+        $this->postJson('/api/cycles')->assertOk();
+        $this->getJson('/api/marker-state')->assertOk()
+            ->assertJsonPath('appState.cyclesHistory.0.snapshot.weeksSnapshot.1.mon.slot_a1.sets.0.weight', '20');
+        $current = $this->bench(1, 'mon');
+        $current->sets->first()->update(['weight' => '12', 'reps' => '8', 'completed' => true]);
+        $payload = app(TrainingBackup::class)->payload();
+        app(TrainingBackup::class)->import($payload);
+        $state = $this->getJson('/api/state')->assertOk()->json();
+        $bench = collect($state['weeks'][1]['mon']['slots'])->firstWhere('selectedName', 'Dumbbell Bench Press');
+        $this->assertSame(20.0, (float) $bench['record']['maxWeight']);
+        $this->assertSame(28.0, (float) $bench['record']['max1RM']);
+        $this->getJson('/api/marker-state')->assertOk()
+            ->assertJsonPath('appState.cyclesHistory.0.snapshot.weeksSnapshot.1.mon.slot_a1.sets.0.reps', '12');
+    }
+
+    public function test_new_cycle_advice_does_not_use_draft_or_invalid_peak_weights(): void
+    {
+        $slot = $this->bench(6, 'mon');
+        ProgramSlot::query()->where('slot_key', 'slot_a1')->update(['alternatives' => ['Dumbbell Bench Press']]);
+        $slot->sets[0]->update(['weight' => '50', 'reps' => '12', 'completed' => false]);
+        $slot->sets[1]->update(['weight' => '40', 'reps' => '0', 'completed' => true]);
+        $slot->sets[2]->update(['weight' => '12', 'reps' => '10', 'completed' => true]);
+        $this->getJson('/api/cycles/next-advice')->assertOk()
+            ->assertJsonPath('schema.mon.slot_a1.weight', 12);
     }
 }

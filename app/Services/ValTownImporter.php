@@ -210,6 +210,12 @@ class ValTownImporter
                         ? (int) $slots['actualAvgRest']
                         : null;
                 }
+                if (array_key_exists('actualRestCount', $slots)) {
+                    $session->actual_rest_count = $slots['actualRestCount'] !== null ? max(0, (int) $slots['actualRestCount']) : null;
+                    if ($session->actual_rest_count === 0) {
+                        $session->actual_avg_rest = null;
+                    }
+                }
                 $session->save();
             }
         }
@@ -264,6 +270,7 @@ class ValTownImporter
         foreach ($cycle->sessions as $session) {
             $session->actual_duration = null;
             $session->actual_avg_rest = null;
+            $session->actual_rest_count = null;
             $session->save();
         }
 

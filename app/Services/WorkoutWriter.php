@@ -131,6 +131,7 @@ class WorkoutWriter
         }
         $session->actual_duration = null;
         $session->actual_avg_rest = null;
+        $session->actual_rest_count = null;
         $session->save();
 
         return $this->state->payload();
@@ -192,13 +193,19 @@ class WorkoutWriter
     /**
      * @return array<string, mixed>
      */
-    public function updateSession(WorkoutSession $session, ?int $duration, ?int $avgRest): array
+    public function updateSession(WorkoutSession $session, ?int $duration, ?int $avgRest, ?int $restCount = null): array
     {
         if ($duration !== null) {
             $session->actual_duration = $duration;
         }
         if ($avgRest !== null) {
             $session->actual_avg_rest = $avgRest;
+        }
+        if ($restCount !== null) {
+            $session->actual_rest_count = $restCount;
+            if ($restCount === 0) {
+                $session->actual_avg_rest = null;
+            }
         }
         $session->save();
 
@@ -207,6 +214,7 @@ class WorkoutWriter
                 'id' => $session->id,
                 'actual_duration' => $session->actual_duration,
                 'actual_avg_rest' => $session->actual_avg_rest,
+                'actual_rest_count' => $session->actual_rest_count,
             ],
         ];
     }

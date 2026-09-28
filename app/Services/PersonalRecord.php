@@ -26,12 +26,34 @@ class PersonalRecord
             ->with('slot')
             ->get();
 
+        $archived = Cycle::query()->where('is_current', false)->doesntHave('sessions')->get(['snapshot']);
+        foreach ($archived as $cycle) {
+            $weeks = $cycle->snapshot['weeksSnapshot'] ?? $cycle->snapshot['weeks'] ?? [];
+            foreach ($weeks as $days) {
+                foreach (config('ironforge.days') as $day) {
+                    foreach ($days[$day] ?? [] as $slot) {
+                        if (! is_array($slot) || mb_strtolower(trim($slot['selectedName'] ?? '')) !== mb_strtolower(trim($exerciseName))) {
+                            continue;
+                        }
+                        foreach ($slot['sets'] ?? [] as $set) {
+                            if ($set['completed'] ?? false) {
+                                $sets->push((object) $set);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         foreach ($sets as $set) {
-            $reps = (int) $set->reps;
+            $reps = (int) ($set->reps ?? 0);
+            if ($reps <= 0 || (! $isBw && (float) ($set->weight ?? 0) <= 0)) {
+                continue;
+            }
             if ($reps > $maxReps) {
                 $maxReps = $reps;
             }
-            $weight = (float) $set->weight;
+            $weight = (float) ($set->weight ?? 0);
             if (! $isBw && $weight > 0) {
                 if ($weight > $maxWeight) {
                     $maxWeight = $weight;

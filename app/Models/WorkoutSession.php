@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['cycle_id', 'week', 'day', 'actual_duration', 'actual_avg_rest'])]
+#[Fillable(['cycle_id', 'week', 'day', 'actual_duration', 'actual_avg_rest', 'actual_rest_count'])]
 class WorkoutSession extends Model
 {
     public function cycle(): BelongsTo

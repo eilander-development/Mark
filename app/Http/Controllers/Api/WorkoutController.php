@@ -93,12 +93,14 @@ class WorkoutController extends Controller
         $data = $request->validate([
             'actual_duration' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'actual_avg_rest' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'actual_rest_count' => ['sometimes', 'nullable', 'integer', 'min:0'],
         ]);
 
         return response()->json($this->writer->updateSession(
             $session,
             $data['actual_duration'] ?? null,
             $data['actual_avg_rest'] ?? null,
+            $data['actual_rest_count'] ?? null,
         ));
     }
 

@@ -71,6 +71,7 @@ class StateAssembler
                 'title' => config('ironforge.splits.'.$session->day.'.title'),
                 'duration' => $session->actual_duration,
                 'avgRest' => $session->actual_avg_rest,
+                'restCount' => $session->actual_rest_count,
                 'dayName' => $this->periodization->dayName($session->day),
                 'dayShort' => $this->periodization->dayShort($session->day),
                 'slots' => $slots,

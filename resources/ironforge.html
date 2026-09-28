@@ -3512,10 +3512,11 @@
               || prevDay.sessionId
               || Object.values(nextDay).find((slot) => slot && slot.sessionId)?.sessionId
               || Object.values(prevDay).find((slot) => slot && slot.sessionId)?.sessionId;
-            if (sessionId && (nextDay.actualDuration !== prevDay.actualDuration || nextDay.actualAvgRest !== prevDay.actualAvgRest)) {
+            if (sessionId && (nextDay.actualDuration !== prevDay.actualDuration || nextDay.actualAvgRest !== prevDay.actualAvgRest || nextDay.actualRestCount !== prevDay.actualRestCount)) {
               requests.push(jsonApi("/api/sessions/" + sessionId, "PATCH", {
                 actual_duration: nextDay.actualDuration ?? null,
-                actual_avg_rest: nextDay.actualAvgRest ?? null
+                actual_avg_rest: nextDay.actualAvgRest ?? null,
+                actual_rest_count: nextDay.actualRestCount ?? null
               }));
             }
             Object.keys(nextDay).forEach((slotKey) => {
@@ -3583,100 +3584,34 @@
     }
 
     // Zoekt in álle weken naar het hoogste geregistreerde gewicht / 1RM of max reps voor een oefening
-    function getAllTimeRecord(exerciseName) {
-      let max1RM = 0;
-      let maxWeight = 0;
-      let maxReps = 0;
-
-      for (let w = 1; w <= appState.totalWeeks; w++) {
-        const week = appState.weeks[w];
-        if (!week) continue;
-
-        ["mon", "tue", "thu", "fri"].forEach(day => {
-          const dayData = week[day];
-          if (!dayData) return;
-
-          Object.values(dayData).forEach(slot => {
-            if (!slot || typeof slot !== "object" || !Array.isArray(slot.sets)) return;
-            if (slot.selectedName === exerciseName) {
-              slot.sets.forEach(s => {
-                if (s && s.completed && Number(s.reps) > 0) {
-                  const r = Number(s.reps);
-                  if (r > maxReps) maxReps = r;
-                  if (Number(s.weight) > 0) {
-                    const est = calculate1RM(s.weight, s.reps);
-                    if (est && est > max1RM) max1RM = est;
-                    if (Number(s.weight) > maxWeight) maxWeight = Number(s.weight);
-                  }
+    function getAllTimeRecord(exerciseName, except = null) {
+      let max1RM = 0, maxWeight = 0, maxReps = 0;
+      const sources = [appState.weeks, ...(appState.cyclesHistory || []).map(item => item.weeksSnapshot || item.snapshot?.weeksSnapshot || item.snapshot?.weeks || {})];
+      sources.forEach((weeks, sourceIndex) => {
+        Object.entries(weeks || {}).forEach(([week, days]) => {
+          ['mon', 'tue', 'thu', 'fri'].forEach(day => {
+            Object.entries(days[day] || {}).forEach(([key, slot]) => {
+              if (!Array.isArray(slot?.sets) || (slot.selectedName || '').trim().toLowerCase() !== exerciseName.trim().toLowerCase()) return;
+              slot.sets.forEach((set, index) => {
+                if (sourceIndex === 0 && except && Number(week) === Number(except.week) && day === except.day && key === except.key && index === except.index) return;
+                if (!set.completed || Number(set.reps) <= 0 || (!isExerciseBodyweight(exerciseName) && Number(set.weight) <= 0)) return;
+                maxReps = Math.max(maxReps, Number(set.reps));
+                if (!isExerciseBodyweight(exerciseName)) {
+                  maxWeight = Math.max(maxWeight, Number(set.weight));
+                  max1RM = Math.max(max1RM, calculate1RM(set.weight, set.reps) || 0);
                 }
               });
-            }
+            });
           });
         });
-      }
+      });
       return { max1RM, maxWeight, maxReps };
     }
 
     function isSetNewAllTimePR(exerciseName, currentWeight, currentReps, currentWeek, currentDay, currentSlotKey, setIdx) {
-      const isBW = isExerciseBodyweight(exerciseName);
-      
-      if (isBW) {
-        const curReps = Number(currentReps) || 0;
-        if (curReps <= 0) return false;
-        let priorMaxReps = 0;
-        for (let w = 1; w <= appState.totalWeeks; w++) {
-          const week = appState.weeks[w];
-          if (!week) continue;
-
-          ["mon", "tue", "thu", "fri"].forEach(day => {
-            const dayData = week[day];
-            if (!dayData) return;
-
-            Object.entries(dayData).forEach(([slotK, slot]) => {
-              if (!slot || typeof slot !== "object" || !Array.isArray(slot.sets)) return;
-              if (slot.selectedName === exerciseName) {
-                slot.sets.forEach((s, idx) => {
-                  if (w === currentWeek && day === currentDay && slotK === currentSlotKey && idx === setIdx) return;
-                  if (s.completed && Number(s.reps) > 0) {
-                    if (Number(s.reps) > priorMaxReps) priorMaxReps = Number(s.reps);
-                  }
-                });
-              }
-            });
-          });
-        }
-        return priorMaxReps > 0 && curReps > priorMaxReps;
-      }
-
-      const current1RM = calculate1RM(currentWeight, currentReps);
-      if (!current1RM) return false;
-
-      let priorMax1RM = 0;
-      // Vergelijk alleen met sets van eerdere weken of eerdere sets in dezelfde sessie
-      for (let w = 1; w <= appState.totalWeeks; w++) {
-        const week = appState.weeks[w];
-        if (!week) continue;
-
-        ["mon", "tue", "thu", "fri"].forEach(day => {
-          const dayData = week[day];
-          if (!dayData) return;
-
-          Object.entries(dayData).forEach(([slotK, slot]) => {
-            if (slot.selectedName === exerciseName) {
-              slot.sets.forEach((s, idx) => {
-                // Sla de huidige set zelf over
-                if (w === currentWeek && day === currentDay && slotK === currentSlotKey && idx === setIdx) return;
-                if (s.completed && Number(s.weight) > 0 && Number(s.reps) > 0) {
-                  const est = calculate1RM(s.weight, s.reps);
-                  if (est && est > priorMax1RM) priorMax1RM = est;
-                }
-              });
-            }
-          });
-        });
-      }
-
-      return priorMax1RM > 0 && current1RM > priorMax1RM;
+      const record = getAllTimeRecord(exerciseName, { week: currentWeek, day: currentDay, key: currentSlotKey, index: setIdx });
+      if (isExerciseBodyweight(exerciseName)) return Number(currentReps) > 0 && Number(currentReps) > record.maxReps;
+      return Number(currentWeight) > 0 && Number(currentReps) > 0 && (Number(currentWeight) > record.maxWeight || calculate1RM(currentWeight, currentReps) > record.max1RM);
     }
 
     /* 3B. LICHAAMSGEWICHT & FYSIOLOGISCHE KRACHTBENCHMARKS VOOR THUISGYM (~42 JR / 82 KG) */
@@ -4237,7 +4172,7 @@
       }, 0);
       const projected = getNextProgression({ ...week, achieved: true, achievedReps: week.targetReps, completedSets: week.requiredSets, exertion: 'good' }, weekNum + 1);
       const nextText = next.provisional
-        ? `Volgende week: nog te beoordelen. ${next.reason} Als alle weekdoelen met voldoende controle worden gehaald: ${projected.requiredSets} × ${isBW ? 'BW' : projected.weight > 0 ? projected.weight + ' kg' : 'zelfgekozen startgewicht'} × ${projected.reps} reps (${projected.status.toLowerCase()}).`
+        ? `Volgende week: nog te beoordelen. Nog ${Math.max(0, week.requiredSets - week.completedSets)} sets niet gelogd. Mogelijke stap als alle doelen zijn gehaald en geen set maximaal was: ${projected.requiredSets} × ${isBW ? 'BW' : projected.weight > 0 ? projected.weight + ' kg' : 'zelfgekozen startgewicht'} × ${projected.reps} reps (${projected.status.toLowerCase()}).`
         : `Volgende week: ${next.requiredSets} × ${isBW ? 'BW' : next.weight + ' kg'} × ${next.reps} reps. ${next.status}: ${next.reason}`;
       const planDiffers = slot.progressionPlan && ((Number(advice.advisedReps) !== progress.targetReps) || Number(advice.advisedWeight || 0) !== progress.targetWeight);
       const planReason = planDiffers ? 'Je volgt het bij de start vastgelegde doel. Je opgeslagen prestaties bepalen de volgende stap.' : advice.adviceText;
@@ -4247,10 +4182,12 @@
         <div class="text-slate-300">${isBW ? 'Na een behaald weekdoel: maximaal 2 reps per set erbij.' : `Volgende gewichtsstap: eerst alle weeksets op ${week.maxReps} reps halen, met voldoende controle. Nu ${upperSets}/${week.requiredSets} sets aan die bovengrens.`}</div></div>
         <div class="flex flex-wrap justify-between gap-2"><span class="font-bold text-emerald-300">${progress.achieved ? 'Doel gehaald' : progress.percent >= 80 ? 'Bijna bij je doel' : 'Op weg naar je doel'}: ${progress.achievedSets}/${progress.requiredSets} sets</span><span class="text-slate-300">Vandaag ${progress.percent}%</span></div>
         <div role="progressbar" aria-label="Doel van vandaag" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress.percent}" class="h-2 overflow-hidden rounded bg-slate-800"><div class="h-full bg-emerald-500" style="width:${progress.percent}%"></div></div>
+        <div class="text-slate-200">Sets uitgevoerd: ${progress.completedSets}/${progress.requiredSets} · Doel gehaald: ${progress.achievedSets}/${progress.requiredSets}</div>
         <div class="text-slate-200">Uitgevoerd: ${actual.length ? format(actual) : 'vandaag nog geen sets opgeslagen'}</div>
         ${remaining ? `<div class="text-amber-300">${remaining}</div>` : ''}
         ${previous ? `<div class="text-slate-400">Vorige training (week ${previous.week}, ${SPLIT_INFO[previous.day].title.split(':')[0]}): ${format(previous.sets)}</div>` : ''}
-        ${comparisons.length ? `<div class="text-emerald-300">Verschil met vorige training: ${comparisons.join(' · ')}</div>` : ''}
+        ${comparisons.length ? `<div class="text-slate-300">${isDeloadWeek(weekNum) ? 'Hersteltraining · ' : ''}Verschil met vorige training: ${comparisons.join(' · ')}</div>` : ''}
+        <div class="text-slate-400">De balk meet je geplande gewicht en reps. Een lichtere set telt wel als uitgevoerd. Inspanning: standaard ‘goed’; één ‘maximaal’ blokkeert extra reps of gewicht deze week.</div>
         <div class="border-t border-slate-800 pt-2 text-slate-300">Weekdoel: ${week.achievedSets}/${week.requiredSets} sets. ${nextText}</div>
       </div>`;
     }
@@ -4365,6 +4302,81 @@
     }
 
     /* 4D. WEEK VOORTGANGS- & OVERLOAD EVALUATIE (EINDRAPPORTAGE) */
+    function getTrainingTiming(day, completedSets) {
+      const duration = Number(day?.actualDuration) || 0;
+      const restCount = Number(day?.actualRestCount) || 0;
+      const hasRest = restCount > 0 && day?.actualAvgRest != null;
+      return {
+        duration: duration > 0 ? duration : completedSets * 135,
+        durationEstimated: duration <= 0 && completedSets > 0,
+        restCount: hasRest ? restCount : 0,
+        restTotal: hasRest ? Number(day.actualAvgRest) * restCount : 0,
+        restUnknown: completedSets > 0 && !hasRest,
+      };
+    }
+
+    function summarizeTrainingTimes(entries) {
+      const timings = entries.map(entry => getTrainingTiming(entry.day, entry.completedSets));
+      const durationSessionsCount = timings.filter(t => t.duration > 0).length;
+      const totalDurationSeconds = timings.reduce((sum, t) => sum + t.duration, 0);
+      const restCount = timings.reduce((sum, t) => sum + t.restCount, 0);
+      return {
+        totalDurationSeconds, durationSessionsCount,
+        averageSessionDurationSeconds: durationSessionsCount ? Math.round(totalDurationSeconds / durationSessionsCount) : 0,
+        durationEstimated: timings.some(t => t.durationEstimated),
+        averageRestSeconds: restCount ? Math.round(timings.reduce((sum, t) => sum + t.restTotal, 0) / restCount) : null,
+        restCount, restIncomplete: timings.some(t => t.restUnknown),
+      };
+    }
+
+    function getCycleReport(weeks) {
+      let totalVolume = 0, totalSets = 0, totalWorkouts = 0;
+      const exercises = {}, timings = [];
+      Object.keys(weeks || {}).sort((a, b) => Number(a) - Number(b)).forEach(week => {
+        ['mon', 'tue', 'thu', 'fri'].forEach(dayKey => {
+          const day = weeks[week][dayKey];
+          if (!day) return;
+          let planned = 0, completed = 0;
+          Object.entries(day).forEach(([key, slot]) => {
+            if (!Array.isArray(slot?.sets)) return;
+            const name = slot.selectedName || EXERCISE_CATALOG[key]?.defaultName || key;
+            const isBW = isExerciseBodyweight(name);
+            const required = isDeloadWeek(Number(week)) ? 2 : 3;
+            planned += required;
+            const sets = slot.sets.slice(0, required).filter(set => set.completed && Number(set.reps) > 0 && (isBW || Number(set.weight) > 0));
+            completed += sets.length;
+            sets.forEach(set => { if (!isBW) totalVolume += Number(set.weight) * Number(set.reps); });
+            if (sets.length && !isDeloadWeek(Number(week))) {
+              const best = [...sets].sort((a, b) => (isBW ? 0 : Number(b.weight) - Number(a.weight)) || Number(b.reps) - Number(a.reps))[0];
+              const performance = { weight: isBW ? 0 : Number(best.weight), reps: Number(best.reps) };
+              exercises[name] ||= { name, isBodyweight: isBW, start: performance };
+              exercises[name].end = performance;
+            }
+          });
+          totalSets += completed;
+          if (planned > 0 && completed === planned) totalWorkouts++;
+          timings.push({ day, completedSets: completed });
+        });
+      });
+      const timing = summarizeTrainingTimes(timings);
+      return { totalVolume, totalSets, totalWorkouts,
+        avgDurationSeconds: timing.averageSessionDurationSeconds, avgRestSeconds: timing.averageRestSeconds,
+        durationEstimated: timing.durationEstimated, restCount: timing.restCount, restIncomplete: timing.restIncomplete,
+        progressHighlights: Object.values(exercises).map(ex => ({ name: ex.name, isBodyweight: ex.isBodyweight,
+          startWeight: ex.start.weight, startReps: ex.start.reps, endWeight: ex.end.weight, endReps: ex.end.reps,
+          diff: Math.round((ex.end.weight - ex.start.weight) * 10) / 10, repDiff: ex.end.reps - ex.start.reps })),
+      };
+    }
+
+    function getCycleHistoryReport(item) {
+      const snapshot = item.snapshot || {};
+      const weeks = item.weeksSnapshot || snapshot.weeksSnapshot || snapshot.weeks;
+      return { ...snapshot, ...item, cycleNumber: item.cycleNumber || item.number,
+        startDate: item.startDate || item.started_at, completedAt: item.completedAt || item.completed_at,
+        ...(weeks ? getCycleReport(weeks) : {}), totalWeeks: item.totalWeeks || snapshot.totalWeeks || (weeks ? Object.keys(weeks).length : '?'), weeksSnapshot: weeks,
+      };
+    }
+
     function getWeekEvaluation(weekNum) {
       const weekData = appState.weeks[weekNum];
       if (!weekData) return null;
@@ -4462,43 +4474,9 @@
         }
       });
 
-      // Bereken werkelijke trainingstijd en rusttijden voor de hele week
-      let totalDurationSeconds = 0;
-      let durationSessionsCount = 0;
-      let totalRestSecondsSum = 0;
-      let restSessionsCount = 0;
-
-      dayKeys.forEach(dKey => {
-        const dData = weekData[dKey];
-        if (!dData) return;
-        const dayStatus = getDayCompletionStatus(weekNum, dKey);
-
-        let dayDuration = 0;
-        if (dData.actualDuration && dData.actualDuration >= 180) {
-          // Echte live timer van minstens 3 minuten
-          dayDuration = dData.actualDuration;
-          durationSessionsCount++;
-        } else if (dayStatus.completedSets > 0) {
-          // Handmatig gelogde of afgeronde dag zonder actieve stopwatch:
-          // Reële trainingstijd: ~45s uitvoering + ~90s rust = ~135s per voltooide set
-          const avgRestForDay = (dData.actualAvgRest && dData.actualAvgRest > 0) ? dData.actualAvgRest : 90;
-          dayDuration = dayStatus.completedSets * (45 + avgRestForDay);
-          durationSessionsCount++;
-        }
-
-        totalDurationSeconds += dayDuration;
-
-        if (dData.actualAvgRest && dData.actualAvgRest > 0) {
-          totalRestSecondsSum += dData.actualAvgRest;
-          restSessionsCount++;
-        } else if (dayStatus.completedSets > 0) {
-          totalRestSecondsSum += 90;
-          restSessionsCount++;
-        }
-      });
-
-      const averageSessionDurationSeconds = durationSessionsCount > 0 ? Math.round(totalDurationSeconds / durationSessionsCount) : 0;
-      const averageRestSeconds = restSessionsCount > 0 ? Math.round(totalRestSecondsSum / restSessionsCount) : null;
+      const timing = summarizeTrainingTimes(dayKeys.filter(day => weekData[day]).map(day => ({
+        day: weekData[day], completedSets: getDayCompletionStatus(weekNum, day).completedSets,
+      })));
 
       const exercisesList = Object.values(exercisesMap).map(ex => {
         const progress = getExerciseWeekProgress(weekNum, ex.name);
@@ -4521,10 +4499,7 @@
         totalPlannedSets: totalPlannedSets,
         totalReps: totalReps,
         daysCompletedCount: daysCompletedCount,
-        totalDurationSeconds: totalDurationSeconds,
-        averageSessionDurationSeconds: averageSessionDurationSeconds,
-        averageRestSeconds: averageRestSeconds,
-        durationSessionsCount: durationSessionsCount,
+        ...timing,
         isCompleted: isCompleted,
         exercises: exercisesList
       };
@@ -4684,62 +4659,7 @@
           </div>
         `;
       } else {
-        exercisesHtml = evalData.exercises.map(ex => {
-          const setsSummary = ex.allSets.length > 0 
-            ? (ex.isBodyweight 
-                ? `${ex.allSets.length} sets gelogd • Max: <b class="text-slate-100">${ex.maxReps} reps</b> (BW)` 
-                : `${ex.allSets.length} sets gelogd • Max: <b class="text-slate-100">${ex.maxWeight} kg</b>`)
-            : `<span class="text-slate-500 italic">Geen sets voltooid</span>`;
-
-          const exertionBadge = ex.dominantExertion === "easy" 
-            ? `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40">🟢 Vlot (${ex.easyCount})</span>`
-            : ex.dominantExertion === "max"
-            ? `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-500/40">🔴 Maximaal (${ex.maxCount})</span>`
-            : `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40">🟡 Goed (${ex.goodCount})</span>`;
-
-          return `
-            <div class="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800/90 hover:border-slate-700 transition space-y-2">
-              <div class="flex items-start justify-between gap-2">
-                <div>
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <h4 class="font-bold text-slate-100 text-sm">${ex.name}</h4>
-                    <span class="text-[10px] font-mono px-2 py-0.5 rounded ${ex.statusClass} font-bold border">
-                      ${ex.statusTag}
-                    </span>
-                    ${ex.allSets.length > 0 ? exertionBadge : ''}
-                  </div>
-                  <div class="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
-                    <span>${ex.days.join(", ")}</span>
-                    <span>•</span>
-                    <span>Doel: ${evalData.isDeload ? 2 : 3} × ${ex.targetReps} reps</span>
-                    ${ex.isBodyweight ? `<span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-300 font-mono font-bold">⚡ BW</span>` : ''}
-                  </div>
-                </div>
-
-                <div class="text-right flex-shrink-0">
-                  <div class="text-[10px] uppercase font-mono text-slate-400">Advies Wk ${nextWeekNum}</div>
-                  ${ex.nextProvisional ? `<div class="font-mono text-xs text-slate-400">Nog te beoordelen</div>` : ex.isBodyweight ? `
-                    <div class="font-mono font-bold text-sm ${ex.nextAdvisedReps > ex.targetReps ? 'text-emerald-400' : 'text-blue-300'}">
-                      ${evalData.isNextDeload ? 2 : 3} × ${ex.nextAdvisedReps} reps
-                    </div>
-                    <div class="text-[9px] text-slate-500 font-mono">Lichaamsgewicht</div>
-                  ` : `
-                    <div class="font-mono font-bold text-sm ${ex.nextAdvisedWeight > ex.maxWeight ? 'text-emerald-400' : 'text-blue-300'}">
-                      ${ex.nextAdvisedWeight > 0 ? `${ex.nextAdvisedWeight} kg × ${ex.nextAdvisedReps} reps` : 'Nog te bepalen'}
-                    </div>
-                  `}
-                </div>
-              </div>
-
-              <div class="text-xs font-bold text-emerald-300">Weekdoel: ${ex.progress.achievedSets}/${ex.progress.requiredSets} sets · ${ex.progress.percent}%</div>
-              <div class="space-y-2">${ex.progress.sessions.map(session => `<div class="text-xs text-slate-400">${SPLIT_INFO[session.dayKey].title.split(':')[0]}</div>${renderProgressDetails(weekNum, session.dayKey, session.slotKey)}`).join('')}</div>
-              <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-800/60 text-slate-300">
-                <span class="text-[11px] text-slate-400">${setsSummary}</span>
-                <span class="text-[11px] text-slate-300 font-mono">${ex.nextActionText}</span>
-              </div>
-            </div>
-          `;
-        }).join("");
+        exercisesHtml = evalData.exercises.map(ex => weekExerciseOutlookHtml(weekNum, ex)).join('');
       }
 
       container.innerHTML = `
@@ -4792,7 +4712,7 @@
             <span class="text-lg flex-shrink-0">💡</span>
             <div>
               <b class="text-slate-200 block mb-0.5">Einde Week Overload Toepassing:</b>
-              Overload (+${inc} kg) wordt pas toegekend wanneer alle geplande werksets en herhalingen voor een oefening succesvol zijn voltooid. Zo voorkom je te snelle verhogingen.
+              Eerst maximaal 2 reps per set erbij binnen je repbereik. Pas aan de bovengrens van alle weeksets: +${inc} kg en terug naar de ondergrens. Eén maximale set blokkeert de verhoging; je ingestelde consolidatie- en herstelweken blijven gelden.
             </div>
           </div>
         `}
@@ -4818,14 +4738,14 @@
             <div class="text-base sm:text-lg font-black font-mono text-blue-400 mt-0.5">
               ${evalData.totalDurationSeconds > 0 ? formatDurationHoursMin(evalData.totalDurationSeconds) : (evalData.totalCompletedSets > 0 ? '~' + Math.round(evalData.totalCompletedSets * 3) + ' min' : '-')}
             </div>
-            <div class="text-[10px] text-slate-500 font-mono mt-0.5">${evalData.durationSessionsCount > 0 ? `${Math.round(evalData.averageSessionDurationSeconds / 60)} min / sessie` : 'werkelijke trainingstijd'}</div>
+            <div class="text-[10px] text-slate-500 font-mono mt-0.5">${evalData.durationEstimated ? 'Deels of volledig geschat · ' : 'Opgeslagen timerduur · '}${Math.round(evalData.averageSessionDurationSeconds / 60)} min / sessie</div>
           </div>
           <div class="p-3 rounded-2xl bg-slate-950/70 border border-slate-800">
             <div class="text-[10px] font-mono uppercase text-slate-400">Gem. Rusttijd</div>
             <div class="text-base sm:text-lg font-black font-mono text-amber-400 mt-0.5">
-              ${evalData.averageRestSeconds ? `${evalData.averageRestSeconds} sec` : '90 sec'}
+              ${evalData.averageRestSeconds !== null ? `${evalData.averageRestSeconds} sec` : 'Onbekend'}
             </div>
-            <div class="text-[10px] text-slate-500 font-mono mt-0.5">tussen werksets</div>
+            <div class="text-[10px] text-slate-500 font-mono mt-0.5">${evalData.restCount} gemeten rustmomenten${evalData.restIncomplete ? ' · onvolledig' : ''}</div>
           </div>
           <div class="p-3 rounded-2xl bg-slate-950/70 border border-slate-800">
             <div class="text-[10px] font-mono uppercase text-slate-400">Dagen Afgerond</div>
@@ -4851,13 +4771,8 @@
               Trainingsdichtheid & Rusttijd Coach-Inzicht:
             </div>
             <p class="leading-relaxed text-slate-300">
-              ${evalData.averageRestSeconds ? (
-                evalData.averageRestSeconds < 65 
-                  ? `<span class="text-amber-300 font-bold">Korte rust (${evalData.averageRestSeconds}s gem.):</span> Voor zware presses en rows geeft 2–3 minuten rust volledige ATP-krachtresynthese, wat progressive overload helpt volhouden.` 
-                  : evalData.averageRestSeconds > 180 
-                    ? `<span class="text-blue-300 font-bold">Ruime rust (${evalData.averageRestSeconds}s gem.):</span> Uitstekend voor maximale kracht per set. Probeer de sessie compact te houden (~45–60 min) voor optimale hormoonrespons.` 
-                    : `<span class="text-emerald-300 font-bold">Gouden balans (${evalData.averageRestSeconds}s gem.):</span> Perfecte verhouding tussen spierkrachtresynthese en trainingsdichtheid!`
-              ) : 'Hou trainingen rond de 45–60 minuten. 2-3 minuten rust bij compound oefeningen (Squat/Bench/Row) zorgt voor ~100% herstel van spier-ATP. 60-90 sec bij isolatie stimuleert metabole stress.'}
+              ${evalData.restCount ? `Gemiddelde gewogen naar ${evalData.restCount} opgeslagen rustmomenten. ${evalData.restIncomplete ? 'Trainingen zonder aantal rustmetingen zijn niet meegerekend.' : ''}` : 'Geen betrouwbare rustmetingen beschikbaar. Oudere sessiegemiddelden zonder aantal rustmomenten worden niet gewogen.'}
+              ${evalData.durationEstimated ? 'Ontbrekende trainingstijd is geschat op 45 seconden uitvoering en 90 seconden rust per uitgevoerde set.' : ''}
             </p>
           </div>
         </div>
@@ -5096,7 +5011,7 @@
       if (!slot || !Array.isArray(slot.sets)) {
         return 0;
       }
-      return slot.sets.reduce((max, set) => Math.max(max, Number(set && set.weight) || 0), 0);
+      return slot.sets.slice(0, isDeloadWeek(peakWeek) ? 2 : 3).reduce((max, set) => set?.completed && Number(set.reps) > 0 ? Math.max(max, Number(set.weight) || 0) : max, 0);
     }
 
     function enrichNextCycleAdvice(advice) {
@@ -5311,82 +5226,7 @@
     function executeStartNewMesocycle(carryForwardWeights = true, customSchema = null) {
       const curCycleNum = appState.currentCycle || 1;
 
-      // 1. Bereken statistieken over de afgeronde cyclus
-      let totalCycleVolume = 0;
-      let totalCycleCompletedSets = 0;
-      let totalCycleWorkouts = 0;
-      let durationSum = 0;
-      let durationCount = 0;
-      let restSum = 0;
-      let restCount = 0;
-
-      const exerciseProgressMap = {};
-
-      for (let w = 1; w <= appState.totalWeeks; w++) {
-        const wkData = appState.weeks[w];
-        if (!wkData) continue;
-        totalCycleVolume += calculateWeekVolume(w);
-
-        ["mon", "tue", "thu", "fri"].forEach(d => {
-          const dayData = wkData[d];
-          if (!dayData) return;
-          if (dayData.actualDuration && dayData.actualDuration > 0) {
-            durationSum += dayData.actualDuration;
-            durationCount++;
-          }
-          if (dayData.actualAvgRest && dayData.actualAvgRest > 0) {
-            restSum += dayData.actualAvgRest;
-            restCount++;
-          }
-
-          let dayAllDone = true;
-          SPLIT_INFO[d].slots.forEach(sKey => {
-            const slot = dayData[sKey];
-            if (!slot) return;
-            const exName = slot.selectedName || (EXERCISE_CATALOG[sKey] ? EXERCISE_CATALOG[sKey].defaultName : "");
-            if (!exerciseProgressMap[exName]) {
-              exerciseProgressMap[exName] = { startWeight: null, endWeight: null };
-            }
-
-            const completed = (slot.sets || []).filter(s => s.completed);
-            totalCycleCompletedSets += completed.length;
-            if (completed.length < (isDeloadWeek(w) ? 2 : 3)) {
-              dayAllDone = false;
-            }
-
-            const maxW = Math.max(0, ...(slot.sets || []).map(s => s.completed ? (Number(s.weight) || 0) : 0));
-            if (maxW > 0) {
-              if (exerciseProgressMap[exName].startWeight === null) {
-                exerciseProgressMap[exName].startWeight = maxW;
-              }
-              if (!isDeloadWeek(w)) {
-                exerciseProgressMap[exName].endWeight = maxW;
-              } else if (exerciseProgressMap[exName].endWeight === null) {
-                exerciseProgressMap[exName].endWeight = maxW;
-              }
-            }
-          });
-
-          if (dayAllDone && Object.keys(dayData).length > 0) {
-            totalCycleWorkouts++;
-          }
-        });
-      }
-
-      // Progressie highlights
-      const progressHighlights = [];
-      Object.keys(exerciseProgressMap).forEach(name => {
-        const item = exerciseProgressMap[name];
-        if (item.startWeight !== null && item.endWeight !== null) {
-          const diff = Math.round((item.endWeight - item.startWeight) * 10) / 10;
-          progressHighlights.push({
-            name,
-            startWeight: item.startWeight,
-            endWeight: item.endWeight,
-            diff
-          });
-        }
-      });
+      const report = getCycleReport(appState.weeks);
 
       // Piekgewichten uit laatste zware werkweek
       const peakWeights = {};
@@ -5403,7 +5243,7 @@
           SPLIT_INFO[d].slots.forEach(sKey => {
             const slot = appState.weeks[peakWeek][d] ? appState.weeks[peakWeek][d][sKey] : null;
             if (slot) {
-              const maxW = Math.max(0, ...(slot.sets || []).map(s => Number(s.weight) || 0));
+              const maxW = Math.max(0, ...(slot.sets || []).slice(0, 3).map(s => s.completed && Number(s.reps) > 0 ? Number(s.weight) || 0 : 0));
               peakWeights[d][sKey] = {
                 selectedName: slot.selectedName,
                 weight: maxW > 0 ? maxW : null
@@ -5420,12 +5260,7 @@
         totalWeeks: appState.totalWeeks,
         completedAt: new Date().toISOString(),
         startDate: appState.cycleStartedAt || (new Date().toLocaleDateString('nl-NL')),
-        totalVolume: Math.round(totalCycleVolume),
-        totalWorkouts: totalCycleWorkouts,
-        totalSets: totalCycleCompletedSets,
-        avgDurationSeconds: durationCount > 0 ? Math.round(durationSum / durationCount) : 0,
-        avgRestSeconds: restCount > 0 ? Math.round(restSum / restCount) : null,
-        progressHighlights: progressHighlights,
+        ...report,
         weeksSnapshot: JSON.parse(JSON.stringify(appState.weeks))
       };
 
@@ -5505,41 +5340,17 @@
       if (!content) return;
 
       const curCycle = appState.currentCycle || 1;
-      const history = appState.cyclesHistory || [];
+      const history = (appState.cyclesHistory || []).map(getCycleHistoryReport).sort((a, b) => b.cycleNumber - a.cycleNumber);
 
       // Bereken all-time statistieken over alle cycli heen
       let allTimeVolume = 0;
       let allTimeWorkouts = 0;
       let allTimeSets = 0;
 
-      // Huidige cyclus data
-      let curCycleVol = 0;
-      let curCycleCompletedDays = 0;
-      let curCycleSetsDone = 0;
-
-      for (let w = 1; w <= appState.totalWeeks; w++) {
-        const vol = calculateWeekVolume(w);
-        curCycleVol += vol;
-        const wkData = appState.weeks[w];
-        if (wkData) {
-          ["mon", "tue", "thu", "fri"].forEach(d => {
-            const dayData = wkData[d];
-            if (dayData && Object.keys(dayData).length > 0) {
-              const allDone = SPLIT_INFO[d].slots.every(sKey => {
-                const sl = dayData[sKey];
-                return sl && sl.sets && sl.sets.slice(0, isDeloadWeek(w) ? 2 : 3).every(s => s.completed);
-              });
-              if (allDone) curCycleCompletedDays++;
-              SPLIT_INFO[d].slots.forEach(sKey => {
-                const sl = dayData[sKey];
-                if (sl && sl.sets) {
-                  curCycleSetsDone += sl.sets.filter(s => s.completed).length;
-                }
-              });
-            }
-          });
-        }
-      }
+      const currentReport = getCycleReport(appState.weeks);
+      const curCycleVol = currentReport.totalVolume;
+      const curCycleCompletedDays = currentReport.totalWorkouts;
+      const curCycleSetsDone = currentReport.totalSets;
 
       allTimeVolume += curCycleVol;
       allTimeWorkouts += curCycleCompletedDays;
@@ -5643,7 +5454,7 @@
             </div>
           ` : `
             <div class="space-y-3">
-              ${history.slice().reverse().map((c, idx) => {
+              ${history.map((c, idx) => {
                 const dateStr = c.completedAt ? new Date(c.completedAt).toLocaleDateString('nl-NL', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Afgerond';
                 return `
                   <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
@@ -5672,27 +5483,27 @@
                       </div>
                       <div class="p-2 rounded-xl bg-slate-900 border border-slate-800/70">
                         <div class="text-[10px] text-slate-500">Gem. Duur</div>
-                        <div class="font-bold text-slate-300 mt-0.5">${c.avgDurationSeconds > 0 ? Math.round(c.avgDurationSeconds / 60) + ' min' : '-'}</div>
+                        <div class="font-bold text-slate-300 mt-0.5">${c.avgDurationSeconds > 0 ? Math.round(c.avgDurationSeconds / 60) + ' min' : 'Onbekend'}${c.durationEstimated ? ' (geschat)' : ''}</div>
                       </div>
                       <div class="p-2 rounded-xl bg-slate-900 border border-slate-800/70">
                         <div class="text-[10px] text-slate-500">Gem. Rust</div>
-                        <div class="font-bold text-amber-400 mt-0.5">${c.avgRestSeconds ? c.avgRestSeconds + 's' : '-'}</div>
+                        <div class="font-bold text-amber-400 mt-0.5">${c.avgRestSeconds != null ? c.avgRestSeconds + 's' : 'Onbekend'}${c.restIncomplete ? ' (onvolledig)' : ''}</div>
                       </div>
                     </div>
 
                     ${c.progressHighlights && c.progressHighlights.length > 0 ? `
                       <div class="space-y-1.5 pt-1">
                         <div class="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-                          🔥 Krachttoename & Progressie Highlights:
+                          Progressie · beste set van eerste → laatste zware training:
                         </div>
                         <div class="flex flex-wrap gap-1.5">
                           ${c.progressHighlights.map(p => `
                             <span class="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center gap-1.5">
                               <span class="text-slate-200 font-bold">${p.name}:</span>
-                              <span class="text-slate-400">${p.startWeight}kg</span>
+                              <span class="text-slate-400">${p.isBodyweight ? 'BW' : p.startWeight + ' kg'} × ${p.startReps ?? '?'} reps</span>
                               <span class="text-slate-500">➔</span>
-                              <span class="text-emerald-400 font-bold">${p.endWeight}kg</span>
-                              ${p.diff > 0 ? `<span class="text-emerald-300 text-[10px] font-black">(+${p.diff}kg)</span>` : ''}
+                              <span class="text-slate-200 font-bold">${p.isBodyweight ? 'BW' : p.endWeight + ' kg'} × ${p.endReps ?? '?'} reps</span>
+                              ${p.diff === 0 && p.repDiff > 0 ? `<span class="text-emerald-300 text-[10px] font-black">(+${p.repDiff} reps)</span>` : ''}
                             </span>
                           `).join("")}
                         </div>
@@ -5798,7 +5609,7 @@
             SPLIT_INFO[d].slots.forEach(sKey => {
               const slot = appState.weeks[peakWeek][d] ? appState.weeks[peakWeek][d][sKey] : null;
               if (slot) {
-                const maxW = Math.max(0, ...(slot.sets || []).map(s => Number(s.weight) || 0));
+                const maxW = Math.max(0, ...(slot.sets || []).slice(0, 3).map(s => s.completed && Number(s.reps) > 0 ? Number(s.weight) || 0 : 0));
                 peakWeights[d][sKey] = {
                   selectedName: slot.selectedName,
                   weight: maxW > 0 ? maxW : null
@@ -6485,6 +6296,170 @@
       return false;
     }
 
+    function escapeReportText(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    }
+
+    function getExerciseHistory(name, before = null) {
+      const days = ['mon', 'tue', 'thu', 'fri'];
+      const currentCycle = Number(appState.currentCycle || 1);
+      const sources = (appState.cyclesHistory || []).map(item => ({
+        cycle: Number(item.number || item.cycleNumber || 0),
+        weeks: item.weeksSnapshot || item.snapshot?.weeksSnapshot || item.snapshot?.weeks || {},
+      })).filter(source => source.cycle < currentCycle);
+      sources.push({ cycle: currentCycle, weeks: appState.weeks });
+      const entries = [];
+      sources.forEach(source => Object.entries(source.weeks || {}).forEach(([weekKey, week]) => {
+        const weekNum = Number(weekKey);
+        days.forEach((day, dayIndex) => {
+          if (before && source.cycle === currentCycle && (weekNum > before.week || (weekNum === before.week && dayIndex >= days.indexOf(before.day)))) return;
+          Object.entries(week[day] || {}).forEach(([key, slot]) => {
+            if (!Array.isArray(slot?.sets) || (slot.selectedName || EXERCISE_CATALOG[key]?.defaultName || '').trim().toLowerCase() !== name.trim().toLowerCase()) return;
+            const isBW = isExerciseBodyweight(name);
+            const sets = slot.sets.slice(0, isDeloadWeek(weekNum) ? 2 : 3).map((set, index) => ({ ...set, position: index + 1 }))
+              .filter(set => set.completed && Number(set.reps) > 0 && (isBW || Number(set.weight) > 0));
+            if (sets.length) entries.push({ cycle: source.cycle, week: weekNum, day, dayIndex, key, sets, isBodyweight: isBW, isDeload: isDeloadWeek(weekNum) });
+          });
+        });
+      }));
+      return entries.sort((a, b) => a.cycle - b.cycle || a.week - b.week || a.dayIndex - b.dayIndex || a.key.localeCompare(b.key));
+    }
+
+    function formatHistorySets(entry) {
+      return entry.sets.map(set => `Set ${set.position}: ${entry.isBodyweight ? 'BW' : Number(set.weight) + ' kg'} × ${Number(set.reps)}`).join(' · ');
+    }
+
+    function compareHistoryEntries(before, current) {
+      if (!before) return 'Eerste opgeslagen uitvoering';
+      if (current.isDeload || before.isDeload) return 'Hersteltraining betrokken; vergelijk de sets afzonderlijk.';
+      const sameSets = current.sets.length === before.sets.length && current.sets.every((set, index) => set.position === before.sets[index].position);
+      if (!sameSets) return 'Verschillend aantal opgeslagen sets; geen totaalvergelijking.';
+      const sameWeights = current.isBodyweight || current.sets.every((set, index) => Number(set.weight) === Number(before.sets[index].weight));
+      if (!sameWeights) return 'Gewicht gewijzigd; vergelijk gewicht en reps samen.';
+      const difference = current.sets.reduce((sum, set, index) => sum + Number(set.reps) - Number(before.sets[index].reps), 0);
+      return `${difference > 0 ? '+' : ''}${difference} reps totaal bij hetzelfde gewicht en aantal sets`;
+    }
+
+    function exerciseHistoryHtml(name, before = null) {
+      const entries = getExerciseHistory(name, before);
+      const rows = entries.map((entry, index) => ({ entry, comparison: compareHistoryEntries(entries[index - 1], entry) })).reverse();
+      return `<details class="border-t border-slate-800 pt-2"><summary class="cursor-pointer text-xs text-blue-300">Oefeningshistorie · ${entries.length} uitvoeringen</summary>
+        <div class="mt-3 max-h-80 overflow-auto space-y-3">${rows.length ? rows.map(({ entry, comparison }) => `<div class="text-xs space-y-1"><p class="text-slate-400">Cyclus ${entry.cycle} · week ${entry.week} · ${escapeReportText(SPLIT_INFO[entry.day]?.title.split(':')[0] || entry.day)}${entry.isDeload ? ' · herstel' : ''}</p><p class="text-slate-100">${formatHistorySets(entry)}</p><p class="text-slate-400">${comparison}</p></div>`).join('') : '<p class="text-xs text-slate-400">Nog geen opgeslagen uitvoeringen.</p>'}</div>
+      </details>`;
+    }
+
+    function preparationDetailsHtml(weekNum, dayKey, slotKey) {
+      const slot = appState.weeks[weekNum][dayKey][slotKey];
+      const name = slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
+      const advice = getSlotTargetAdvice(weekNum, dayKey, slotKey);
+      const history = getExerciseHistory(name, { week: weekNum, day: dayKey });
+      const previous = history[history.length - 1];
+      const isBW = isExerciseBodyweight(name);
+      const reason = slot.progressionPlan ? 'Doel vastgelegd bij de start. Je eigen setinvoer blijft leidend.'
+        : advice.adviceText || (advice.adviceType === 'same_week' ? 'Referentie uit dezelfde week. De weekprestaties bepalen de volgende verhoging.' : 'Vooraf ingevuld startdoel; kies tijdens de training je passende startgewicht.');
+      return `<div class="text-xs space-y-2 mt-3 border-t border-slate-800 pt-3">
+        <p class="text-blue-300">Gepland: ${isDeloadWeek(weekNum) ? 2 : 3} × ${isBW ? 'BW' : advice.advisedWeight > 0 ? advice.advisedWeight + ' kg' : 'startgewicht kiezen'} × ${advice.advisedReps || advice.targetReps} reps</p>
+        <p class="text-slate-400">${escapeReportText(reason)}</p>
+        <p class="text-slate-300">${previous ? `Laatste uitvoering · cyclus ${previous.cycle}, week ${previous.week}, ${escapeReportText(SPLIT_INFO[previous.day]?.title.split(':')[0] || previous.day)}: ${formatHistorySets(previous)}` : 'Nog geen eerdere uitvoering opgeslagen.'}</p>
+        ${exerciseHistoryHtml(name, { week: weekNum, day: dayKey })}
+      </div>`;
+    }
+
+    function weekExerciseOutlookHtml(weekNum, exercise) {
+      const outlook = getOverloadOutlook(weekNum, exercise.name);
+      const next = outlook.next;
+      return `<article class="p-4 rounded-2xl bg-slate-950/70 border border-slate-700 space-y-3">
+        <h4 class="font-bold text-slate-100">${escapeReportText(exercise.name)}</h4>
+        <p class="text-xs text-slate-300">${exercise.progress.completedSets}/${exercise.progress.requiredSets} sets uitgevoerd · ${exercise.progress.achievedSets}/${exercise.progress.requiredSets} setdoelen gehaald</p>
+        <div class="space-y-1"><p class="text-xs text-slate-400">${outlook.provisional ? 'Voorlopige verwachting' : 'Advies voor volgende week'}</p><p class="font-bold text-blue-300">${escapeReportText(outlook.title)}</p>
+        ${next ? `<p class="text-sm text-slate-100">${outlook.provisional ? 'Mogelijke stap' : 'Volgende stap'}: ${next.requiredSets} × ${exercise.isBodyweight ? 'BW' : next.weight + ' kg'} × ${next.reps} reps</p>` : ''}
+        <p class="text-xs text-slate-300">${escapeReportText(outlook.reason)}</p><p class="text-xs text-slate-400">${outlook.remaining ? `Nog ${outlook.remaining} sets te beoordelen.` : 'Alle weeksets beoordeeld.'}</p></div>
+        <details><summary class="cursor-pointer text-xs text-slate-300">Bekijk prestaties per trainingsdag</summary><div class="mt-3 space-y-3">${exercise.progress.sessions.map(session => `<div class="text-xs text-slate-400">${escapeReportText(SPLIT_INFO[session.dayKey].title.split(':')[0])}</div>${renderProgressDetails(weekNum, session.dayKey, session.slotKey)}`).join('')}</div></details>
+        ${exerciseHistoryHtml(exercise.name, { week: weekNum + 1, day: 'mon' })}
+      </article>`;
+    }
+
+    function getOverloadOutlook(weekNum, name) {
+      const week = getExerciseWeekProgress(weekNum, name);
+      const remaining = Math.max(0, week.requiredSets - week.completedSets);
+      const next = getNextProgression(week, weekNum + 1);
+      if (weekNum >= Number(appState.totalWeeks || 7)) {
+        return { title: 'Nieuwe cyclus voorbereiden', reason: 'Dit is de laatste week van deze cyclus. Het nieuwe schema bepaalt je volgende startdoel.', remaining, next: null, provisional: true };
+      }
+      if (!remaining) return { title: next.status, reason: next.reason, remaining, next, provisional: false };
+      if (!week.completedSets) return { title: 'Nog onvoldoende gegevens', reason: 'Sla eerst een uitvoering van deze oefening op.', remaining, next: null, provisional: true };
+      if (isDeloadWeek(weekNum + 1)) return { title: 'Herstelweek gepland', reason: next.reason, remaining, next, provisional: true };
+      if (week.exertion === 'max' || week.achievedSets < week.completedSets) {
+        return { title: 'Voorlopig herhalen', reason: week.exertion === 'max'
+          ? 'Minstens één set is als maximaal opgeslagen. Met deze gegevens geen verhoging; het definitieve advies volgt na alle weeksets.'
+          : 'Niet alle uitgevoerde sets haalden hun doel. Meer gewicht of reps wordt met deze gegevens nog niet geadviseerd.', remaining, next: null, provisional: true };
+      }
+      // Remaining sets are projected at their own planned targets, never as already achieved.
+      const weights = week.sets.map(set => Number(set.weight));
+      const reps = week.sets.map(set => Number(set.reps));
+      week.sessions.forEach(session => {
+        if (session.progress.completedSets < session.progress.requiredSets) {
+          weights.push(session.progress.targetWeight > 0 ? session.progress.targetWeight : week.targetWeight);
+          reps.push(session.progress.targetReps);
+        }
+      });
+      const projected = getNextProgression({ ...week, achieved: true, completedSets: week.requiredSets,
+        targetWeight: week.isBodyweight ? 0 : Math.min(...weights), achievedReps: Math.min(...reps) }, weekNum + 1);
+      return { title: projected.change === 'weight' ? 'Op koers voor meer gewicht' : projected.change === 'reps' ? 'Op koers voor extra reps' : 'Consolidatieweek gepland',
+        reason: projected.change === 'repeat' ? projected.reason : 'Als de overige weeksets hun doel halen en geen set als maximaal wordt opgeslagen.',
+        remaining, next: projected, provisional: true };
+    }
+
+    function completedDayResultsHtml(weekNum, dayKey) {
+      const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+      const status = getDayCompletionStatus(weekNum, dayKey);
+      let achieved = 0;
+      const cards = SPLIT_INFO[dayKey].slots.map(key => {
+        const slot = appState.weeks[weekNum][dayKey][key];
+        const name = slot.selectedName || EXERCISE_CATALOG[key].defaultName;
+        const progress = getSlotProgress(weekNum, dayKey, key);
+        achieved += progress.achievedSets;
+        const isBW = isExerciseBodyweight(name);
+        const sets = slot.sets.slice(0, progress.requiredSets);
+        const format = set => `${isBW ? 'BW' : Number(set.weight) + ' kg'} × ${Number(set.reps)} reps`;
+        const previous = findPreviousExerciseSession(weekNum, dayKey, name);
+        const differences = previous ? sets.map((set, index) => {
+          const before = previous.slot.sets[index];
+          if (!before?.completed || Number(before.reps) <= 0 || (!isBW && Number(before.weight) <= 0)) return '';
+          const weight = Math.round((Number(set.weight) - Number(before.weight)) * 10) / 10;
+          const reps = Number(set.reps) - Number(before.reps);
+          return weight === 0 || isBW ? `Set ${index + 1}: ${reps > 0 ? '+' : ''}${reps} reps bij hetzelfde gewicht`
+            : `Set ${index + 1}: ${Number(before.weight)} → ${Number(set.weight)} kg; ${Number(before.reps)} → ${Number(set.reps)} reps`;
+        }).filter(Boolean) : [];
+        const week = getExerciseWeekProgress(weekNum, name);
+        const outlook = getOverloadOutlook(weekNum, name);
+        const next = outlook.next;
+        return `<article class="rounded-2xl border border-slate-700 bg-slate-950/70 p-4 space-y-3">
+          <div class="flex flex-wrap justify-between gap-2"><h4 class="font-bold text-slate-100">${escape(name)}</h4><span class="text-xs text-slate-300">${progress.achievedSets}/${progress.requiredSets} setdoelen gehaald</span></div>
+          <div class="text-sm text-slate-100"><span class="text-xs text-slate-400 block mb-1">Uitgevoerd · set 1 t/m ${progress.requiredSets}</span>${sets.map(format).join(' · ')}</div>
+          <div class="text-xs text-slate-400">${isDeloadWeek(weekNum) ? 'Hersteltraining · ' : ''}${previous ? `Verschil met week ${previous.week}, ${escape(SPLIT_INFO[previous.day].title.split(':')[0])}: ${differences.join(' · ') || 'Geen vergelijkbare sets'}` : 'Eerste opgeslagen uitvoering in deze cyclus; nog geen vergelijking.'}</div>
+          <div class="border-t border-slate-800 pt-3 space-y-1"><div class="text-xs text-slate-400">${outlook.provisional ? 'Verwachting progressive overload' : 'Advies voor volgende week'}</div>
+            <p class="font-bold text-blue-300 text-sm">${escape(outlook.title)}</p>
+            ${next ? `<p class="text-sm text-slate-100">${outlook.provisional ? 'Mogelijke volgende stap' : 'Volgende stap'}: ${next.requiredSets} × ${isBW ? 'BW' : next.weight + ' kg'} × ${next.reps} reps</p>` : ''}
+            <p class="text-xs text-slate-300">${escape(outlook.reason)}</p>
+            <p class="text-xs text-slate-400">${week.achievedSets}/${week.requiredSets} weeksetdoelen gehaald · ${outlook.remaining ? `nog ${outlook.remaining} sets te beoordelen` : 'alle weeksets beoordeeld'}</p>
+          </div>
+          ${exerciseHistoryHtml(name, { week: weekNum + 1, day: 'mon' })}
+        </article>`;
+      }).join('');
+      const nextDay = getNextSplitDay(dayKey);
+      return `<section class="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 sm:p-6 space-y-5">
+        <header><h3 class="font-black text-slate-100 text-lg">Resultaten & vooruitblik</h3><p class="text-sm text-emerald-300 mt-1">${escape(SPLIT_INFO[dayKey].title.split(':')[0])} afgerond</p><p class="text-xs text-slate-300 mt-1">${status.completedSets}/${status.totalSets} sets uitgevoerd · ${achieved}/${status.totalSets} setdoelen gehaald</p></header>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${cards}</div>
+        <p class="text-xs text-slate-400">De verwachting gebruikt alle opgeslagen sets van deze oefening in deze week. Inspanning telt mee: standaard ‘goed’; één maximale set blokkeert verhogen.</p>
+        <footer class="flex flex-wrap items-center gap-3 border-t border-slate-800 pt-4">
+          ${nextDay.nextDayKey ? `<button onclick="switchDay('${nextDay.nextDayKey}')" class="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold">Bekijk ${escape(nextDay.nextDayLabel.toLowerCase())}</button>` : `<button onclick="openWeekReportModal(${weekNum})" class="px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold">Bekijk weekrapport</button>`}
+          <button onclick="openCompletedWorkoutView()" class="px-3 py-2 text-xs text-slate-300 hover:text-white">Volledig dagrapport</button>
+          <button onclick="openCompletedWorkoutView(); resumeLiveWorkoutFromSummary()" class="px-3 py-2 text-xs text-slate-300 hover:text-white">Sets corrigeren</button>
+        </footer>
+      </section>`;
+    }
+
     function renderLockedRoutineView(container, currentDayData, slotKeys, isDeload, isDayLocked, isWeekDone) {
       const dayStatus = getDayCompletionStatus(appState.currentWeek, appState.currentDay);
       const isDayFullyDone = dayStatus.isFullyCompleted;
@@ -6495,16 +6470,16 @@
         const catalogItem = EXERCISE_CATALOG[slotKey];
         const exerciseData = currentDayData[slotKey];
         const selectedName = exerciseData.selectedName || catalogItem.defaultName;
-        const targetReps = getExerciseTargetReps(selectedName, slotKey);
+        const targetReps = getSlotTargetAdvice(appState.currentWeek, appState.currentDay, slotKey).advisedReps;
         const slotAdvice = getSlotTargetAdvice(appState.currentWeek, appState.currentDay, slotKey);
-        const targetWeight = slotAdvice.advisedWeight || Math.max(...exerciseData.sets.map(s => Number(s.weight) || 0)) || catalogItem.suggestedStart || 0;
+        const targetWeight = slotAdvice.advisedWeight || 0;
         const setsCount = isDeload ? 2 : (exerciseData.sets ? exerciseData.sets.length : 3);
         const completedSetsCount = exerciseData.sets ? exerciseData.sets.filter((s, i) => (!isDeload || i < 2) && s.completed).length : 0;
         const isSlotDone = completedSetsCount >= setsCount;
         const restTimeStr = catalogItem.restSec ? `${Math.floor(catalogItem.restSec / 60)}:${(catalogItem.restSec % 60).toString().padStart(2, '0')}m` : "2:00m";
 
         slotsCompactHtml += `
-          <div class="p-3.5 rounded-2xl bg-slate-950/70 border ${isSlotDone ? 'border-emerald-500/40 bg-emerald-950/15' : 'border-slate-800/80'} flex items-center justify-between gap-3 transition">
+          <article><div class="p-3.5 rounded-2xl bg-slate-950/70 border ${isSlotDone ? 'border-emerald-500/40 bg-emerald-950/15' : 'border-slate-800/80'} flex items-center justify-between gap-3 transition">
             <div class="flex items-center gap-3 min-w-0">
               <span class="w-7 h-7 rounded-xl ${isSlotDone ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold' : 'bg-slate-800 text-slate-400 font-bold'} text-[11px] font-mono flex items-center justify-center flex-shrink-0">
                 0${idx + 1}
@@ -6515,7 +6490,7 @@
                   ${isSlotDone ? '<span class="text-emerald-400 text-xs">✓</span>' : ''}
                 </div>
                 <div class="text-[10px] font-mono text-slate-400 flex items-center gap-2 mt-0.5">
-                  <span class="text-amber-300 font-bold">${targetWeight > 0 ? targetWeight + ' kg' : 'Start'} × ${targetReps} reps</span>
+                  <span class="text-amber-300 font-bold">${isExerciseBodyweight(selectedName) ? 'BW' : targetWeight > 0 ? targetWeight + ' kg' : 'Start'} × ${targetReps} reps</span>
                   <span class="text-slate-600">•</span>
                   <span>⏱ ${restTimeStr}</span>
                 </div>
@@ -6533,6 +6508,7 @@
               `}
             </div>
           </div>
+          <div class="px-3.5 pb-3.5">${preparationDetailsHtml(appState.currentWeek, appState.currentDay, slotKey)}</div></article>
         `;
       });
 
@@ -6632,6 +6608,11 @@
 
       const isDayLocked = isDayLockedOnHoofdscherm(appState.currentWeek, appState.currentDay);
       const isWeekDone = ["mon", "tue", "thu", "fri"].every(d => getDayCompletionStatus(appState.currentWeek, d).isFullyCompleted);
+
+      if (getDayCompletionStatus(appState.currentWeek, appState.currentDay).isFullyCompleted) {
+        container.innerHTML = completedDayResultsHtml(appState.currentWeek, appState.currentDay);
+        return;
+      }
 
       // ALS SCHEMA VAST STAAT: SCHEMA IS UIT HET HOOFDSCHERM
       // Tenzij de gebruiker expliciet heeft geklikt op 'Toon Sets Details (Alleen-Lezen)'
@@ -8079,6 +8060,8 @@
       liveWorkout.elapsedSeconds = 0;
       liveWorkout.restStartTimestamp = null;
       liveWorkout.actualRestDurations = [];
+      liveWorkout.previousRestCount = 0;
+      liveWorkout.previousAvgRest = 0;
 
       // Zoek de eerste onvoltooide set van deze dag
       const isDeload = isDeloadWeek(liveWorkout.weekNum);
@@ -8567,6 +8550,13 @@
       }
     }
 
+    function getLiveRestStats() {
+      const previousCount = Number(liveWorkout.previousRestCount) || 0;
+      const count = previousCount + liveWorkout.actualRestDurations.length;
+      const total = previousCount * (Number(liveWorkout.previousAvgRest) || 0) + liveWorkout.actualRestDurations.reduce((a, b) => a + b, 0);
+      return { count, average: count > 0 ? Math.round(total / count) : null };
+    }
+
     function showLiveWorkoutSummary() {
       stopContinuousWorkoutAlarm();
       clearInterval(liveWorkout.restInterval);
@@ -8581,13 +8571,12 @@
 
       // Bereken werkelijke duur en rusttijden voor logboek & periodisering
       const actualDuration = liveWorkout.elapsedSeconds;
-      const avgRest = liveWorkout.actualRestDurations.length > 0
-        ? Math.round(liveWorkout.actualRestDurations.reduce((a, b) => a + b, 0) / liveWorkout.actualRestDurations.length)
-        : (liveWorkout.restTotalSeconds || 90);
+      const rest = getLiveRestStats();
 
       if (appState.weeks[liveWorkout.weekNum] && appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey]) {
         appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey].actualDuration = actualDuration;
-        appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey].actualAvgRest = avgRest;
+        appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey].actualAvgRest = rest.average;
+        appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey].actualRestCount = rest.count;
         appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey].completedAt = new Date().toISOString();
       }
 
@@ -9272,9 +9261,10 @@
               <span class="text-[11px] font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
                 <span>⚡ Hoe voelde deze set?</span>
               </span>
-              <span class="text-[10px] text-slate-400 font-mono">Bepaalt slimme overload</span>
+              <span class="text-[10px] text-slate-400 font-mono">Standaard: goed</span>
             </div>
 
+            <p class="text-[11px] text-slate-400">Jouw beoordeling bepaalt het advies. Eén maximale set houdt de verhoging voor deze oefening deze week tegen.</p>
             <div class="grid grid-cols-3 gap-2" id="lwExertionGroup">
               <button 
                 type="button" 
@@ -9522,9 +9512,8 @@
       // FASE 4: TRAINING VOLTOOID SAMENVATTING (CONFETTI, PR'S, TONNAGE)
       // ==========================================
       else if (liveWorkout.phase === "summary") {
-        const avgRestDuration = liveWorkout.actualRestDurations.length > 0 
-          ? Math.round(liveWorkout.actualRestDurations.reduce((a, b) => a + b, 0) / liveWorkout.actualRestDurations.length)
-          : (liveWorkout.restTotalSeconds || 90);
+        const timing = getTrainingTiming(currentDayData, completedSetsCount);
+        const avgRestDuration = timing.restCount ? Math.round(timing.restTotal / timing.restCount) : null;
 
         container.innerHTML = `
           <div class="py-3 space-y-5">
@@ -9538,7 +9527,7 @@
                 ${completedSetsCount === totalSetsInWorkout ? 'TRAINING VOLTOOID!' : 'TUSSENTIJDS TRAININGSRAPPORT'}
               </h2>
               <p class="text-xs sm:text-sm text-emerald-400 font-mono">
-                Week ${liveWorkout.weekNum} • ${SPLIT_INFO[liveWorkout.dayKey].title} succesvol afgerond!
+                Week ${liveWorkout.weekNum} • ${SPLIT_INFO[liveWorkout.dayKey].title} · ${completedSetsCount === totalSetsInWorkout ? 'afgerond' : 'nog bezig'}
               </p>
             </div>
 
@@ -9555,17 +9544,17 @@
               <div class="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 text-center">
                 <span class="text-[10px] uppercase font-semibold text-slate-400 block font-mono">Duur Training</span>
                 <span class="text-xl sm:text-2xl font-black font-mono text-blue-400 mt-1 block">
-                  ${formatTime(liveWorkout.elapsedSeconds)}
+                  ${formatTime(timing.duration)}
                 </span>
-                <span class="text-[10px] text-slate-500 font-mono">effectieve tijd</span>
+                <span class="text-[10px] text-slate-500 font-mono">${timing.durationEstimated ? 'geschat · 135 sec per set' : 'opgeslagen timerduur'}</span>
               </div>
 
               <div class="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 text-center">
                 <span class="text-[10px] uppercase font-semibold text-slate-400 block font-mono">Gem. Rust</span>
                 <span class="text-xl sm:text-2xl font-black font-mono text-amber-400 mt-1 block">
-                  ${avgRestDuration}s
+                  ${avgRestDuration !== null ? avgRestDuration + 's' : 'Onbekend'}
                 </span>
-                <span class="text-[10px] text-slate-500 font-mono">per werkset</span>
+                <span class="text-[10px] text-slate-500 font-mono">${timing.restCount} gemeten rustmomenten</span>
               </div>
 
               <div class="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 text-center">
@@ -9590,7 +9579,7 @@
               <span class="text-lg flex-shrink-0">⏱️</span>
               <div class="leading-relaxed">
                 <span class="font-bold text-slate-200 block mb-0.5">Sessieduur & Rusttijden Opgeslagen:</span>
-                Je werkelijke sessieduur (<b>${formatTime(liveWorkout.elapsedSeconds)}</b>) en gemiddelde rust per werkset (<b>${avgRestDuration}s</b>) zijn vastgelegd in je weekschema. Een consistente rusttijd per oefening zorgt voor zuivere progressive overload en voorkomt onopgemerkte vermoeidheid of onnodig lange pauzes.
+                Je werkelijke sessieduur (<b>${formatTime(liveWorkout.elapsedSeconds)}</b>) en gemiddelde rust per werkset (<b>${avgRestDuration !== null ? avgRestDuration + 's' : 'Onbekend'}</b>) zijn vastgelegd in je weekschema. Een consistente rusttijd per oefening zorgt voor zuivere progressive overload en voorkomt onopgemerkte vermoeidheid of onnodig lange pauzes.
               </div>
             </div>
 
@@ -9830,8 +9819,10 @@
       liveWorkout.slotAdaptations = {};
 
       const dayData = (appState.weeks && appState.weeks[liveWorkout.weekNum]) ? appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey] : null;
-      liveWorkout.elapsedSeconds = (dayData && dayData.actualDuration) ? dayData.actualDuration : 45 * 60;
-      liveWorkout.actualRestDurations = (dayData && dayData.actualAvgRest) ? [dayData.actualAvgRest] : [90];
+      liveWorkout.elapsedSeconds = Number(dayData?.actualDuration) || 0;
+      liveWorkout.actualRestDurations = [];
+      liveWorkout.previousRestCount = Number(dayData?.actualRestCount) || 0;
+      liveWorkout.previousAvgRest = Number(dayData?.actualAvgRest) || 0;
 
       clearInterval(liveWorkout.elapsedInterval);
       clearInterval(liveWorkout.restInterval);
@@ -9957,7 +9948,7 @@
       if (status.isFullyCompleted) {
         if (noticeEl) noticeEl.textContent = "✓ Training succesvol afgerond • Alle sets geregistreerd";
         if (badgeIconEl) badgeIconEl.textContent = "✓";
-        if (badgeTextEl) badgeTextEl.textContent = "Voltooid (Alles Groen)";
+        if (badgeTextEl) badgeTextEl.textContent = "Alle sets uitgevoerd";
         if (badgeEl) {
           badgeEl.className = "text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 flex items-center gap-1.5 shadow-sm";
         }
