@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\WorkoutSession;
 use App\Models\WorkoutSet;
+use App\Services\CycleFactory;
 use App\Services\PersonalRecord;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -177,6 +178,39 @@ class IronforgeApiTest extends TestCase
             ->assertJsonPath('week', 1)
             ->assertJsonPath('completedSets', 1)
             ->assertJsonPath('volume', 500);
+    }
+
+    public function test_same_week_repeated_exercise_keeps_earlier_reps_for_advice(): void
+    {
+        $days = config('ironforge.days');
+        $this->assertGreaterThanOrEqual(2, count($days));
+
+        $cycle = app(CycleFactory::class)->ensureCurrent();
+        $firstSession = $cycle->sessions()->where('week', 1)->where('day', $days[0])->firstOrFail();
+        $laterSession = $cycle->sessions()->where('week', 1)->where('day', $days[1])->firstOrFail();
+
+        $firstSlot = $firstSession->slots()->firstOrFail();
+        $laterSlot = $laterSession->slots()->firstOrFail();
+
+        $name = 'Dumbbell Bench Press';
+        $firstSlot->update(['selected_name' => $name]);
+        $laterSlot->update(['selected_name' => $name]);
+
+        $firstSet = $firstSlot->sets()->orderBy('position')->firstOrFail();
+        $firstSet->update([
+            'weight' => '90',
+            'reps' => '12',
+            'completed' => true,
+            'exertion' => 'good',
+        ]);
+
+        $state = $this->getJson('/api/state')->assertOk()->json();
+        $later = collect($state['weeks'][1][$days[1]]['slots'])->firstWhere('selectedName', $name);
+
+        $this->assertNotNull($later);
+        $this->assertSame('same_week', $later['advice']['adviceType']);
+        $this->assertSame(90.0, (float) $later['advice']['advisedWeight']);
+        $this->assertSame(12, $later['advice']['sameWeekReps']);
     }
 
     public function test_spa_is_served_from_root(): void

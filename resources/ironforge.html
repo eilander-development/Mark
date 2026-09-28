@@ -3146,6 +3146,7 @@
       const d = dayKey || (typeof appState !== "undefined" ? appState.currentDay : "mon");
       if (slotKey && typeof appState !== "undefined" && appState.weeks && appState.weeks[w] && appState.weeks[w][d] && appState.weeks[w][d][slotKey]) {
         const slotData = appState.weeks[w][d][slotKey];
+        if (slotData?.progressionPlan?.reps) return Number(slotData.progressionPlan.reps);
         if (slotData && slotData.targetReps && Number(slotData.targetReps) > 0) {
           return Number(slotData.targetReps);
         }
@@ -3444,7 +3445,7 @@
 
     function setFingerprint(set) {
       if (!set) return "";
-      return [set.weight || "", set.reps || "", set.completed ? "1" : "0", set.exertion || "good"].join("|");
+      return [set.weight || "", set.reps || "", set.completed ? "1" : "0", set.exertion || "good", JSON.stringify(set.inputFields || {})].join("|");
     }
 
     async function persistIncrementalToLaravel() {
@@ -3522,10 +3523,12 @@
               if (!nextSlot || !Array.isArray(nextSlot.sets)) return;
               const prevSlot = prevDay[slotKey] || {};
               const slotId = lookupSlotId(week, day, slotKey, nextSlot);
-              if (slotId && (nextSlot.selectedName !== prevSlot.selectedName || (nextSlot.note || "") !== (prevSlot.note || ""))) {
+              if (slotId && (nextSlot.selectedName !== prevSlot.selectedName || (nextSlot.note || "") !== (prevSlot.note || "") || nextSlot.targetReps !== prevSlot.targetReps || JSON.stringify(nextSlot.progressionPlan) !== JSON.stringify(prevSlot.progressionPlan))) {
                 const slotBody = { context: "setup" };
                 if (nextSlot.selectedName !== prevSlot.selectedName) slotBody.selectedName = nextSlot.selectedName;
                 if ((nextSlot.note || "") !== (prevSlot.note || "")) slotBody.note = nextSlot.note || "";
+                if (nextSlot.targetReps !== prevSlot.targetReps && nextSlot.targetReps) slotBody.targetReps = nextSlot.targetReps;
+                if (JSON.stringify(nextSlot.progressionPlan) !== JSON.stringify(prevSlot.progressionPlan)) slotBody.progressionPlan = nextSlot.progressionPlan || null;
                 requests.push(jsonApi("/api/slots/" + slotId, "PATCH", slotBody));
               }
               nextSlot.sets.forEach((set, index) => {
@@ -3538,6 +3541,7 @@
                   reps: set.reps ?? "",
                   completed: !!set.completed,
                   exertion: set.exertion || "good",
+                  inputFields: set.inputFields || {},
                   context: "live"
                 }));
               });
@@ -4073,17 +4077,139 @@
     }
 
     /* 4. DELOAD, INREGELWEEK & PROGRESSIVE OVERLOAD AUTOMATISERING */
-    function checkOverloadAchieved(exerciseData, targetReps, isDeload) {
-      if (!exerciseData || !exerciseData.sets) return false;
-      const requiredSets = isDeload ? 2 : 3;
-      const relevantSets = exerciseData.sets.slice(0, requiredSets);
-      if (relevantSets.length === 0) return false;
-      const isBW = isExerciseBodyweight(exerciseData.selectedName);
-      return relevantSets.every(s => {
-        const reps = Number(s.reps);
-        const weight = Number(s.weight);
-        return s.completed && reps >= targetReps && (isBW || weight > 0);
+    function calculateSetProgress(sets, targetWeight, targetReps, requiredSets, isBodyweight) {
+      const details = Array.from({ length: requiredSets }, (_, index) => {
+        const set = sets[index] || {};
+        const completed = !!set.completed && Number(set.reps) > 0 && (isBodyweight || Number(set.weight) > 0);
+        const weightMet = isBodyweight || (Number(set.weight) > 0 && Number(set.weight) >= targetWeight);
+        const creditedReps = completed && weightMet ? Math.min(targetReps, Number(set.reps)) : 0;
+        return { completed, weightMet, creditedReps, missingReps: targetReps - creditedReps, achieved: completed && weightMet && Number(set.reps) >= targetReps };
       });
+      const completedSets = details.filter(set => set.completed).length;
+      const achievedSets = details.filter(set => set.achieved).length;
+      const creditedReps = details.reduce((sum, set) => sum + set.creditedReps, 0);
+      return { details, completedSets, achievedSets, requiredSets, creditedReps, requiredReps: requiredSets * targetReps,
+        remainingReps: requiredSets * targetReps - creditedReps,
+        percent: Math.floor(100 * creditedReps / (requiredSets * targetReps)),
+        achieved: achievedSets === requiredSets, targetWeight, targetReps };
+    }
+
+    function getSlotProgress(weekNum, dayKey, slotKey) {
+      const slot = appState.weeks[weekNum][dayKey][slotKey];
+      const name = slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
+      const isBW = isExerciseBodyweight(name);
+      const firstLogged = slot.sets.find(set => set.completed && Number(set.reps) > 0 && (isBW || Number(set.weight) > 0));
+      const firstPlanned = slot.sets.find(set => Number(set.weight) > 0);
+      const plan = slot.progressionPlan || { weight: isBW ? 0 : Number(firstLogged?.weight || firstPlanned?.weight || 0), reps: getExerciseTargetReps(name, slotKey, weekNum, dayKey) };
+      return calculateSetProgress(slot.sets, Number(plan.weight), Number(plan.reps), isDeloadWeek(weekNum) ? 2 : 3, isBW);
+    }
+
+    function getExerciseWeekProgress(weekNum, exerciseName) {
+      const sessions = [];
+      const sets = [];
+      for (const dayKey of ["mon", "tue", "thu", "fri"]) {
+        const day = appState.weeks[weekNum]?.[dayKey];
+        for (const slotKey of SPLIT_INFO[dayKey]?.slots || []) {
+          const slot = day?.[slotKey];
+          if (!slot || (slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName).trim().toLowerCase() !== exerciseName.trim().toLowerCase()) continue;
+          const progress = getSlotProgress(weekNum, dayKey, slotKey);
+          sessions.push({ dayKey, slotKey, progress });
+          sets.push(...slot.sets.slice(0, progress.requiredSets).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(exerciseName) || Number(set.weight) > 0)));
+        }
+      }
+      const sum = key => sessions.reduce((total, session) => total + session.progress[key], 0);
+      const requiredReps = sum('requiredReps');
+      const weights = sets.map(set => Number(set.weight)).filter(weight => weight > 0);
+      const plans = sessions.map(session => session.progress.targetWeight).filter(weight => weight > 0);
+      const achieved = sessions.length > 0 && sessions.every(session => session.progress.achieved);
+      const counts = sets.reduce((result, set) => { result[set.exertion || 'good']++; return result; }, { easy: 0, good: 0, max: 0 });
+      const exertion = counts.max > 0 ? 'max' : (sets.length > 0 && counts.easy >= Math.ceil(sets.length / 2) ? 'easy' : 'good');
+      return { sessions, sets, achieved, exertion, completedSets: sum('completedSets'), achievedSets: sum('achievedSets'), requiredSets: sum('requiredSets'),
+        remainingReps: sum('remainingReps'), requiredReps, creditedReps: sum('creditedReps'),
+        percent: requiredReps ? Math.floor(100 * sum('creditedReps') / requiredReps) : 0,
+        targetReps: Math.max(0, ...sessions.map(session => session.progress.targetReps)),
+        targetWeight: achieved && weights.length ? Math.min(...weights) : Math.max(0, ...plans),
+        isBodyweight: isExerciseBodyweight(exerciseName) };
+    }
+
+    function getNextProgression(progress, nextWeek) {
+      const increment = Number(appState.overloadIncrement) || 2;
+      let weight = progress.targetWeight;
+      let reps = progress.targetReps;
+      let reason = 'Doel nog niet volledig gehaald; herhaal het werkgewicht en de herhalingen.';
+      let status = 'Herhalen';
+      if (!progress.completedSets) {
+        status = 'Nog niet uitgevoerd';
+        reason = 'Nog geen opgeslagen prestaties om een verhoging te adviseren.';
+      } else if (isDeloadWeek(nextWeek)) {
+        status = 'Herstelweek';
+        weight = progress.isBodyweight ? 0 : Math.max(increment, Math.round(weight * 0.7 / increment) * increment);
+        if (progress.isBodyweight) reps = Math.max(6, Math.round(reps * 0.7));
+        reason = 'Volgende week 2 herstelsets.';
+      } else if (progress.achieved && isBiweeklyHoldWeek(nextWeek)) {
+        status = 'Consolideren';
+        reason = 'Doel gehaald; nog een week herhalen volgens je 2-weken schema.';
+      } else if (progress.exertion === 'max') {
+        status = 'Herhalen';
+        reason = 'Minstens een set was maximaal; eerst herhalen met controle.';
+        if (!progress.achieved && !progress.isBodyweight && progress.completedSets === progress.requiredSets) {
+          weight = Math.max(0, Math.round((weight - increment) * 10) / 10);
+          status = 'Lichter herhalen';
+          reason = 'Alle sets uitgevoerd, doel gemist en maximale inspanning: een gewichtsstap terug.';
+        }
+      } else if (progress.achieved) {
+        status = 'Verhogen';
+        if (progress.isBodyweight) reps += progress.exertion === 'easy' ? 3 : 2;
+        else weight = Math.round((weight + increment * (progress.exertion === 'easy' ? 2 : 1)) * 10) / 10;
+        reason = 'Alle geplande sets op het werkgewicht gehaald' + (progress.exertion === 'easy' ? ' en vlot uitgevoerd.' : '.');
+      }
+      return { weight, reps, status, reason, requiredSets: isDeloadWeek(nextWeek) ? 2 : 3 };
+    }
+
+    function findPreviousExerciseSession(weekNum, dayKey, exerciseName) {
+      const days = ["mon", "tue", "thu", "fri"];
+      for (let week = weekNum; week >= 1; week--) {
+        for (const day of days.slice(0, week === weekNum ? days.indexOf(dayKey) : days.length).reverse()) {
+          for (const key of SPLIT_INFO[day]?.slots || []) {
+            const slot = appState.weeks[week]?.[day]?.[key];
+            if (!slot || (slot.selectedName || EXERCISE_CATALOG[key].defaultName).trim().toLowerCase() !== exerciseName.trim().toLowerCase()) continue;
+            const sets = slot.sets.slice(0, isDeloadWeek(week) ? 2 : 3).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(exerciseName) || Number(set.weight) > 0));
+            if (sets.length) return { week, day, key, slot, sets };
+          }
+        }
+      }
+      return null;
+    }
+
+    function renderProgressDetails(weekNum, dayKey, slotKey) {
+      const slot = appState.weeks[weekNum][dayKey][slotKey];
+      const name = slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
+      const progress = getSlotProgress(weekNum, dayKey, slotKey);
+      const week = getExerciseWeekProgress(weekNum, name);
+      const next = getNextProgression(week, weekNum + 1);
+      const previous = findPreviousExerciseSession(weekNum, dayKey, name);
+      const actual = slot.sets.slice(0, progress.requiredSets).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(name) || Number(set.weight) > 0));
+      const comparable = previous && actual.length === progress.requiredSets && previous.sets.length === progress.requiredSets && actual.every((set, index) => Number(set.weight) === Number(previous.sets[index].weight));
+      const difference = comparable ? actual.reduce((total, set) => total + Number(set.reps), 0) - previous.sets.reduce((total, set) => total + Number(set.reps), 0) : null;
+      const format = sets => sets.map(set => `${isExerciseBodyweight(name) ? 'BW' : Number(set.weight) + ' kg'} &times; ${Number(set.reps)}`).join(' &middot; ');
+      const remaining = progress.details.map((set, index) => set.achieved ? '' : !set.completed ? `Set ${index + 1}: nog uitvoeren` : !set.weightMet ? `Set ${index + 1}: onder ${progress.targetWeight} kg` : `Set ${index + 1}: nog ${set.missingReps} reps`).filter(Boolean).join(' &middot; ');
+      return `<div class="space-y-2 rounded-xl border border-slate-700 bg-slate-950/70 p-3 text-xs">
+        <div class="flex flex-wrap justify-between gap-2"><span class="font-bold text-emerald-300">${progress.achieved ? 'Doel gehaald' : progress.percent >= 80 ? 'Bijna bij je doel' : 'Op weg naar je doel'}: ${progress.achievedSets}/${progress.requiredSets} sets</span><span class="text-slate-300">${progress.percent}%</span></div>
+        <div role="progressbar" aria-label="Voortgang oefening" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress.percent}" class="h-2 overflow-hidden rounded bg-slate-800"><div class="h-full bg-emerald-500" style="width:${progress.percent}%"></div></div>
+        <div class="text-slate-400">Gepland: ${progress.requiredSets} &times; ${isExerciseBodyweight(name) ? 'BW' : progress.targetWeight > 0 ? progress.targetWeight + ' kg' : 'startgewicht kiezen'} &times; ${progress.targetReps} reps</div>
+        <div class="text-slate-200">Uitgevoerd: ${actual.length ? format(actual) : 'nog geen sets opgeslagen'}</div>
+        ${remaining ? `<div class="text-amber-300">${remaining}</div>` : ''}
+        ${previous ? `<div class="text-slate-400">Vorige training (week ${previous.week}, ${previous.day}): ${format(previous.sets)}</div>` : ''}
+        ${difference !== null ? `<div class="text-emerald-300">${difference > 0 ? '+' : ''}${difference} reps bij hetzelfde gewicht ten opzichte van de vorige training</div>` : ''}
+        <div class="border-t border-slate-800 pt-2 text-slate-300">Weekdoel: ${week.achievedSets}/${week.requiredSets} sets &middot; ${next.status}. ${next.reason} Volgende week: ${next.requiredSets} &times; ${week.isBodyweight ? 'BW' : next.weight + ' kg'} &times; ${next.reps} reps.</div>
+      </div>`;
+    }
+
+    function checkOverloadAchieved(exerciseData, targetReps, isDeload) {
+      if (!exerciseData?.sets) return false;
+      const isBW = isExerciseBodyweight(exerciseData.selectedName);
+      const firstLogged = exerciseData.sets.find(set => set.completed && Number(set.weight) > 0);
+      return calculateSetProgress(exerciseData.sets, Number(exerciseData.progressionPlan?.weight ?? firstLogged?.weight ?? 0), Number(exerciseData.progressionPlan?.reps || targetReps), isDeload ? 2 : 3, isBW).achieved;
     }
 
     /* 4A. VIND GELIJKSOORTIGE OEFENING BINNEN DEZELFDE WEEK (CONSISTENTIE MICROCYCLE) */
@@ -4092,7 +4218,7 @@
       const weekData = appState.weeks[weekNum];
       const dayOrder = ["mon", "tue", "thu", "fri"];
 
-      for (const dKey of dayOrder) {
+      for (const dKey of dayOrder.slice(0, dayOrder.indexOf(currentDayKey)).reverse()) {
         if (!weekData[dKey]) continue;
         const slots = SPLIT_INFO[dKey] ? SPLIT_INFO[dKey].slots : [];
         for (const sKey of slots) {
@@ -4101,18 +4227,21 @@
           if (!sData) continue;
           const exName = sData.selectedName || (EXERCISE_CATALOG[sKey] ? EXERCISE_CATALOG[sKey].defaultName : "");
           if (exName.trim().toLowerCase() === exerciseName.trim().toLowerCase()) {
-            const filledSets = (sData.sets || []).filter(s => s.completed || (s.weight !== "" && Number(s.weight) > 0));
+            const isBW = isExerciseBodyweight(exerciseName);
+            const filledSets = (sData.sets || []).filter(s => s.completed && Number(s.reps) > 0 && (isBW || Number(s.weight) > 0));
             if (filledSets.length > 0) {
               const weights = filledSets.map(s => Number(s.weight)).filter(w => !isNaN(w) && w > 0);
-              if (weights.length > 0) {
-                const maxW = Math.max(...weights);
+              if (isBW || weights.length > 0) {
+                const maxW = isBW ? 0 : Math.max(...weights);
+                const referenceSet = filledSets.find(s => isBW || Number(s.weight) === maxW);
                 const dayName = SPLIT_INFO[dKey].title.split(":")[0];
                 return {
                   dayKey: dKey,
                   dayName: dayName,
                   slotKey: sKey,
                   weight: maxW,
-                  sets: sData.sets,
+                  reps: Number(referenceSet.reps),
+                  sets: filledSets,
                   allCompleted: sData.sets.length > 0 && sData.sets.every(s => s.completed)
                 };
               }
@@ -4125,330 +4254,52 @@
 
     /* 4B. OVERLOAD & DELOAD OVERERVEN */
     function autoApplyOverloadAndDeloadInheritance(weekNum, dayKey) {
-      if (!appState.weeks[weekNum] || !appState.weeks[weekNum][dayKey]) return;
-      const currentDayData = appState.weeks[weekNum][dayKey];
-      const isDeload = isDeloadWeek(weekNum);
-      const inc = Number(appState.overloadIncrement) || 2.0;
+      const day = appState.weeks[weekNum]?.[dayKey];
+      if (!day) return;
       let changed = false;
-
-      // 1. Zelfde oefening binnen dezelfde week: zelfde gewicht & sets overnemen (geen vroegtijdige overload)
-      SPLIT_INFO[dayKey].slots.forEach(slotKey => {
-        const curSlot = currentDayData[slotKey];
-        if (!curSlot) return;
-        const catalogItem = EXERCISE_CATALOG[slotKey];
-        const exName = curSlot.selectedName || catalogItem.defaultName;
-
-        const isVirgin = curSlot.sets.every(s => s.weight === "" && s.reps === "" && !s.completed);
-        if (isVirgin) {
-          const sameWeekMatch = getSameWeekExerciseLogged(weekNum, exName, dayKey, slotKey);
-          if (sameWeekMatch && sameWeekMatch.weight > 0) {
-            curSlot.sets.forEach((s, idx) => {
-              if (isDeload && idx === 2) {
-                s.weight = "";
-                s.reps = "";
-                s.completed = false;
-              } else {
-                s.weight = sameWeekMatch.weight;
-                s.reps = "";
-                s.completed = false;
-              }
-            });
+      for (const slotKey of SPLIT_INFO[dayKey].slots) {
+        const slot = day[slotKey];
+        if (!slot) continue;
+        const advice = getSlotTargetAdvice(weekNum, dayKey, slotKey);
+        const name = slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
+        const sameWeek = getSameWeekExerciseLogged(weekNum, name, dayKey, slotKey);
+        slot.sets.forEach((set, index) => {
+          if (set.completed || (isDeloadWeek(weekNum) && index >= 2)) return;
+          if (!set.inputFields?.weight && set.weight === '' && advice.advisedWeight > 0) {
+            set.weight = sameWeek?.sets[index]?.weight ?? advice.advisedWeight;
             changed = true;
           }
-        }
-      });
-
-      // 2. Overload vanuit vorige week (ALLEEN indien weekNum > 1; Week 1 is inregelweek!)
-      if (weekNum > 1) {
-        const referenceWeekNum = (weekNum === 8 && appState.weeks[6]) ? 6 : (weekNum - 1);
-        const prevWeekData = appState.weeks[referenceWeekNum] ? appState.weeks[referenceWeekNum][dayKey] : null;
-        if (prevWeekData) {
-          SPLIT_INFO[dayKey].slots.forEach(slotKey => {
-            const curSlot = currentDayData[slotKey];
-            const prevSlot = prevWeekData[slotKey];
-            if (!curSlot || !prevSlot) return;
-
-            // Als in de huidige week de standaardoefening staat en in de vorige een alternatief, synchroniseer
-            if (curSlot.selectedName === EXERCISE_CATALOG[slotKey].defaultName && prevSlot.selectedName !== curSlot.selectedName) {
-              curSlot.selectedName = prevSlot.selectedName;
-            }
-
-            const curExName = (curSlot.selectedName || EXERCISE_CATALOG[slotKey].defaultName).trim().toLowerCase();
-            const prevExName = (prevSlot.selectedName || EXERCISE_CATALOG[slotKey].defaultName).trim().toLowerCase();
-
-            // BELANGRIJKE ISOLATIE: Geen gewichten overerven als de oefening anders is!
-            // (Voorkomt bijv. dat een Incline Dumbbell Press het gewicht van een Barbell Bench Press krijgt)
-            if (curExName !== prevExName) return;
-
-            const isVirgin = curSlot.sets.every(s => s.weight === "" && s.reps === "" && !s.completed);
-            if (isVirgin) {
-              const catalogItem = EXERCISE_CATALOG[slotKey];
-              const isBW = isExerciseBodyweight(curSlot.selectedName);
-              // Alleen overerven als vorige week werkelijk gelogde sets heeft
-              const prevCompleted = prevSlot.sets.filter(s => s.completed && (isBW || Number(s.weight) > 0));
-              const prevWeights = prevSlot.sets.map(s => Number(s.weight)).filter(w => !isNaN(w) && w > 0);
-
-              if (prevCompleted.length > 0 && (isBW || prevWeights.length > 0)) {
-                const maxPrev = isBW ? 0 : Math.max(...prevWeights);
-                const prevOverload = checkOverloadAchieved(prevSlot, catalogItem.targetReps, isDeloadWeek(referenceWeekNum));
-                let targetWeight = maxPrev;
-
-                if (!isBW) {
-                  if (isDeload) {
-                    // Deload regel: 70% afgerond op stap
-                    targetWeight = Math.round((maxPrev * 0.70) / inc) * inc;
-                    if (targetWeight < inc && maxPrev > 0) targetWeight = maxPrev;
-                  } else {
-                    // Indien 2-weken consolidatie ingesteld staat
-                    let applyInc = prevOverload && !isBiweeklyHoldWeek(weekNum);
-                    targetWeight = applyInc ? Math.round((maxPrev + inc) * 10) / 10 : maxPrev;
-                  }
-                }
-
-                curSlot.sets.forEach((s, idx) => {
-                  if (isDeload && idx === 2) {
-                    s.weight = "";
-                    s.reps = "";
-                    s.completed = false;
-                  } else {
-                    s.weight = isBW ? 0 : targetWeight;
-                    s.reps = "";
-                    s.completed = false;
-                  }
-                });
-                changed = true;
-              }
-            }
-          });
-        }
+          if (!set.inputFields?.reps && set.reps === '' && sameWeek) {
+            set.reps = sameWeek.sets[index]?.reps ?? sameWeek.reps;
+            changed = true;
+          }
+        });
       }
-
-      if (changed) {
-        saveState();
-      }
+      if (changed) saveState();
     }
 
     /* 4C. CENTRAAL ADVIES & PROGRESSIVE OVERLOAD BEREKENING */
     function getSlotTargetAdvice(weekNum, dayKey, slotKey) {
-      const catalogItem = EXERCISE_CATALOG[slotKey];
-      const currentDayData = appState.weeks[weekNum] ? appState.weeks[weekNum][dayKey] : null;
-      const currentSlot = currentDayData ? currentDayData[slotKey] : null;
-      const exerciseName = currentSlot ? (currentSlot.selectedName || catalogItem.defaultName) : (catalogItem ? catalogItem.defaultName : "Oefening");
-      const targetReps = getExerciseTargetReps(exerciseName, slotKey);
-      const isDeload = isDeloadWeek(weekNum);
-      const inc = Number(appState.overloadIncrement) || 2.0;
-      const isBW = isExerciseBodyweight(exerciseName);
-      const benchmark = getStrengthBenchmark(exerciseName, appState.userProfile);
-
-      // Huidig al ingevuld gewicht in dit slot
-      let currentLoggedWeight = null;
-      if (currentSlot && currentSlot.sets) {
-        const curFilled = currentSlot.sets.find(s => s.weight !== "" && (!isNaN(Number(s.weight)) && (isBW || Number(s.weight) > 0)));
-        if (curFilled) currentLoggedWeight = Number(curFilled.weight);
-      }
-
-      // Check 1: Heeft deze oefening EERDER in DEZELFDE week al een prestatie?
-      const sameWeekMatch = getSameWeekExerciseLogged(weekNum, exerciseName, dayKey, slotKey);
-      if (sameWeekMatch) {
-        const advisedWeight = isBW ? 0 : sameWeekMatch.weight;
-        return {
-          advisedWeight: advisedWeight,
-          targetReps: targetReps,
-          prevMax: advisedWeight,
-          prevWeekFound: `deze week (${sameWeekMatch.dayName})`,
-          prevOverload: false,
-          adviceType: "same_week",
-          adviceTitle: isBW ? `🔄 Zelfde Oefening als ${sameWeekMatch.dayName}` : `🔄 Zelfde Gewicht als ${sameWeekMatch.dayName} (${advisedWeight} kg)`,
-          adviceText: isBW 
-            ? `Je hebt ${exerciseName} op ${sameWeekMatch.dayName} uitgevoerd. Voer vandaag hetzelfde aantal sets en reps uit voor een consistente prikkel.`
-            : `Je hebt ${exerciseName} op ${sameWeekMatch.dayName} met ${advisedWeight} kg uitgevoerd. Gebruik vandaag hetzelfde gewicht en aantal sets voor een consistente prikkel in Week ${weekNum}. Overload wordt pas na afloop van de week berekend.`,
-          hasPriorData: true,
-          currentLoggedWeight: currentLoggedWeight,
-          sameWeekDay: sameWeekMatch.dayName,
-          benchmark: benchmark,
-          cycleGoal: benchmark.cycleGoal,
-          unit: benchmark.unit
-        };
-      }
-
-      // Check 2: Is dit Week 1 (Inregelweek)? Nulmeting baseren op eigen invoer
-      if (weekNum === 1) {
-        const hasLogged = currentLoggedWeight !== null;
-        return {
-          advisedWeight: hasLogged ? currentLoggedWeight : (isBW ? 0 : null),
-          targetReps: targetReps,
-          prevMax: null,
-          prevWeekFound: null,
-          prevOverload: false,
-          adviceType: hasLogged ? "inregel_logged" : "inregel_baseline",
-          adviceTitle: `🎯 Inregelweek: Nulmeting`,
-          adviceText: isBW
-            ? `Week 1 is je inregelweek. Focus op 3 × ${targetReps} strikte herhalingen als nulmeting.`
-            : `Week 1 is je inregelweek. Kies een comfortabel startgewicht voor 3 × ${targetReps} reps als nulmeting om je belastbaarheid te kalibreren.`,
-          hasPriorData: hasLogged,
-          currentLoggedWeight: currentLoggedWeight,
-          benchmark: benchmark,
-          cycleGoal: benchmark.cycleGoal,
-          unit: benchmark.unit
-        };
-      }
-
-      // Check 3: Zoek in eerdere voltooide weken naar de meest recente prestatie van DEZE SPECIFIEKE OEFENING
-      const refWeekNum = (weekNum === 8 && appState.weeks[6]) ? 6 : (weekNum - 1);
-      let prevMax = null;
-      let prevOverload = false;
-      let prevWeekFound = null;
-
-      for (let w = refWeekNum; w >= 1; w--) {
-        const wDayData = appState.weeks[w] ? appState.weeks[w][dayKey] : null;
-        const wSlot = wDayData ? wDayData[slotKey] : null;
-        if (!wSlot || !wSlot.sets) continue;
-        
-        const wSlotExName = (wSlot.selectedName || (EXERCISE_CATALOG[slotKey] ? EXERCISE_CATALOG[slotKey].defaultName : "")).trim().toLowerCase();
-        // Alleen vergelijken als het EXACT dezelfde oefening is!
-        if (wSlotExName !== exerciseName.trim().toLowerCase()) continue;
-
-        const completedSets = wSlot.sets.filter(s => s.completed && (isBW || Number(s.weight) > 0));
-        if (completedSets.length > 0) {
-          const wWeights = completedSets.map(s => Number(s.weight));
-          prevMax = isBW ? 0 : Math.max(...wWeights);
-          prevOverload = checkOverloadAchieved(wSlot, targetReps, isDeloadWeek(w));
-          prevWeekFound = `Week ${w}`;
-          break;
-        }
-      }
-
-      // All-time fallback als in huidige cyclus nog geen gelogde sets voor deze oefening zijn
-      if (prevMax === null) {
-        const allTime = getAllTimeRecord(exerciseName);
-        if (allTime && (allTime.maxWeight > 0 || isBW)) {
-          prevMax = allTime.maxWeight;
-          prevOverload = false;
-          prevWeekFound = "vorige cyclus";
-        }
-      }
-
-      let advisedWeight = null;
-      let adviceType = "initial";
-      let adviceTitle = "";
-      let adviceText = "";
-
-      if (isDeload) {
-        if (prevMax !== null && !isBW) {
-          advisedWeight = Math.round((prevMax * 0.70) / inc) * inc;
-          if (advisedWeight < inc && prevMax > 0) advisedWeight = prevMax;
-          adviceType = "deload";
-          adviceTitle = "🌿 Deload Advies (Herstel)";
-          adviceText = `Train op ~70% (${advisedWeight} kg) voor 2 lichte technieksets. Laat je spieren en pezen herstellen.`;
-        } else if (isBW) {
-          advisedWeight = 0;
-          adviceType = "deload";
-          adviceTitle = "🌿 Deload Herstel (Lichaamsgewicht)";
-          adviceText = `Deload week: doe 2 comfortabele sets van ${Math.max(6, Math.round(targetReps * 0.7))} reps zonder tot falen te gaan.`;
-        } else {
-          adviceType = "deload_no_prev";
-          adviceTitle = "🌿 Deload Herstelweek";
-          adviceText = `Deload week: kies een licht, comfortabel herstelgewicht voor 2 sets.`;
-        }
-      } else if (prevMax !== null) {
-        if (prevOverload) {
-          // Check gevoel / exertion van de vorige week
-          const prevSlot = prevWeekFound ? (appState.weeks[prevWeekFound] && appState.weeks[prevWeekFound][dayKey] ? appState.weeks[prevWeekFound][dayKey][slotKey] : null) : null;
-          let prevDominantExertion = "good";
-          if (prevSlot && prevSlot.sets) {
-            const completedSets = prevSlot.sets.filter(s => s.completed);
-            const easyCount = completedSets.filter(s => s.exertion === "easy").length;
-            const maxCount = completedSets.filter(s => s.exertion === "max").length;
-            if (completedSets.length > 0) {
-              if (easyCount >= Math.ceil(completedSets.length / 2)) prevDominantExertion = "easy";
-              else if (maxCount >= Math.ceil(completedSets.length / 2)) prevDominantExertion = "max";
-            }
-          }
-
-          if (isBiweeklyHoldWeek(weekNum)) {
-            advisedWeight = isBW ? 0 : prevMax;
-            adviceType = "repeat";
-            adviceTitle = "🟡 2-Weken Consolidatie";
-            adviceText = isBW
-              ? `Vorige week doel behaald. In je 2-weken schema herhaal je nu 3 × ${targetReps} reps voordat je reps optelt.`
-              : `Vorige week doel behaald op ${prevMax} kg. In je 2-weken schema consolideer je dit gewicht nu 1 week voordat je verhoogt.`;
-          } else if (isBW) {
-            advisedWeight = 0;
-            adviceType = "overload";
-            adviceTitle = `🟢 Overload Behaald (Reps Uitbreiden)`;
-            adviceText = `Vorige week doel behaald! Probeer vandaag 1 of 2 extra herhalingen toe te voegen per set richting je cyclusdoel van ${benchmark.cycleGoal} reps.`;
-          } else if (prevDominantExertion === "easy") {
-            // 🟢 Fast-Track: Vlot doorgekomen -> direct verhogen!
-            advisedWeight = Math.round((prevMax + inc) * 10) / 10;
-            adviceType = "overload";
-            adviceTitle = `🟢 Fast-Track Overload (+${inc} kg)`;
-            adviceText = `Vorige week voelden de sets erg vlot (🟢)! Je bent dit gewicht ontgroeid. Direct verhogen naar ${advisedWeight} kg voor 3 × ${targetReps} reps.`;
-          } else if (prevDominantExertion === "max") {
-            // 🔴 Maximaal: Tegen falen aan -> gewicht behouden voor controle & veiligheid
-            advisedWeight = prevMax;
-            adviceType = "repeat";
-            adviceTitle = "🔴 Gewicht Behouden (Vorm & Controle)";
-            adviceText = `Vorige week doel behaald op ${prevMax} kg, maar met maximale inspanning (🔴). Herhaal vandaag ${advisedWeight} kg voor strakkere controle voor je ophoogt.`;
-          } else {
-            advisedWeight = Math.round((prevMax + inc) * 10) / 10;
-            adviceType = "overload";
-            adviceTitle = `🔥 Progressive Overload Advies (+${inc} kg)`;
-            adviceText = `Vorige week doel behaald op ${prevMax} kg! Verhoog vandaag naar ${advisedWeight} kg voor 3 × ${targetReps} reps (+${inc} kg).`;
-          }
-        } else {
-          advisedWeight = prevMax;
-          adviceType = "repeat";
-          adviceTitle = isBW ? "🎯 Rep Doel Herhalen" : "🎯 Gewicht Herhalen";
-          adviceText = isBW
-            ? `Vorige sessie doel nog niet volledig volgemaakt. Herhaal vandaag om 3 × ${targetReps} herhalingen strikt vol te maken.`
-            : `Vorige prestatie was ${prevMax} kg (doel nog niet behaald). Herhaal vandaag ${advisedWeight} kg om 3 × ${targetReps} herhalingen vol te maken.`;
-        }
-      } else {
-        // GEEN EERDERE RESULTATEN VOOR DEZE OEFENING: Laat leeg zodat de gebruiker zelf kiest
-        if (isBW) {
-          advisedWeight = 0;
-          adviceType = "initial_no_data";
-          adviceTitle = `🎯 Startgewicht Bepalen`;
-          adviceText = `Nog geen eerdere logs voor ${exerciseName}. Start vandaag met 3 × ${targetReps} herhalingen op lichaamsgewicht.`;
-        } else {
-          advisedWeight = null;
-          adviceType = "initial_no_data";
-          adviceTitle = `🎯 Startgewicht Bepalen`;
-          adviceText = `Nog geen eerdere trainingsdata voor ${exerciseName}. Vul hieronder je werkgewicht in voor 3 × ${targetReps} herhalingen.`;
-        }
-      }
-
-      // Intelligente Coach-Notitie over rusttijd en energieherstel
-      let coachRestNote = "";
-      const currentExerciseName = currentSlot ? (currentSlot.selectedName || (EXERCISE_CATALOG[slotKey] ? EXERCISE_CATALOG[slotKey].defaultName : "")) : (EXERCISE_CATALOG[slotKey] ? EXERCISE_CATALOG[slotKey].defaultName : "");
-      const isCompound = isCompoundExercise(currentExerciseName, slotKey);
-
-      const prevDayData = prevWeekFound && appState.weeks[prevWeekFound] ? appState.weeks[prevWeekFound][dayKey] : null;
-      if (prevDayData && prevDayData.actualAvgRest && prevDayData.actualAvgRest > 0) {
-        const avgRest = prevDayData.actualAvgRest;
-        if (isCompound && avgRest < 75) {
-          coachRestNote = `⏱️ <b>Coach Inzicht (Rust vs Kracht):</b> Vorige sessie rustte je gemiddeld vrij kort (${avgRest}s). Voor zware compound oefeningen (press/row) zorgt 2–3 minuten rust voor ~100% ATP-resynthese, wat je helpt je reps en progressive overload vol te houden zonder vroegtijdige verzuring.`;
-        } else if (!isCompound && avgRest > 180) {
-          coachRestNote = `⏱️ <b>Coach Inzicht (Spierpomp):</b> Vorige sessie rustte je relatief lang (${avgRest}s). Voor isolatie is 60–90 seconden optimaal om metabole stress en spieractivatie hoog te houden.`;
-        }
-      }
-
-      return {
-        advisedWeight,
-        targetReps,
-        prevMax,
-        prevWeekFound,
-        prevOverload,
-        adviceType,
-        adviceTitle,
-        adviceText,
-        coachRestNote,
-        hasPriorData: (prevMax !== null || (isBW && prevWeekFound !== null) || currentLoggedWeight !== null),
-        currentLoggedWeight,
-        benchmark,
-        cycleGoal: benchmark.cycleGoal,
-        unit: benchmark.unit
-      };
+      const slot = appState.weeks[weekNum]?.[dayKey]?.[slotKey];
+      const name = slot?.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
+      const isBW = isExerciseBodyweight(name);
+      const targetReps = getExerciseTargetReps(name, slotKey, weekNum, dayKey);
+      const previous = findPreviousExerciseSession(weekNum, dayKey, name);
+      const sameWeek = previous?.week === weekNum;
+      const current = slot?.sets.find(set => set.completed && Number(set.reps) > 0 && (isBW || Number(set.weight) > 0));
+      const priorProgress = previous ? getExerciseWeekProgress(previous.week, name) : null;
+      const next = previous && !sameWeek ? getNextProgression(priorProgress, weekNum) : null;
+      const reference = previous?.sets[0];
+      const advisedWeight = isBW ? 0 : Number(slot?.progressionPlan?.weight || (sameWeek ? reference?.weight : next?.weight) || current?.weight || slot?.sets[0]?.weight || 0) || null;
+      const benchmark = getStrengthBenchmark(name, appState.userProfile);
+      const adviceType = sameWeek ? 'same_week' : isDeloadWeek(weekNum) ? 'deload' : next?.status === 'Verhogen' ? 'overload' : previous ? 'repeat' : current ? 'inregel_logged' : 'inregel_baseline';
+      return { advisedWeight, targetReps, sameWeekReps: sameWeek ? Number(reference.reps) : null,
+        advisedReps: slot?.progressionPlan?.reps || (sameWeek ? targetReps : next?.reps) || targetReps,
+        prevMax: priorProgress?.targetWeight ?? null, prevWeekFound: previous ? `Week ${previous.week}` : null,
+        prevOverload: priorProgress?.achieved || false, adviceType, adviceTitle: next?.status || 'Trainingsdoel', adviceText: next?.reason || 'Gebruik je laatste prestatie als referentie.',
+        sameWeekDay: sameWeek ? SPLIT_INFO[previous.day].title.split(':')[0] : null,
+        hasPriorData: !!previous || !!current, currentLoggedWeight: current ? Number(current.weight) : null,
+        benchmark, cycleGoal: benchmark.cycleGoal, unit: benchmark.unit };
     }
 
     function formatDurationHoursMin(sec) {
@@ -4516,16 +4367,12 @@
             exercisesMap[exName].days.push(dayShort);
           }
 
-          const setsToCheck = sData.sets.slice(0, reqSets);
+          const setsToCheck = Array.from({ length: reqSets }, (_, index) => sData.sets[index] || {});
           let slotDone = true;
 
           setsToCheck.forEach(s => {
             const w = Number(s.weight) || 0;
             let r = Number(s.reps) || 0;
-            // Als de set voltooid is bij een bodyweight oefening maar reps nog leeg was, geldt het streefdoel
-            if (isBW && s.completed && r === 0) {
-              r = targetReps;
-            }
 
             const isValidSetCompleted = s.completed && (isBW ? r > 0 : (w > 0 && r > 0));
 
@@ -4548,7 +4395,7 @@
               slotDone = false;
               exercisesMap[exName].allSetsCompleted = false;
               exercisesMap[exName].targetRepsAchieved = false;
-              if (s.completed) totalCompletedSets++;
+
             }
           });
 
@@ -4556,7 +4403,7 @@
         });
 
         const dayStatus = getDayCompletionStatus(weekNum, dKey);
-        if (dayStatus.isFullyCompleted || dayAllCompleted) {
+        if (dayAllCompleted) {
           daysCompletedCount++;
         }
       });
@@ -4600,136 +4447,13 @@
       const averageRestSeconds = restSessionsCount > 0 ? Math.round(totalRestSecondsSum / restSessionsCount) : null;
 
       const exercisesList = Object.values(exercisesMap).map(ex => {
-        const maxW = ex.weights.length > 0 ? Math.max(...ex.weights) : 0;
-        const maxReps = ex.repsList.length > 0 ? Math.max(...ex.repsList) : 0;
-        const totalSetsLogged = ex.easyCount + ex.goodCount + ex.maxCount;
-        let dominantExertion = "good";
-        if (totalSetsLogged > 0) {
-          if (ex.easyCount >= Math.ceil(totalSetsLogged / 2)) dominantExertion = "easy";
-          else if (ex.maxCount >= Math.ceil(totalSetsLogged / 2)) dominantExertion = "max";
-        }
-
-        let nextAdvisedWeight = maxW;
-        let nextAdvisedReps = ex.targetReps;
-        let statusTag = "";
-        let statusClass = "";
-        let nextActionText = "";
-
-        if (ex.isBodyweight) {
-          // ==========================================
-          // LICHAAMSGEWICHT OVERLOAD (ZUIVER IN REPS)
-          // ==========================================
-          nextAdvisedWeight = 0;
-
-          if (ex.allSets.length === 0) {
-            statusTag = "Niet Uitgevoerd";
-            statusClass = "bg-slate-800 text-slate-400 border-slate-700";
-            nextAdvisedReps = ex.targetReps;
-            nextActionText = "Nog geen herhalingen geregistreerd";
-          } else if (isNextDeload) {
-            statusTag = "Deload Volgende Week 🌿";
-            statusClass = "bg-purple-500/20 text-purple-300 border-purple-500/40";
-            nextAdvisedReps = Math.max(6, Math.round(ex.targetReps * 0.7));
-            nextActionText = `Herstelweek: verlaag volume naar 2 sets van ${nextAdvisedReps} reps`;
-          } else if (ex.targetRepsAchieved && ex.allSetsCompleted) {
-            if (isBiweeklyHoldWeek(weekNum + 1)) {
-              statusTag = "Consolideren 🟡";
-              statusClass = "bg-amber-500/20 text-amber-300 border-amber-500/40";
-              nextAdvisedReps = ex.targetReps;
-              nextActionText = `Doel behaald. In 2-weken cyclus: herhaal 3 × ${ex.targetReps} reps in Week ${weekNum + 1} voordat je reps optelt.`;
-            } else if (dominantExertion === "easy") {
-              // 🟢 VLOT: Fast-Track reps overload (+3 reps)
-              statusTag = "Fast-Track Reps (+3) 🟢";
-              statusClass = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
-              nextAdvisedReps = ex.targetReps + 3;
-              nextActionText = `Sets voelden vlot (🟢)! Verhoog doel naar 3 × ${nextAdvisedReps} reps in Week ${weekNum + 1}.`;
-            } else if (dominantExertion === "max") {
-              // 🔴 MAXIMAAL: Tegen falen aan -> reps behouden voor strakkere controle
-              statusTag = "Behoud Reps (Vorm) 🔴";
-              statusClass = "bg-rose-500/20 text-rose-300 border-rose-500/40";
-              nextAdvisedReps = ex.targetReps;
-              nextActionText = `Doel behaald, maar met maximale inspanning (🔴). Herhaal 3 × ${nextAdvisedReps} reps in Week ${weekNum + 1} met strakkere vorm.`;
-            } else {
-              // 🟡 GOED: Standaard rep progressive overload (+2 reps)
-              statusTag = "Rep Overload (+2) 🔥";
-              statusClass = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
-              nextAdvisedReps = ex.targetReps + 2;
-              nextActionText = `Doel behaald! Verhoog voor Week ${weekNum + 1} naar 3 × ${nextAdvisedReps} herhalingen (BW overload).`;
-            }
-          } else if (weekNum === 1) {
-            statusTag = "Nulmeting Bepaald ⚖️";
-            statusClass = "bg-blue-500/20 text-blue-300 border-blue-500/40";
-            nextAdvisedReps = ex.targetReps;
-            nextActionText = `Nulmeting vastgelegd op 3 × ${ex.targetReps} reps. Volgende week doel voltooien voor overload.`;
-          } else {
-            statusTag = "Reps Behouden 🎯";
-            statusClass = "bg-amber-500/20 text-amber-300 border-amber-500/40";
-            nextAdvisedReps = ex.targetReps;
-            nextActionText = `Herhaal 3 × ${ex.targetReps} herhalingen in Week ${weekNum + 1} om alle sets vol te maken`;
-          }
-        } else {
-          // ==========================================
-          // GEWICHT OVERLOAD (BARBELL / DUMBBELL / KABEL)
-          // ==========================================
-          if (maxW === 0) {
-            statusTag = "Niet Uitgevoerd";
-            statusClass = "bg-slate-800 text-slate-400 border-slate-700";
-            nextAdvisedWeight = 0;
-            nextActionText = "Nog geen gewicht geregistreerd";
-          } else if (isNextDeload) {
-            statusTag = "Deload Volgende Week 🌿";
-            statusClass = "bg-purple-500/20 text-purple-300 border-purple-500/40";
-            nextAdvisedWeight = Math.round((maxW * 0.70) / inc) * inc;
-            if (nextAdvisedWeight < inc && maxW > 0) nextAdvisedWeight = maxW;
-            nextActionText = `Herstelweek: verlaag naar ~70% (${nextAdvisedWeight} kg) voor 2 sets`;
-          } else if (ex.targetRepsAchieved && ex.allSetsCompleted) {
-            if (isBiweeklyHoldWeek(weekNum + 1)) {
-              statusTag = "Consolideren 🟡";
-              statusClass = "bg-amber-500/20 text-amber-300 border-amber-500/40";
-              nextAdvisedWeight = maxW;
-              nextActionText = `Doel behaald. In 2-weken cyclus: behoud ${maxW} kg in Week ${weekNum + 1} voordat je verhoogt.`;
-            } else if (dominantExertion === "easy") {
-              // 🟢 VLOT: Fast-Track overload (+inc direct)!
-              statusTag = `Fast-Track (+${inc} kg) 🟢`;
-              statusClass = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
-              nextAdvisedWeight = Math.round((maxW + inc) * 10) / 10;
-              nextActionText = `Sets voelden vlot (🟢)! Direct +${inc} kg verhogen naar ${nextAdvisedWeight} kg (Fast-Track geactiveerd).`;
-            } else if (dominantExertion === "max") {
-              // 🔴 MAXIMAAL: Tegen falen / grind -> Gewicht behouden voor peesherstel en vorm
-              statusTag = "Behoud Gewicht 🔴";
-              statusClass = "bg-rose-500/20 text-rose-300 border-rose-500/40";
-              nextAdvisedWeight = maxW;
-              nextActionText = `Doel behaald, maar met maximale inspanning (🔴). Herhaal ${maxW} kg in Week ${weekNum + 1} voor strakkere controle.`;
-            } else {
-              statusTag = `Doel Behaald (+${inc} kg) 🔥`;
-              statusClass = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
-              nextAdvisedWeight = Math.round((maxW + inc) * 10) / 10;
-              nextActionText = `Strakke werksets en doel behaald! Verhoog in Week ${weekNum + 1} met +${inc} kg naar ${nextAdvisedWeight} kg.`;
-            }
-          } else if (weekNum === 1) {
-            statusTag = "Nulmeting Bepaald ⚖️";
-            statusClass = "bg-blue-500/20 text-blue-300 border-blue-500/40";
-            nextAdvisedWeight = maxW;
-            nextActionText = `Startgewicht vastgesteld op ${maxW} kg. Herhaal in Week 2 om doel vol te maken.`;
-          } else {
-            statusTag = "Gewicht Behouden 🎯";
-            statusClass = "bg-amber-500/20 text-amber-300 border-amber-500/40";
-            nextAdvisedWeight = maxW;
-            nextActionText = `Herhaal ${maxW} kg in Week ${weekNum + 1} om alle ${ex.targetReps} reps vol te maken`;
-          }
-        }
-
-        return {
-          ...ex,
-          dominantExertion: dominantExertion,
-          maxWeight: maxW,
-          maxReps: maxReps,
-          nextAdvisedWeight: nextAdvisedWeight,
-          nextAdvisedReps: nextAdvisedReps,
-          statusTag: statusTag,
-          statusClass: statusClass,
-          nextActionText: nextActionText
-        };
+        const progress = getExerciseWeekProgress(weekNum, ex.name);
+        const next = getNextProgression(progress, weekNum + 1);
+        return { ...ex, progress, dominantExertion: progress.exertion,
+          maxWeight: Math.max(0, ...ex.weights), maxReps: Math.max(0, ...ex.repsList),
+          nextAdvisedWeight: next.weight, nextAdvisedReps: next.reps,
+          statusTag: next.status, statusClass: progress.achieved ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300',
+          nextActionText: next.reason };
       });
 
       const isCompleted = totalPlannedSets > 0 && totalCompletedSets >= totalPlannedSets;
@@ -4847,49 +4571,19 @@
       if (!appState.bodyweightTargetReps) appState.bodyweightTargetReps = {};
       if (!appState.bodyweightTargetReps[nextWeekNum]) appState.bodyweightTargetReps[nextWeekNum] = {};
 
-      // Schrijf berekende gewichten en streef-reps weg naar de volgende week
       evalData.exercises.forEach(ex => {
-        if (ex.isBodyweight && ex.nextAdvisedReps > 0) {
-          appState.bodyweightTargetReps[nextWeekNum][ex.name] = ex.nextAdvisedReps;
-
-          ["mon", "tue", "thu", "fri"].forEach(dKey => {
-            const slots = SPLIT_INFO[dKey].slots;
-            slots.forEach(sKey => {
-              const curSlot = nextWeekData[dKey][sKey];
-              if (!curSlot) return;
-              const curName = curSlot.selectedName || EXERCISE_CATALOG[sKey].defaultName;
-              if (curName.trim().toLowerCase() === ex.name.trim().toLowerCase()) {
-                curSlot.targetReps = ex.nextAdvisedReps;
-                curSlot.sets.forEach((s, idx) => {
-                  s.weight = "";
-                  s.reps = "";
-                  s.completed = false;
-                });
-              }
+        for (const dKey of ["mon", "tue", "thu", "fri"]) {
+          for (const sKey of SPLIT_INFO[dKey].slots) {
+            const slot = nextWeekData[dKey]?.[sKey];
+            if (!slot || (slot.selectedName || EXERCISE_CATALOG[sKey].defaultName).trim().toLowerCase() !== ex.name.trim().toLowerCase()) continue;
+            if (slot.sets.some(set => set.completed || set.inputFields?.weight || set.inputFields?.reps || (set.reps !== '' && set.reps != null))) continue;
+            slot.progressionPlan = { weight: ex.isBodyweight ? 0 : ex.nextAdvisedWeight, reps: ex.nextAdvisedReps };
+            slot.targetReps = ex.nextAdvisedReps;
+            slot.sets.forEach((set, index) => {
+              if (isNextDeload && index >= 2) return;
+              if (set.weight === '') set.weight = ex.isBodyweight ? 0 : ex.nextAdvisedWeight;
             });
-          });
-        } else if (ex.nextAdvisedWeight > 0) {
-          ["mon", "tue", "thu", "fri"].forEach(dKey => {
-            const slots = SPLIT_INFO[dKey].slots;
-            slots.forEach(sKey => {
-              const curSlot = nextWeekData[dKey][sKey];
-              if (!curSlot) return;
-              const curName = curSlot.selectedName || EXERCISE_CATALOG[sKey].defaultName;
-              if (curName.trim().toLowerCase() === ex.name.trim().toLowerCase()) {
-                curSlot.sets.forEach((s, idx) => {
-                  if (isNextDeload && idx === 2) {
-                    s.weight = "";
-                    s.reps = "";
-                    s.completed = false;
-                  } else {
-                    s.weight = ex.nextAdvisedWeight;
-                    s.reps = "";
-                    s.completed = false;
-                  }
-                });
-              }
-            });
-          });
+          }
         }
       });
 
@@ -4963,7 +4657,7 @@
                   <div class="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
                     <span>${ex.days.join(", ")}</span>
                     <span>•</span>
-                    <span>Doel: 3 × ${ex.targetReps} reps</span>
+                    <span>Doel: ${evalData.isDeload ? 2 : 3} × ${ex.targetReps} reps</span>
                     ${ex.isBodyweight ? `<span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-300 font-mono font-bold">⚡ BW</span>` : ''}
                   </div>
                 </div>
@@ -4972,7 +4666,7 @@
                   <div class="text-[10px] uppercase font-mono text-slate-400">Advies Wk ${nextWeekNum}</div>
                   ${ex.isBodyweight ? `
                     <div class="font-mono font-bold text-sm ${ex.nextAdvisedReps > ex.targetReps ? 'text-emerald-400' : 'text-blue-300'}">
-                      3 × ${ex.nextAdvisedReps} reps
+                      ${evalData.isNextDeload ? 2 : 3} × ${ex.nextAdvisedReps} reps
                     </div>
                     <div class="text-[9px] text-slate-500 font-mono">Lichaamsgewicht</div>
                   ` : `
@@ -4983,6 +4677,8 @@
                 </div>
               </div>
 
+              <div class="text-xs font-bold text-emerald-300">Weekdoel: ${ex.progress.achievedSets}/${ex.progress.requiredSets} sets ? ${ex.progress.percent}%</div>
+              <div class="space-y-2">${ex.progress.sessions.map(session => `<div class="text-xs text-slate-400">${SPLIT_INFO[session.dayKey].title.split(':')[0]}</div>${renderProgressDetails(weekNum, session.dayKey, session.slotKey)}`).join('')}</div>
               <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-800/60 text-slate-300">
                 <span class="text-[11px] text-slate-400">${setsSummary}</span>
                 <span class="text-[11px] text-slate-300 font-mono">${ex.nextActionText}</span>
@@ -6199,6 +5895,8 @@
               const item = setupWizardState.schema[d][sKey];
               if (appState.weeks[w][d][sKey]) {
                 const targetSlot = appState.weeks[w][d][sKey];
+                if (targetSlot.selectedName !== item.selectedName && targetSlot.sets.some(set => set.completed)) return;
+                if (targetSlot.selectedName !== item.selectedName) targetSlot.progressionPlan = null;
                 targetSlot.selectedName = item.selectedName;
                 
                 // Vul startgewicht in Week 1 ALLEEN in op sets die nog NIET voltooid zijn!
@@ -6985,95 +6683,7 @@
 
         const inc = Number(appState.overloadIncrement) || 2.0;
 
-        // Automatisch Advies Banner
-        let adviceHtml = "";
-        if (appState.currentWeek === 1) {
-          // Week 1: Inregelweek
-          if (slotAdvice.adviceType === "same_week") {
-            adviceHtml = `
-              <div class="mb-3 py-1.5 px-3 rounded-lg bg-blue-500/15 border border-blue-500/30 text-xs text-blue-300 font-mono flex items-center justify-between">
-                <span>🔄 <b>Inregelweek Consistentie:</b> ${isBW ? 'Lichaamsgewicht (BW)' : `${slotAdvice.advisedWeight} kg`} (zelfde als ${slotAdvice.sameWeekDay || 'eerder deze week'})</span>
-                <span class="text-[10px] text-blue-400 font-bold">Nulmeting Week 1</span>
-              </div>
-            `;
-          } else if (isBaselineAchieved) {
-            const week2Hold = isBiweeklyHoldWeek(2);
-            const nextWeekHint = week2Hold
-              ? (isBW ? `Week 2: herhaal 3 × ${targetReps} reps (2-weken consolidatie)` : `Week 2: herhaal ${maxCurrentWeight} kg (2-weken consolidatie)`)
-              : (isBW ? `Start Overload Week 2: 3 × ${targetReps + 1} reps (+1 rep)` : `Start Overload in Week 2: ${(maxCurrentWeight + inc).toFixed(1).replace(/\.0$/, "")} kg (+${inc} kg)`);
-            adviceHtml = `
-              <div class="mb-3 py-1.5 px-3 rounded-lg bg-blue-500/15 border border-blue-500/40 text-xs text-blue-200 font-mono flex items-center justify-between">
-                <span>🎯 <b>NULMETING VASTGELEGD!</b> (${isBW ? 'Lichaamsgewicht' : `${maxCurrentWeight} kg`} × ${targetReps} reps)</span>
-                <span class="font-bold ${week2Hold ? 'text-amber-300 border-amber-500/40' : 'text-emerald-400 border-emerald-500/40'} bg-slate-900 px-2 py-0.5 rounded border text-[11px]">
-                  ${nextWeekHint}
-                </span>
-              </div>
-            `;
-          } else {
-            adviceHtml = `
-              <div class="mb-3 py-1.5 px-3 rounded-lg bg-blue-500/10 border border-blue-500/25 text-xs text-blue-300 font-mono flex items-center justify-between">
-                <span>🎯 <b>Inregelweek:</b> ${isBW ? `Focus op 3 × ${targetReps} strikte herhalingen als nulmeting.` : `Bepaal je startgewicht voor 3 × ${targetReps} herhalingen als nulmeting.`}</span>
-                <span class="text-[10px] text-blue-400 font-bold">Kalibratie</span>
-              </div>
-            `;
-          }
-        } else if (slotAdvice.adviceType === "same_week") {
-          adviceHtml = `
-            <div class="mb-3 py-1.5 px-3 rounded-lg bg-blue-500/15 border border-blue-500/30 text-xs text-blue-300 font-mono flex items-center justify-between">
-              <span>🔄 <b>Zelfde Week Advies:</b> ${isBW ? 'Lichaamsgewicht (BW)' : `${slotAdvice.advisedWeight} kg`} (zelfde als ${slotAdvice.sameWeekDay || 'eerder deze week'})</span>
-              <span class="text-[10px] text-blue-400 font-bold">Microcycle Consistentie</span>
-            </div>
-          `;
-        } else if (isDeload) {
-          adviceHtml = `
-            <div class="mb-3 py-1.5 px-3 rounded-lg bg-purple-500/15 border border-purple-500/30 text-xs text-purple-300 font-mono flex items-center justify-between">
-              <span>🌿 <b>Deload Advies:</b> ${isBW ? `Doe 2 comfortabele sets van ~${Math.max(5, Math.round(targetReps * 0.7))} reps.` : (slotAdvice.advisedWeight ? `Train op ~${slotAdvice.advisedWeight} kg (~70%).` : 'Licht herstelgewicht.')} Doe exact 2 sets met perfecte techniek.</span>
-              <span class="text-[10px] text-purple-400 font-bold">2 Sets Herstel</span>
-            </div>
-          `;
-        } else if (isCurrentOverloadAchieved) {
-          const nextHold = isBiweeklyHoldWeek(appState.currentWeek + 1);
-          const nextHint = nextHold
-            ? (isBW ? `Volgende week: herhaal 3 × ${targetReps} reps` : `Volgende week: herhaal ${maxCurrentWeight} kg (consolidatie)`)
-            : (isBW ? `Volgende week advies: 3 × ${targetReps + 1} reps (+1 rep)` : `Volgende week advies: ${(maxCurrentWeight + inc).toFixed(1).replace(/\.0$/, "")} kg (+${inc} kg)`);
-          adviceHtml = `
-            <div class="mb-3 py-1.5 px-3 rounded-lg ${nextHold ? 'bg-amber-500/15 border-amber-500/40 text-amber-200' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'} border text-xs font-mono flex items-center justify-between ${nextHold ? '' : 'animate-pulse'}">
-              <span>${nextHold ? '🟡' : '🔥'} <b>DOEL BEHAALD!</b></span>
-              <span class="font-bold ${nextHold ? 'text-amber-300 border-amber-500/40' : 'text-emerald-400 border-emerald-500/40'} bg-slate-900 px-2 py-0.5 rounded border text-[11px]">
-                ${nextHint}
-              </span>
-            </div>
-          `;
-        } else if (slotAdvice.adviceType === "overload") {
-          adviceHtml = `
-            <div class="mb-3 py-1.5 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 font-mono flex items-center justify-between">
-              <span>🎯 <b>Advies Vandaag:</b> ${isBW ? `3 × ${targetReps} reps (herhalingen uitbreiden! 🚀)` : `${slotAdvice.advisedWeight} kg (+${inc} kg verhoging verdiend! 🚀)`}</span>
-              <span class="text-[10px] text-emerald-400 font-bold">${isBW ? 'Lichaamsgewicht' : `Vorige week: ${slotAdvice.prevMax} kg`}</span>
-            </div>
-          `;
-        } else if (slotAdvice.adviceType === "repeat") {
-          adviceHtml = `
-            <div class="mb-3 py-1.5 px-3 rounded-lg bg-slate-800/90 border border-slate-700 text-xs text-slate-300 font-mono flex items-center justify-between">
-              <span>🎯 <b>Advies Vandaag:</b> ${isBW ? `Herhalen om 3 × ${targetReps} reps vol te maken` : `${slotAdvice.advisedWeight} kg (herhalen om 3 × ${targetReps} vol te maken)`}</span>
-              <span class="text-[10px] text-slate-400 font-bold">Doel: 3 × ${targetReps}</span>
-            </div>
-          `;
-        } else {
-          adviceHtml = `
-            <div class="mb-3 py-1.5 px-3 rounded-lg bg-blue-500/10 border border-blue-500/25 text-xs text-blue-300 font-mono flex items-center justify-between">
-              <span>🎯 <b>${isBW ? 'Doel' : 'Startgewicht'} Bepalen:</b> ${isBW ? `Voer 3 × ${targetReps} herhalingen met eigen lichaamsgewicht uit.` : `Kies je startgewicht voor 3 × ${targetReps} herhalingen.`}</span>
-            </div>
-          `;
-        }
-
-        if (slotAdvice.coachRestNote) {
-          adviceHtml += `
-            <div class="mb-3 py-2 px-3 rounded-lg bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-200/90 font-mono flex items-start gap-2">
-              <span class="text-sm flex-shrink-0">💡</span>
-              <div class="leading-relaxed">${slotAdvice.coachRestNote}</div>
-            </div>
-          `;
-        }
+        const adviceHtml = renderProgressDetails(appState.currentWeek, appState.currentDay, slotKey);
 
         const card = document.createElement("div");
         card.className = `bg-slate-800/80 border rounded-2xl p-4 transition-all ${
@@ -7134,7 +6744,7 @@
 
               ${isCurrentOverloadAchieved ? `
                 <span class="px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black text-[11px] uppercase tracking-wide shadow-sm flex items-center gap-1 animate-pulse">
-                  🎯 OVERLOAD!
+                  🎯 DOEL GEHAALD
                 </span>
               ` : isBaselineAchieved ? `
                 <span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold text-[11px] uppercase tracking-wide shadow-sm flex items-center gap-1">
@@ -7327,6 +6937,7 @@
       const exName = slotData.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
       const isBW = isExerciseBodyweight(exName);
 
+      setObj.inputFields = { ...(setObj.inputFields || {}), [field]: true };
       setObj[field] = value === "" ? "" : Number(value);
       if (isBW) {
         setObj.weight = 0;
@@ -7401,7 +7012,14 @@
         appState.routineLocked = false;
         updateDashboard();
       }
-      appState.weeks[appState.currentWeek][appState.currentDay][slotKey].selectedName = newName;
+      const slot = appState.weeks[appState.currentWeek][appState.currentDay][slotKey];
+      if (slot.selectedName !== newName && slot.sets.some(set => set.completed)) {
+        showToast('Deze oefening bevat opgeslagen prestaties. Wissel de oefening in een nog niet uitgevoerde training.', 'error');
+        renderExercises();
+        return;
+      }
+      if (slot.selectedName !== newName) slot.progressionPlan = null;
+      slot.selectedName = newName;
       saveState();
       renderExercises();
       if (typeof liveWorkout !== 'undefined' && liveWorkout && liveWorkout.active) {
@@ -7413,6 +7031,7 @@
       if (!confirm(`Sets van Week ${appState.currentWeek} ${appState.currentDay.toUpperCase()} wissen?`)) return;
       const currentDayData = appState.weeks[appState.currentWeek][appState.currentDay];
       SPLIT_INFO[appState.currentDay].slots.forEach(slotKey => {
+        currentDayData[slotKey].progressionPlan = null;
         currentDayData[slotKey].sets = [
           { weight: "", reps: "", completed: false },
           { weight: "", reps: "", completed: false },
@@ -8457,43 +8076,45 @@
 
     function prepareCurrentLiveSetValues() {
       const slotKey = liveWorkout.slots[liveWorkout.currentSlotIndex];
-      const slotData = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey][slotKey];
-      const catalogItem = EXERCISE_CATALOG[slotKey];
-      const exerciseName = (slotData && slotData.selectedName) || (catalogItem ? catalogItem.defaultName : "Oefening");
-      const isBW = isExerciseBodyweight(exerciseName);
-      const targetReps = getExerciseTargetReps(exerciseName, slotKey, liveWorkout.weekNum, liveWorkout.dayKey);
-      const setIdx = liveWorkout.currentSetIndex;
-      const setObj = slotData && slotData.sets ? slotData.sets[setIdx] : null;
+      const slot = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey][slotKey];
+      const name = slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
+      const isBW = isExerciseBodyweight(name);
       const advice = getSlotTargetAdvice(liveWorkout.weekNum, liveWorkout.dayKey, slotKey);
-
-      // Bepaal gewicht: voor bodyweight oefeningen is dit altijd 0
-      let initialWeight = 0;
-      if (isBW) {
-        initialWeight = 0;
-      } else if (setObj && setObj.weight !== "" && Number(setObj.weight) > 0) {
-        initialWeight = Number(setObj.weight);
-      } else if (setIdx > 0 && slotData && slotData.sets && slotData.sets[setIdx - 1] && Number(slotData.sets[setIdx - 1].weight) > 0) {
-        // Eerdere set in deze zelfde sessie al gelogd -> handig overnemen
-        initialWeight = Number(slotData.sets[setIdx - 1].weight);
-      } else if (advice.hasPriorData && advice.advisedWeight !== null && advice.advisedWeight > 0) {
-        // Alleen voorvullen als er werkelijk eerdere data aanwezig is!
-        initialWeight = advice.advisedWeight;
-      } else {
-        // Geen eerdere data bekend: leeg laten (0) zodat gebruiker zelf kiest
-        initialWeight = 0;
+      if (!slot.progressionPlan) {
+        slot.progressionPlan = { weight: isBW ? 0 : Number(advice.advisedWeight || slot.sets[0]?.weight || 0), reps: Number(advice.advisedReps || advice.targetReps) };
       }
+      const index = liveWorkout.currentSetIndex;
+      const set = slot.sets[index] || {};
+      const previous = slot.sets.slice(0, index).reverse().find(item => item.completed && Number(item.reps) > 0 && (isBW || Number(item.weight) > 0));
+      const sameWeek = getSameWeekExerciseLogged(liveWorkout.weekNum, name, liveWorkout.dayKey, slotKey);
+      const reference = sameWeek?.sets[index] || sameWeek?.sets[0];
+      const value = field => {
+        if ((set.completed || set.inputFields?.[field]) && set[field] !== '' && set[field] != null) return Number(set[field]);
+        if (previous) return Number(previous[field]);
+        if (reference) return Number(reference[field]);
+        if (set[field] !== '' && set[field] != null) return Number(set[field]);
+        return Number(slot.progressionPlan[field === 'weight' ? 'weight' : 'reps']);
+      };
+      liveWorkout.tempWeight = isBW ? 0 : value('weight');
+      liveWorkout.tempReps = value('reps');
+      liveWorkout.tempExertion = set.exertion || 'good';
+      liveWorkout.valueSource = set.completed || set.inputFields?.weight || set.inputFields?.reps ? 'Eigen invoer voor deze set' : previous ? 'Overgenomen van de vorige set' : reference ? 'Overgenomen van eerder deze week' : 'Vooraf ingevuld trainingsdoel';
+    }
 
-      // Bepaal reps:
-      let initialReps = targetReps;
-      if (setObj && setObj.reps !== "" && Number(setObj.reps) > 0) {
-        initialReps = Number(setObj.reps);
-      } else if (liveWorkout.slotAdaptations[slotKey] && liveWorkout.slotAdaptations[slotKey].suggestedReps) {
-        initialReps = liveWorkout.slotAdaptations[slotKey].suggestedReps;
+    function rememberLiveInput(field, value) {
+      const key = liveWorkout.slots[liveWorkout.currentSlotIndex];
+      const slot = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey][key];
+      if (!slot.progressionPlan) {
+        const advice = getSlotTargetAdvice(liveWorkout.weekNum, liveWorkout.dayKey, key);
+        slot.progressionPlan = { weight: Number(advice.advisedWeight || 0), reps: Number(advice.advisedReps || advice.targetReps) };
       }
-
-      liveWorkout.tempWeight = initialWeight;
-      liveWorkout.tempReps = initialReps;
-      liveWorkout.tempExertion = (setObj && setObj.exertion) ? setObj.exertion : "good";
+      const set = slot.sets[liveWorkout.currentSetIndex];
+      set[field] = value;
+      set.inputFields = { ...(set.inputFields || {}), [field]: true };
+      liveWorkout.valueSource = 'Eigen invoer voor deze set';
+      const source = document.getElementById('lwValueSource');
+      if (source) source.textContent = liveWorkout.valueSource;
+      saveState();
     }
 
     function adjustLiveWeight(delta) {
@@ -8505,6 +8126,7 @@
       } else {
         liveWorkout.tempWeight = Math.max(0, Math.round((liveWorkout.tempWeight + delta) * 10) / 10);
       }
+      rememberLiveInput('weight', liveWorkout.tempWeight);
       const valEl = document.getElementById("lwWeightDisplay");
       const inputEl = document.getElementById("lwWeightInput");
       if (valEl) valEl.textContent = liveWorkout.tempWeight > 0 ? liveWorkout.tempWeight.toFixed(1) : "0.0";
@@ -8516,6 +8138,7 @@
     function setLiveWeightManual(val) {
       const num = parseFloat(val);
       liveWorkout.tempWeight = isNaN(num) || num < 0 ? 0 : Math.round(num * 10) / 10;
+      rememberLiveInput('weight', liveWorkout.tempWeight);
       const valEl = document.getElementById("lwWeightDisplay");
       if (valEl) valEl.textContent = liveWorkout.tempWeight > 0 ? liveWorkout.tempWeight.toFixed(1) : "0.0";
       updateLive1RMPreview();
@@ -8530,28 +8153,34 @@
       const catalogItem = EXERCISE_CATALOG[slotKey];
       const exerciseName = (slotData && slotData.selectedName) || (catalogItem ? catalogItem.defaultName : "Oefening");
       const isBW = isExerciseBodyweight(exerciseName);
-      const targetReps = getExerciseTargetReps(exerciseName, slotKey, liveWorkout.weekNum, liveWorkout.dayKey);
+      const enteredWeight = Number(liveWorkout.tempWeight || 0);
+      const enteredReps = Number(liveWorkout.tempReps || 0);
+      const displayWeight = isBW ? 'BW' : (enteredWeight > 0 ? enteredWeight.toFixed(1) + ' kg' : '0.0 kg');
       btn.innerHTML = `
         <span>✅</span>
-        <span>DOEL BEHAALD (${isBW ? '' : (liveWorkout.tempWeight > 0 ? liveWorkout.tempWeight + ' kg × ' : '')}${targetReps} reps${isBW ? ' • BW' : ''})</span>
+        <span>OPSLAAN (${displayWeight} × ${enteredReps || 1} reps)</span>
       `;
     }
 
     function adjustLiveReps(delta) {
       liveWorkout.tempReps = Math.max(1, liveWorkout.tempReps + delta);
+      rememberLiveInput('reps', liveWorkout.tempReps);
       const valEl = document.getElementById("lwRepsDisplay");
       const inputEl = document.getElementById("lwRepsInput");
       if (valEl) valEl.textContent = liveWorkout.tempReps;
       if (inputEl) inputEl.value = liveWorkout.tempReps;
       updateLive1RMPreview();
+      updateLiveSubmitButtonText();
     }
 
     function setLiveRepsManual(val) {
       const num = parseInt(val, 10);
       liveWorkout.tempReps = isNaN(num) || num < 1 ? 1 : num;
+      rememberLiveInput('reps', liveWorkout.tempReps);
       const valEl = document.getElementById("lwRepsDisplay");
       if (valEl) valEl.textContent = liveWorkout.tempReps;
       updateLive1RMPreview();
+      updateLiveSubmitButtonText();
     }
 
     function updateLive1RMPreview() {
@@ -8661,18 +8290,9 @@
       let loggedReps = liveWorkout.tempReps;
       let loggedWeight = isBW ? 0 : liveWorkout.tempWeight;
 
-      if (useTarget) {
-        loggedReps = targetReps;
-        liveWorkout.tempReps = targetReps;
-        if (!isBW && (!loggedWeight || loggedWeight <= 0) && advice.hasPriorData && advice.advisedWeight) {
-          loggedWeight = advice.advisedWeight;
-          liveWorkout.tempWeight = advice.advisedWeight;
-        }
-      } else {
-        if (!loggedReps || loggedReps <= 0) {
-          loggedReps = targetReps;
-          liveWorkout.tempReps = targetReps;
-        }
+      if (!loggedReps || loggedReps <= 0 || (!isBW && (!loggedWeight || loggedWeight <= 0))) {
+        showToast('Vul een geldig gewicht en aantal herhalingen in voordat je opslaat.', 'error');
+        return;
       }
 
       // Check of dit een All-Time PR is
@@ -8697,7 +8317,9 @@
 
       // Sla de set direct op in de week data
       if (slotData && slotData.sets) {
+        if (slotData.progressionPlan && !isBW && slotData.progressionPlan.weight === 0) slotData.progressionPlan.weight = loggedWeight;
         slotData.sets[setIdx] = {
+          ...slotData.sets[setIdx],
           weight: isBW ? 0 : (loggedWeight > 0 ? loggedWeight : ""),
           reps: loggedReps > 0 ? loggedReps : "",
           completed: true,
@@ -8719,7 +8341,7 @@
         // Gebruiker haalde meer reps dan voorgesteld
         liveWorkout.slotAdaptations[slotKey] = {
           message: `Super! Vorige set: ${loggedReps}/${targetReps} reps (+${loggedReps - targetReps} bonus!). Je hebt voldoende krachtreserve.`,
-          suggestedReps: targetReps,
+          suggestedReps: loggedReps,
           suggestedWeight: loggedWeight,
           isOverTarget: true
         };
@@ -8764,7 +8386,7 @@
         if (hasUncompletedRemaining) break;
       }
 
-      const isWorkoutFinished = (!hasUncompletedRemaining) || (isLastSlot && isLastSetInSlot);
+      const isWorkoutFinished = !hasUncompletedRemaining;
 
       if (isWorkoutFinished) {
         // Direct naar de feestelijke samenvatting & confetti! Geen onnodige rusttimer meer na de laatste set.
@@ -9351,12 +8973,11 @@
         if (sl && sl.sets) {
           const setsToCheck = isDeload ? sl.sets.slice(0, 2) : sl.sets;
           setsToCheck.forEach(st => {
-            if (st.completed && Number(st.weight) > 0 && Number(st.reps) > 0) {
+            const isBW = isExerciseBodyweight(sl.selectedName || EXERCISE_CATALOG[sK].defaultName);
+            if (st.completed && Number(st.reps) > 0 && (isBW || Number(st.weight) > 0)) {
               completedSetsCount++;
-              totalVolumeWeight += Number(st.weight) * Number(st.reps);
+              if (!isBW) totalVolumeWeight += Number(st.weight) * Number(st.reps);
               totalRepsCount += Number(st.reps);
-            } else if (st.completed) {
-              completedSetsCount++;
             }
           });
         }
@@ -9429,67 +9050,7 @@
 
         // Advies HTML voorbereiden
         let adviceCardHtml = "";
-        if (advice.adviceType === "same_week") {
-          adviceCardHtml = `
-            <div class="p-3 rounded-xl bg-blue-950/50 border border-blue-500/40 text-blue-200 text-xs flex items-start gap-2.5">
-              <span class="text-base flex-shrink-0">🔄</span>
-              <div class="leading-relaxed">
-                <span class="font-bold block uppercase text-[10px] tracking-wider mb-0.5 text-blue-400">${liveWorkout.weekNum === 1 ? 'Inregelweek' : 'Zelfde Week'} Consistentie:</span>
-                Zelfde oefening als ${advice.sameWeekDay || 'eerder deze week'}. ${isBW ? `Doel: <b>3 × ${targetReps} reps</b> met eigen lichaamsgewicht.` : `Aanbevolen gewicht: <b>${advice.advisedWeight} kg</b> voor 3 × ${targetReps} reps.`}
-              </div>
-            </div>
-          `;
-        } else if (liveWorkout.weekNum === 1) {
-          adviceCardHtml = `
-            <div class="p-3 rounded-xl bg-blue-950/30 border border-blue-500/30 text-blue-200 text-xs flex items-start gap-2.5">
-              <span class="text-base flex-shrink-0">🎯</span>
-              <div class="leading-relaxed">
-                <span class="font-bold block uppercase text-[10px] tracking-wider mb-0.5 text-blue-400">Inregelweek Nulmeting:</span>
-                Week 1 is je kalibratieweek. ${isBW ? `Voer 3 × ${targetReps} strikte herhalingen uit met eigen lichaamsgewicht.` : `Bepaal een comfortabel startgewicht voor 3 × ${targetReps} reps.`} Overload wordt berekend in je weekrapport.
-              </div>
-            </div>
-          `;
-        } else if (advice.adviceType === "overload") {
-          adviceCardHtml = `
-            <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-xs flex items-start gap-2.5">
-              <span class="text-base flex-shrink-0">🔥</span>
-              <div class="leading-relaxed">
-                <span class="font-bold block uppercase text-[10px] tracking-wider mb-0.5 text-emerald-400">${isBW ? 'Progressive Overload Advies (+1 Rep):' : `Progressive Overload Advies (+${inc} kg):`}</span>
-                ${isBW ? `Vorige week doel behaald! Aanbevolen doel vandaag: <b>3 × ${targetReps} reps</b> (lichaamsgewicht).` : `Vorige week doel behaald (${advice.prevMax} kg)! Aanbevolen werkgewicht vandaag: <b>${advice.advisedWeight} kg</b> voor 3 × ${targetReps} reps.`}
-              </div>
-            </div>
-          `;
-        } else if (advice.adviceType === "repeat") {
-          adviceCardHtml = `
-            <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-700/80 text-slate-200 text-xs flex items-start gap-2.5">
-              <span class="text-base flex-shrink-0">🎯</span>
-              <div class="leading-relaxed">
-                <span class="font-bold block uppercase text-[10px] tracking-wider mb-0.5 text-slate-400">${isBW ? 'Herhalingen Herhalen:' : 'Gewicht Herhalen:'}</span>
-                ${isBW ? `Herhaal vandaag <b>3 × ${targetReps} herhalingen</b> om dit doel consistent vol te maken.` : `Vorige prestatie was ${advice.prevMax} kg. Herhaal vandaag <b>${advice.advisedWeight} kg</b> om 3 × ${targetReps} herhalingen vol te maken.`}
-              </div>
-            </div>
-          `;
-        } else if (advice.adviceType === "deload") {
-          adviceCardHtml = `
-            <div class="p-3 rounded-xl bg-purple-950/40 border border-purple-500/40 text-purple-200 text-xs flex items-start gap-2.5">
-              <span class="text-base flex-shrink-0">🌿</span>
-              <div class="leading-relaxed">
-                <span class="font-bold block uppercase text-[10px] tracking-wider mb-0.5 text-purple-300">Deload Advies:</span>
-                ${isBW ? `Doe 2 rustige herstelsets van ~${Math.max(5, Math.round(targetReps * 0.7))} reps.` : `Aanbevolen gewicht voor herstel: <b>${advice.advisedWeight} kg</b> voor exact 2 sets met strakke vorm.`}
-              </div>
-            </div>
-          `;
-        } else {
-          adviceCardHtml = `
-            <div class="p-3 rounded-xl bg-blue-950/30 border border-blue-500/30 text-blue-200 text-xs flex items-start gap-2.5">
-              <span class="text-base flex-shrink-0">🎯</span>
-              <div class="leading-relaxed">
-                <span class="font-bold block uppercase text-[10px] tracking-wider mb-0.5 text-blue-400">${isBW ? 'Doelherhalingen:' : 'Startgewicht Bepalen:'}</span>
-                ${isBW ? `Voer 3 × ${targetReps} herhalingen uit met eigen lichaamsgewicht.` : `Vul hieronder je werkgewicht in voor 3 × ${targetReps} herhalingen.`}
-              </div>
-            </div>
-          `;
-        }
+        adviceCardHtml = renderProgressDetails(liveWorkout.weekNum, liveWorkout.dayKey, slotKey);
 
         container.innerHTML = `
           <!-- Mini Stepper Navigatie -->
@@ -9550,7 +9111,7 @@
           ` : ''}
 
           <!-- REAL-TIME SESSIE ADAPTATIE (INDIEN VAN TOEPASSING OP VOLGENDE SETS) -->
-          ${adaptation ? `
+          ${adaptation?.message ? `
             <div class="p-2.5 rounded-xl border flex items-start gap-2 text-xs ${
               adaptation.isUnderTarget 
                 ? 'bg-amber-950/40 border-amber-500/40 text-amber-200' 
@@ -9572,6 +9133,7 @@
             <span>Nieuw All-Time PR in zicht bij afronding van deze set!</span>
           </div>
 
+          <div id="lwValueSource" class="text-xs text-slate-400">${liveWorkout.valueSource || "Vooraf ingevuld trainingsdoel"}</div>
           <!-- INSTELLING: GEWICHT & REPS -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             
@@ -9713,20 +9275,12 @@
 
           <!-- ACTIEKNOPPEN VOOR HET AFRONDEN VAN DE SET -->
           <div class="space-y-2 pt-1">
-            <button id="lwSubmitTargetBtn" onclick="submitLiveSet(true)" class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition active:scale-[0.99] shadow-md cursor-pointer">
+            <button id="lwSubmitTargetBtn" onclick="submitLiveSet(false)" class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition active:scale-[0.99] shadow-md cursor-pointer">
               <span>✅</span>
-              <span>DOEL BEHAALD (${liveWorkout.tempWeight > 0 ? liveWorkout.tempWeight + ' kg × ' : ''}${targetReps} reps)</span>
+              <span>OPSLAAN (${isBW ? 'BW' : liveWorkout.tempWeight + ' kg'} &times; ${liveWorkout.tempReps || targetReps} reps)</span>
             </button>
 
-            <button onclick="submitLiveSet(false)" class="w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs flex items-center justify-center gap-1.5 transition border border-slate-700 active:scale-[0.99] cursor-pointer">
-              <span>✍️</span>
-              <span>Afronden met aangepaste reps of gewicht (start rust)</span>
-            </button>
 
-            <button onclick="finishLiveWorkoutNow()" class="w-full py-2.5 px-3 rounded-xl bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 border border-emerald-500/40 active:scale-[0.99] cursor-pointer shadow-sm transition">
-              <span>🏁</span>
-              <span>Training Afronden (Confetti & Rapport)</span>
-            </button>
           </div>
         `;
       }
@@ -9744,7 +9298,7 @@
         let nextSetNum = liveWorkout.currentSetIndex + 2;
         let nextExerciseName = exerciseName;
         let nextWeight = liveWorkout.tempWeight;
-        let nextReps = getExerciseTargetReps(exerciseName, slotKey, liveWorkout.weekNum, liveWorkout.dayKey);
+        let nextReps = liveWorkout.tempReps;
         let previewSlotKey = slotKey;
 
         if (liveWorkout.currentSetIndex >= maxSetsPerSlot - 1) {
@@ -9850,13 +9404,6 @@
               </button>
             </div>
 
-            <div class="pt-2 max-w-md mx-auto">
-              <button onclick="finishLiveWorkoutNow()" class="w-full py-2.5 px-3 rounded-xl bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 border border-emerald-500/40 active:scale-[0.99] cursor-pointer shadow-sm transition">
-                <span>🏁</span>
-                <span>Training Afronden (Confetti & Rapport)</span>
-              </button>
-            </div>
-
           </div>
         `;
       }
@@ -9935,7 +9482,7 @@
                 🏆
               </div>
               <h2 class="text-2xl sm:text-3xl font-black text-slate-100 tracking-wide uppercase">
-                TRAINING VOLTOOID! GEWELDIG GEDAAN!
+                ${completedSetsCount === totalSetsInWorkout ? 'TRAINING VOLTOOID!' : 'TUSSENTIJDS TRAININGSRAPPORT'}
               </h2>
               <p class="text-xs sm:text-sm text-emerald-400 font-mono">
                 Week ${liveWorkout.weekNum} • ${SPLIT_INFO[liveWorkout.dayKey].title} succesvol afgerond!
@@ -10027,15 +9574,16 @@
                   const sData = currentDayData[sKey];
                   const exName = sData.selectedName || EXERCISE_CATALOG[sKey].defaultName;
                   const sets = isDeload ? sData.sets.slice(0, 2) : sData.sets;
-                  const setsSummary = sets.map(s => isExerciseBodyweight(exName) ? `${s.reps || 0} reps (BW)` : `${s.weight || 0}kg × ${s.reps || 0}`).join(" • ");
+                  const setsSummary = sets.filter(s => s.completed && Number(s.reps) > 0 && (isExerciseBodyweight(exName) || Number(s.weight) > 0)).map(s => isExerciseBodyweight(exName) ? `${s.reps || 0} reps (BW)` : `${s.weight || 0}kg × ${s.reps || 0}`).join(" • ");
                   return `
                     <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono">
                       <div class="flex items-center gap-2">
                         <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-[10px]">✓</span>
                         <span class="font-bold text-slate-200">${exName}</span>
                       </div>
-                      <span class="text-slate-400 text-[11px]">${setsSummary}</span>
+                      <span class="text-slate-400 text-[11px]">${setsSummary || 'Nog niet uitgevoerd'}</span>
                     </div>
+                    ${renderProgressDetails(liveWorkout.weekNum, liveWorkout.dayKey, sKey)}
                   `;
                 }).join("")}
               </div>
@@ -10114,7 +9662,7 @@
       
       Object.values(dayData).forEach(slot => {
         if (!slot || typeof slot !== "object" || !Array.isArray(slot.sets)) return;
-        slot.sets.forEach(set => {
+        slot.sets.slice(0, isDeloadWeek(weekNum) ? 2 : 3).forEach(set => {
           if (set && set.completed && Number(set.weight) > 0 && Number(set.reps) > 0) {
             total += Number(set.weight) * Number(set.reps);
           }
@@ -10149,14 +9697,9 @@
       const isDeload = isDeloadWeek(appState.currentWeek);
       const currentDayData = appState.weeks[appState.currentWeek] ? appState.weeks[appState.currentWeek][appState.currentDay] : null;
       
-      if (currentDayData) {
-        Object.values(currentDayData).forEach(slot => {
-          if (!slot || typeof slot !== "object" || !Array.isArray(slot.sets)) return;
-          const applicableSets = isDeload ? slot.sets.slice(0, 2) : slot.sets;
-          totalSets += applicableSets.length;
-          completedSets += applicableSets.filter(s => s && s.completed).length;
-        });
-      }
+      const completion = getDayCompletionStatus(appState.currentWeek, appState.currentDay);
+      totalSets = completion.totalSets;
+      completedSets = completion.completedSets;
 
       const pct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
       const compPctEl = document.getElementById("completionPercent");
@@ -10186,26 +9729,17 @@
     }
 
     function getDayCompletionStatus(weekNum, dayKey) {
-      const isDeload = isDeloadWeek(weekNum);
-      const dayData = (appState.weeks && appState.weeks[weekNum]) ? appState.weeks[weekNum][dayKey] : null;
-      if (!dayData) return { totalSets: 0, completedSets: 0, isFullyCompleted: false, hasStarted: false };
-
-      const slots = (SPLIT_INFO[dayKey] && SPLIT_INFO[dayKey].slots) ? SPLIT_INFO[dayKey].slots : ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"];
+      const day = appState.weeks?.[weekNum]?.[dayKey];
+      if (!day) return { totalSets: 0, completedSets: 0, isFullyCompleted: false, hasStarted: false };
       let totalSets = 0;
       let completedSets = 0;
-
-      slots.forEach(sKey => {
-        const slot = dayData[sKey];
-        if (slot && typeof slot === "object" && Array.isArray(slot.sets)) {
-          const sets = isDeload ? slot.sets.slice(0, 2) : slot.sets;
-          totalSets += sets.length;
-          completedSets += sets.filter(s => s && s.completed).length;
-        }
-      });
-
-      const isFullyCompleted = totalSets > 0 && completedSets >= totalSets;
-      const hasStarted = completedSets > 0;
-      return { totalSets, completedSets, isFullyCompleted, hasStarted };
+      for (const key of SPLIT_INFO[dayKey]?.slots || []) {
+        if (!day[key]?.sets) continue;
+        const progress = getSlotProgress(weekNum, dayKey, key);
+        totalSets += progress.requiredSets;
+        completedSets += progress.completedSets;
+      }
+      return { totalSets, completedSets, isFullyCompleted: totalSets > 0 && completedSets === totalSets, hasStarted: completedSets > 0 };
     }
 
     function getNextSplitDay(currentDayKey) {

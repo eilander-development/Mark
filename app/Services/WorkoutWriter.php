@@ -15,6 +15,7 @@ class WorkoutWriter
         private readonly PersonalRecord $records,
         private readonly StateAssembler $state,
         private readonly NextCycleAdvisor $nextCycle,
+        private readonly SlotAdvisor $advisor,
     ) {}
 
     /**
@@ -37,6 +38,10 @@ class WorkoutWriter
         }
         if (array_key_exists('exertion', $data) && in_array($data['exertion'], ['easy', 'good', 'max'], true)) {
             $set->exertion = $data['exertion'];
+        }
+
+        if (array_key_exists('inputFields', $data)) {
+            $set->input_fields = $data['inputFields'];
         }
 
         $name = $set->slot->selected_name;
@@ -78,11 +83,23 @@ class WorkoutWriter
                     'selectedName' => 'Schema staat vast. Ontgrendel eerst om te wisselen.',
                 ]);
             }
+            if ($slot->selected_name !== $data['selectedName']) {
+                if ($slot->sets()->where('completed', true)->exists()) {
+                    throw ValidationException::withMessages(['selectedName' => 'Deze oefening bevat opgeslagen prestaties. Wissel in een nog niet uitgevoerde training.']);
+                }
+                $slot->progression_plan = null;
+            }
             $slot->selected_name = (string) $data['selectedName'];
         }
         if (array_key_exists('note', $data)) {
             $this->guardMainScreen($context);
             $slot->note = (string) $data['note'];
+        }
+        if (array_key_exists('progressionPlan', $data)) {
+            $slot->progression_plan = $data['progressionPlan'];
+        }
+        if (isset($data['targetReps'])) {
+            $slot->target_reps = $data['targetReps'];
         }
         $slot->save();
 
@@ -107,8 +124,9 @@ class WorkoutWriter
         $cycle = $this->factory->ensureCurrent();
         $session = $cycle->sessions()->where('week', $week)->where('day', $day)->with('slots.sets')->firstOrFail();
         foreach ($session->slots as $slot) {
+            $slot->update(['progression_plan' => null]);
             foreach ($slot->sets as $set) {
-                $set->fill(['weight' => '', 'reps' => '', 'completed' => false, 'is_pr' => false, 'exertion' => 'good'])->save();
+                $set->fill(['weight' => '', 'reps' => '', 'completed' => false, 'is_pr' => false, 'exertion' => 'good', 'input_fields' => null])->save();
             }
         }
         $session->actual_duration = null;
@@ -202,34 +220,21 @@ class WorkoutWriter
         $prefs = $this->factory->preferences();
         $nextWeek = min($cycle->total_weeks, $fromWeek + 1);
 
-        $fromSessions = $cycle->sessions()->where('week', $fromWeek)->with('slots.sets')->get()->keyBy('day');
         $toSessions = $cycle->sessions()->where('week', $nextWeek)->with('slots.sets')->get();
-
         foreach ($toSessions as $session) {
-            $source = $fromSessions->get($session->day);
-            if (! $source) {
-                continue;
-            }
             foreach ($session->slots as $slot) {
-                $fromSlot = $source->slots->firstWhere('slot_key', $slot->slot_key);
-                if (! $fromSlot) {
+                if ($slot->sets->contains(fn ($set): bool => $set->completed || ! empty($set->input_fields) || $set->reps !== '')) {
                     continue;
                 }
-                $advice = app(SlotAdvisor::class)->forSlot(
-                    $cycle,
-                    $session,
-                    $slot,
-                    (float) $prefs->overload_increment,
-                    (string) $prefs->overload_frequency,
-                );
-                $weight = $advice['advisedWeight'];
-                if ($weight === null) {
+                $progress = $this->advisor->exerciseProgress($cycle, $fromWeek, $slot->selected_name);
+                if (! $progress['completedSets']) {
                     continue;
                 }
-                foreach ($slot->sets as $set) {
-                    if ($set->weight === '' && ! $set->completed) {
-                        $set->weight = (string) $weight;
-                        $set->save();
+                $next = $this->periodization->nextProgression($progress, $nextWeek, (float) $prefs->overload_increment, $prefs->overload_frequency);
+                $slot->update(['progression_plan' => ['weight' => $next['weight'], 'reps' => $next['reps']], 'target_reps' => $next['reps']]);
+                foreach ($slot->sets->take($next['requiredSets']) as $set) {
+                    if ($set->weight === '') {
+                        $set->update(['weight' => (string) $next['weight']]);
                     }
                 }
             }
@@ -285,11 +290,14 @@ class WorkoutWriter
         $slot->loadMissing('session');
         $sessions = WorkoutSession::query()
             ->where('cycle_id', $slot->session->cycle_id)
+            ->where('week', '>=', $slot->session->week)
             ->pluck('id');
 
         WorkoutSlot::query()
             ->whereIn('workout_session_id', $sessions)
             ->where('slot_key', $slot->slot_key)
-            ->update(['selected_name' => $slot->selected_name]);
+            ->where('selected_name', '!=', $slot->selected_name)
+            ->whereDoesntHave('sets', fn ($query) => $query->where('completed', true))
+            ->update(['selected_name' => $slot->selected_name, 'progression_plan' => null]);
     }
 }

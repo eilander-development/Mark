@@ -34,6 +34,7 @@ class MarkerState
                     'id' => $slot->id,
                     'sessionId' => $session->id,
                     'selectedName' => $slot->selected_name,
+                    'progressionPlan' => $slot->progression_plan,
                     'note' => (string) $slot->note,
                     'targetReps' => $slot->target_reps,
                     'sets' => $slot->sets->map(fn ($set) => [
@@ -42,6 +43,7 @@ class MarkerState
                         'reps' => $set->reps ?? '',
                         'completed' => (bool) $set->completed,
                         'exertion' => $set->exertion ?: 'good',
+                        'inputFields' => $set->input_fields ?? [],
                     ])->values()->all(),
                 ];
             }

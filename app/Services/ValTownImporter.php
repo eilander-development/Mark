@@ -172,6 +172,7 @@ class ValTownImporter
                     if (isset($slotData['targetReps'])) {
                         $slot->target_reps = (int) $slotData['targetReps'];
                     }
+                    $slot->progression_plan = $slotData['progressionPlan'] ?? null;
                     $slot->save();
                     $sets = is_array($slotData['sets'] ?? null) ? $slotData['sets'] : [];
                     foreach ($sets as $index => $setData) {
@@ -191,6 +192,7 @@ class ValTownImporter
                             'reps' => (string) ($setData['reps'] ?? ''),
                             'completed' => (bool) ($setData['completed'] ?? false),
                             'is_pr' => (bool) $set->is_pr,
+                            'input_fields' => json_encode($setData['inputFields'] ?? []),
                             'exertion' => in_array($exertion, ['easy', 'good', 'max'], true) ? $exertion : 'good',
                             'created_at' => $set->created_at ?? $now,
                             'updated_at' => $now,
@@ -216,7 +218,7 @@ class ValTownImporter
             WorkoutSet::query()->upsert(
                 $setRows,
                 ['id'],
-                ['weight', 'reps', 'completed', 'exertion', 'updated_at'],
+                ['weight', 'reps', 'completed', 'exertion', 'input_fields', 'updated_at'],
             );
         }
     }

@@ -62,28 +62,14 @@ class Periodization
         if ($previousMax === null || $previousMax <= 0) {
             return null;
         }
-        if ($this->isDeloadWeek($weekNum)) {
-            return $this->roundToIncrement($previousMax * 0.70, $increment);
-        }
         if ($weekNum <= 1) {
             return $previousMax;
         }
-        if (! $hitTarget) {
-            return $exertion === 'max'
-                ? max(0.0, round($previousMax - $increment, 1))
-                : $previousMax;
-        }
-        if ($exertion === 'max') {
-            return $previousMax;
-        }
-        if ($this->isBiweeklyHoldWeek($weekNum, $frequency)) {
-            return $previousMax;
-        }
-        if ($exertion === 'easy') {
-            return round($previousMax + (2 * $increment), 1);
-        }
 
-        return round($previousMax + $increment, 1);
+        return $this->nextProgression([
+            'targetWeight' => $previousMax, 'targetReps' => 8, 'achieved' => $hitTarget,
+            'completedSets' => 3, 'requiredSets' => 3, 'exertion' => $exertion, 'isBodyweight' => false,
+        ], $weekNum, $increment, $frequency)['weight'];
     }
 
     public function isBiweeklyHoldWeek(int $weekNum, string $frequency): bool
@@ -117,27 +103,92 @@ class Periodization
     }
 
     /**
-     * @param  iterable<int, object{completed?: bool, weight?: mixed, reps?: mixed}>  $sets
+     * @param  iterable<array{completed?: bool, weight?: mixed, reps?: mixed}|object>  $sets
+     * @return array<string, mixed>
+     */
+    public function progress(iterable $sets, float $targetWeight, int $targetReps, int $requiredSets, bool $isBodyweight): array
+    {
+        $items = is_array($sets) ? array_values($sets) : iterator_to_array($sets, false);
+        $details = [];
+        for ($index = 0; $index < $requiredSets; $index++) {
+            $set = $items[$index] ?? [];
+            $value = fn (string $key): mixed => is_array($set) ? ($set[$key] ?? null) : ($set->$key ?? null);
+            $completed = (bool) $value('completed') && (int) $value('reps') > 0 && ($isBodyweight || (float) $value('weight') > 0);
+            $weightMet = $isBodyweight || ((float) $value('weight') > 0 && (float) $value('weight') >= $targetWeight);
+            $credited = $completed && $weightMet ? min($targetReps, (int) $value('reps')) : 0;
+            $details[] = ['completed' => $completed, 'weightMet' => $weightMet, 'creditedReps' => $credited,
+                'missingReps' => $targetReps - $credited, 'achieved' => $completed && $weightMet && (int) $value('reps') >= $targetReps];
+        }
+        $achieved = count(array_filter($details, fn (array $set): bool => $set['achieved']));
+        $credited = array_sum(array_column($details, 'creditedReps'));
+
+        return ['details' => $details, 'completedSets' => count(array_filter($details, fn (array $set): bool => $set['completed'])),
+            'achievedSets' => $achieved, 'requiredSets' => $requiredSets, 'creditedReps' => $credited,
+            'requiredReps' => $requiredSets * $targetReps, 'remainingReps' => $requiredSets * $targetReps - $credited,
+            'percent' => (int) floor(100 * $credited / max(1, $requiredSets * $targetReps)),
+            'achieved' => $achieved === $requiredSets, 'targetWeight' => $targetWeight, 'targetReps' => $targetReps];
+    }
+
+    /**
+     * @param  iterable<array{completed?: bool, weight?: mixed, reps?: mixed}|object>  $sets
      */
     public function targetAchieved(iterable $sets, int $targetReps, int $weekNum, bool $isBodyweight): bool
     {
-        $needed = $this->requiredSets($weekNum);
-        $ok = 0;
-        $index = 0;
-        foreach ($sets as $set) {
-            $index++;
-            if ($index > $needed) {
+        $items = is_array($sets) ? array_values($sets) : iterator_to_array($sets, false);
+        $weight = 0.0;
+        foreach ($items as $set) {
+            $completed = is_array($set) ? ($set['completed'] ?? false) : $set->completed;
+            $candidate = (float) (is_array($set) ? ($set['weight'] ?? 0) : $set->weight);
+            if ($completed && $candidate > 0) {
+                $weight = $candidate;
                 break;
-            }
-            $completed = (bool) (is_array($set) ? ($set['completed'] ?? false) : $set->completed);
-            $reps = (int) (is_array($set) ? ($set['reps'] ?? 0) : $set->reps);
-            $weight = (float) (is_array($set) ? ($set['weight'] ?? 0) : $set->weight);
-            if ($completed && $reps >= $targetReps && ($isBodyweight || $weight > 0)) {
-                $ok++;
             }
         }
 
-        return $ok >= $needed;
+        return $this->progress($items, $weight, $targetReps, $this->requiredSets($weekNum), $isBodyweight)['achieved'];
+    }
+
+    /**
+     * @param  array<string, mixed>  $progress
+     * @return array{weight: float, reps: int, status: string, reason: string, requiredSets: int}
+     */
+    public function nextProgression(array $progress, int $nextWeek, float $increment, string $frequency): array
+    {
+        $weight = (float) $progress['targetWeight'];
+        $reps = (int) $progress['targetReps'];
+        $status = 'Herhalen';
+        $reason = 'Doel nog niet volledig gehaald; herhaal het werkgewicht en de herhalingen.';
+        if (! $progress['completedSets']) {
+            $status = 'Nog niet uitgevoerd';
+            $reason = 'Nog geen opgeslagen prestaties om een verhoging te adviseren.';
+        } elseif ($this->isDeloadWeek($nextWeek)) {
+            $status = 'Herstelweek';
+            $weight = $progress['isBodyweight'] ? 0.0 : max($increment, $this->roundToIncrement($weight * 0.7, $increment));
+            if ($progress['isBodyweight']) {
+                $reps = max(6, (int) round($reps * 0.7));
+            }
+            $reason = 'Volgende week 2 herstelsets.';
+        } elseif ($progress['achieved'] && $this->isBiweeklyHoldWeek($nextWeek, $frequency)) {
+            $status = 'Consolideren';
+            $reason = 'Doel gehaald; nog een week herhalen volgens je 2-weken schema.';
+        } elseif ($progress['exertion'] === 'max') {
+            $reason = 'Minstens een set was maximaal; eerst herhalen met controle.';
+            if (! $progress['achieved'] && ! $progress['isBodyweight'] && $progress['completedSets'] === $progress['requiredSets']) {
+                $weight = max(0.0, round($weight - $increment, 1));
+                $status = 'Lichter herhalen';
+                $reason = 'Alle sets uitgevoerd, doel gemist en maximale inspanning: een gewichtsstap terug.';
+            }
+        } elseif ($progress['achieved']) {
+            $status = 'Verhogen';
+            if ($progress['isBodyweight']) {
+                $reps += $progress['exertion'] === 'easy' ? 3 : 2;
+            } else {
+                $weight = round($weight + $increment * ($progress['exertion'] === 'easy' ? 2 : 1), 1);
+            }
+            $reason = 'Alle geplande sets op het werkgewicht gehaald'.($progress['exertion'] === 'easy' ? ' en vlot uitgevoerd.' : '.');
+        }
+
+        return ['weight' => $weight, 'reps' => $reps, 'status' => $status, 'reason' => $reason, 'requiredSets' => $this->requiredSets($nextWeek)];
     }
 
     public function dayName(string $day): string

@@ -1,0 +1,62 @@
+# generated-by: sail-manager
+services:
+  laravel.test:
+    build:
+      context: '/home/marke/code/projecten/Mark'
+      dockerfile: '/sail-manager/project-runtime/mark-85060c8d5e96/runtime/Dockerfile'
+    image: sail-manager/mark-php83
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    environment:
+      WWWUSER: '${WWWUSER:-1000}'
+      WWWGROUP: '${WWWGROUP:-1000}'
+      LARAVEL_SAIL: 1
+    working_dir: /var/www/html
+    volumes:
+      - type: bind
+        source: '/home/marke/code/projecten/Mark'
+        target: '/var/www/html'
+      - type: bind
+        source: '/home/marke/code/sail/storage/app/sail-manager-project-runtime/mark-85060c8d5e96/runtime'
+        target: '/var/sail-manager'
+      - type: bind
+        source: '/home/marke/code/sail/storage/app/sail-manager-project-runtime/mark-85060c8d5e96/runtime/php/app.ini'
+        target: '/usr/local/etc/php/conf.d/99-sail-manager.ini'
+        read_only: true
+    command: >
+      sh -lc "if [ ! -f vendor/autoload.php ] && command -v composer >/dev/null 2>&1; then composer install; fi &&
+      while sleep 3600; do :; done"
+    networks:
+      - sail-proxy
+  web:
+    build:
+      context: '/home/marke/code/projecten/Mark'
+      dockerfile: '/sail-manager/project-runtime/mark-85060c8d5e96/runtime/Web.Dockerfile'
+    image: sail-manager/mark-web-php83
+    depends_on:
+      - laravel.test
+    volumes:
+      - type: bind
+        source: '/home/marke/code/projecten/Mark'
+        target: '/var/www/html'
+      - type: bind
+        source: '/home/marke/code/sail/storage/app/sail-manager-project-runtime/mark-85060c8d5e96/runtime'
+        target: '/var/sail-manager'
+      - type: bind
+        source: '/home/marke/code/sail/storage/app/sail-manager-project-runtime/mark-85060c8d5e96/runtime/php/web.ini'
+        target: '/usr/local/etc/php/conf.d/99-sail-manager.ini'
+        read_only: true
+    command: >
+      sh -lc "cp /var/sail-manager/apache/sites.conf /etc/apache2/sites-enabled/000-default.conf && apache2-foreground"
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -sS http://127.0.0.1/ -o /dev/null || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 4
+    networks:
+      - sail-proxy
+
+networks:
+  sail-proxy:
+    external: true
+    name: sail-proxy

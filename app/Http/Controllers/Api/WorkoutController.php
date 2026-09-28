@@ -24,6 +24,8 @@ class WorkoutController extends Controller
             'reps' => ['sometimes', 'nullable'],
             'completed' => ['sometimes', 'boolean'],
             'exertion' => ['sometimes', 'in:easy,good,max'],
+            'inputFields' => ['sometimes', 'array:weight,reps'],
+            'inputFields.*' => ['boolean'],
             'context' => ['sometimes', 'in:main,live,setup'],
         ]);
 
@@ -34,6 +36,10 @@ class WorkoutController extends Controller
     {
         $data = $request->validate([
             'selectedName' => ['sometimes', 'string', 'max:180'],
+            'targetReps' => ['sometimes', 'integer', 'min:1', 'max:200'],
+            'progressionPlan' => ['sometimes', 'nullable', 'array:weight,reps'],
+            'progressionPlan.weight' => ['required_with:progressionPlan', 'numeric', 'min:0'],
+            'progressionPlan.reps' => ['required_with:progressionPlan', 'integer', 'min:1', 'max:200'],
             'note' => ['sometimes', 'nullable', 'string', 'max:500'],
             'context' => ['sometimes', 'in:main,live,setup'],
         ]);

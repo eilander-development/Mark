@@ -1,0 +1,16 @@
+services:
+  web:
+    networks:
+      - default
+      - sail-proxy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=sail-proxy
+      - traefik.http.routers.mark.rule=Host(`fitness.test`)
+      - traefik.http.routers.mark.entrypoints=websecure
+      - traefik.http.routers.mark.tls=true
+      - traefik.http.services.mark.loadbalancer.server.port=80
+
+networks:
+  sail-proxy:
+    external: true

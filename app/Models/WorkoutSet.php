@@ -6,13 +6,14 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['workout_slot_id', 'position', 'weight', 'reps', 'completed', 'is_pr', 'exertion'])]
+#[Fillable(['workout_slot_id', 'position', 'weight', 'reps', 'completed', 'is_pr', 'exertion', 'input_fields'])]
 class WorkoutSet extends Model
 {
     protected function casts(): array
     {
         return [
             'completed' => 'boolean',
+            'input_fields' => 'array',
             'is_pr' => 'boolean',
         ];
     }

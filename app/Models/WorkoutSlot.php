@@ -7,9 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['workout_session_id', 'slot_key', 'selected_name', 'note', 'target_reps'])]
+#[Fillable(['workout_session_id', 'slot_key', 'selected_name', 'note', 'target_reps', 'progression_plan'])]
 class WorkoutSlot extends Model
 {
+    protected function casts(): array
+    {
+        return ['progression_plan' => 'array'];
+    }
+
     public function session(): BelongsTo
     {
         return $this->belongsTo(WorkoutSession::class, 'workout_session_id');

@@ -43,6 +43,7 @@ class StateAssembler
                     'id' => $slot->id,
                     'slotKey' => $slot->slot_key,
                     'selectedName' => $slot->selected_name,
+                    'progressionPlan' => $slot->progression_plan,
                     'note' => $slot->note,
                     'targetReps' => $targetReps,
                     'catalog' => $this->catalog->slot($slot->slot_key),
@@ -50,12 +51,8 @@ class StateAssembler
                     'advice' => $advice,
                     'record' => $record,
                     'isBodyweight' => $isBw,
-                    'isTargetAchieved' => $this->periodization->targetAchieved(
-                        $slot->sets,
-                        $targetReps,
-                        (int) $session->week,
-                        $isBw,
-                    ),
+                    'progress' => $this->advisor->slotProgress($slot, (int) $session->week),
+                    'isTargetAchieved' => $this->advisor->slotProgress($slot, (int) $session->week)['achieved'],
                     'sets' => $slot->sets->map(fn (WorkoutSet $set) => [
                         'id' => $set->id,
                         'position' => $set->position,
@@ -64,6 +61,7 @@ class StateAssembler
                         'completed' => $set->completed,
                         'isPr' => $set->is_pr,
                         'exertion' => $set->exertion ?: 'good',
+                        'inputFields' => $set->input_fields ?? [],
                         'estimated1Rm' => $this->periodization->calculate1Rm($set->weight, $set->reps),
                     ])->values(),
                 ];
@@ -128,9 +126,10 @@ class StateAssembler
             foreach ($session->slots as $slot) {
                 $ex = $slot->selected_name;
                 $exercises[$ex] ??= ['name' => $ex, 'sets' => 0, 'volume' => 0.0, 'maxWeight' => 0.0];
-                foreach ($slot->sets as $set) {
-                    $totalSets++;
-                    if (! $set->completed) {
+                $requiredSets = $this->periodization->requiredSets($week);
+                $totalSets += $requiredSets;
+                foreach ($slot->sets->take($requiredSets) as $set) {
+                    if (! $set->completed || (int) $set->reps <= 0 || (! $this->periodization->isBodyweight($ex) && (float) $set->weight <= 0)) {
                         continue;
                     }
                     $completedSets++;
@@ -146,6 +145,13 @@ class StateAssembler
                 }
             }
         }
+
+        $prefs = $this->factory->preferences();
+        foreach ($exercises as $name => &$exercise) {
+            $exercise['progress'] = $this->advisor->exerciseProgress($cycle, $week, $name);
+            $exercise['next'] = $this->periodization->nextProgression($exercise['progress'], $week + 1, (float) $prefs->overload_increment, $prefs->overload_frequency);
+        }
+        unset($exercise);
 
         return [
             'week' => $week,
