@@ -26,6 +26,39 @@
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   
   <style>
+    #liveWorkoutCard.deload-training,
+    .deload-training {
+      background: #241039;
+      border-color: #8054a8;
+    }
+    body.deload-week #startWorkoutHeroBtn,
+    .deload-training button[onclick="handleWorkoutHeroButtonClick()"] {
+      background: #7e22ce;
+      box-shadow: 0 4px 12px #581c874d;
+      color: #fff;
+    }
+    body.deload-week #startWorkoutHeroBtn:hover,
+    .deload-training button[onclick="handleWorkoutHeroButtonClick()"]:hover {
+      background: #9333ea;
+    }
+    #liveWorkoutCard.deload-training > .bg-slate-950,
+    #liveWorkoutCard.deload-training #lwContentArea .bg-slate-950,
+    #liveWorkoutCard.deload-training #lwContentArea [class*="bg-slate-950/"] {
+      background: #190b29;
+      border-color: #684186;
+    }
+    #liveWorkoutCard.deload-training #lwDayPhaseBadge { color: #d8b4fe; }
+    #liveWorkoutCard.deload-training #lwLiveDot { background: #c084fc; }
+    #liveWorkoutCard.deload-training #lwOverallProgressBar { background: #a855f7; }
+    #liveWorkoutCard.deload-training #lwContentArea .bg-blue-600 { background: #7e22ce; border-color: #c084fc; }
+    #liveWorkoutCard.deload-training.animate-alarm { border-color: #f59e0b; }
+    body.deload-week #periodizationDashboard,
+    body.deload-week #exerciseSlotsList > *,
+    body.deload-week #dayTabs {
+      background: #241039;
+      border-color: #8054a8;
+    }
+
     body {
       background-color: #0f172a;
       color: #f8fafc;
@@ -185,7 +218,7 @@
     </div>
 
     <!-- PERIODISERING & WORKLOAD GRAFIEK -->
-    <section class="bg-slate-800/60 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur">
+    <section id="periodizationDashboard" class="bg-slate-800/60 border border-slate-800 rounded-2xl p-4 shadow-xl backdrop-blur">
       <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-2">
           <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
@@ -204,10 +237,12 @@
         <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
           <span class="text-[10px] uppercase font-semibold text-slate-400 block">Totale Week Workload</span>
           <span id="weeklyVolumeVal" class="text-xl sm:text-2xl font-black font-mono text-emerald-400">0 <span class="text-xs text-slate-500 font-normal">kg</span></span>
+          <p id="weeklyVolumeComparison" class="text-[11px] text-slate-400 mt-2 leading-relaxed"></p>
         </div>
         <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
           <span class="text-[10px] uppercase font-semibold text-slate-400 block">Sessie Volume Vandaag</span>
           <span id="sessionVolumeVal" class="text-xl sm:text-2xl font-black font-mono text-blue-400">0 <span class="text-xs text-slate-500 font-normal">kg</span></span>
+          <p id="sessionVolumeComparison" class="text-[11px] text-slate-400 mt-2 leading-relaxed"></p>
         </div>
         <div class="col-span-2 sm:col-span-1 bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex flex-col justify-between">
           <span class="text-[10px] uppercase font-semibold text-slate-400 block">Voltooide Sets Vandaag</span>
@@ -227,11 +262,11 @@
           <span class="flex items-center gap-1.5">
             <span>📈</span> WORKLOAD PROFILE (GEWICHT × REPS OVER DE WEKEN)
           </span>
-          <span class="text-[10px] text-slate-500">Groen = Overload | Paars = Deload 🌿</span>
+          <span class="text-[10px] text-slate-500">Groen = Afgerond | Blauw = Huidig | Grijs = Open | Paars = Deload 🌿</span>
         </div>
         
         <!-- Grafiek Canvas / SVG Container -->
-        <div class="h-24 w-full flex items-end justify-between gap-1.5 pt-3 pb-1 bg-slate-950/70 rounded-xl px-2.5 border border-slate-800/80 overflow-x-auto no-scrollbar" id="trendChartContainer"></div>
+        <div class="w-full flex items-end justify-between gap-1.5 py-3 bg-slate-950/70 rounded-xl px-2.5 border border-slate-800/80 overflow-x-auto no-scrollbar" id="trendChartContainer"></div>
       </div>
     </section>
 
@@ -256,18 +291,19 @@
     </nav>
 
     <!-- AUTOMATISCHE DELOAD TOELICHTINGSBANNER (VERSCHIJNT IN WEEK 7, 14...) -->
-    <div id="deloadExplanationBanner" class="hidden p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-slate-900 border border-purple-500/40 shadow-lg space-y-2">
+    <div id="deloadExplanationBanner" class="hidden p-4 rounded-2xl bg-purple-950 border border-purple-500/60 shadow-lg space-y-2">
       <div class="flex items-center justify-between">
         <span class="text-xs font-black uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
-          <span>🌿</span> Automatische Deload Week Geactiveerd
+          <span>🌿</span> Deload — geplande herstelweek
         </span>
         <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
-          Supercompensatie Modus
+          Vaste planning
         </span>
       </div>
       <p class="text-xs text-slate-300 leading-relaxed">
-        <strong>Waarom deze herstelweek?</strong> Na 6 weken progressieve overbelasting lopen je pezen, aanhechtingen en het centrale zenuwstelsel (CZS) vol met residuele vermoeidheid. Door nu 1 week het gewicht op <strong>~70%</strong> te zetten en <strong>2 sets</strong> in plaats van 3 te draaien, herstellen je weefsels volledig. In je volgende periode (nieuwe 7-weken mesocycle) breek je hierdoor explosief door je plateaus heen zonder blessures!
+        <strong>Week 7: herstelweek met aangepast advies.</strong> Twee sets per oefening. Je herstelcheck en eerdere setbeoordelingen bepalen het advies: circa 60%, 70% of 80% van de laatste eerdere referentieweek (normaal week 6). Afronding gebeurt op jouw gewichtstappen; als lager gewicht niet kan, worden de reps verlaagd. Eigen invoer en eenmaal gestarte doelen blijven behouden.
       </p>
+      <details class="text-xs text-purple-200"><summary class="cursor-pointer">Hoe en waarom?</summary><p class="mt-2">60% bij veel gemelde vermoeidheid, of gemiste doelen met minstens de helft maximale sets (minstens 3 opgeslagen sets). 80% alleen bij een herstelcheck ‘goed hersteld’ én alle referentiesets met controle gehaald. Anders 70%. Dit zijn praktische appregels, geen bewezen persoonlijke herstelpercentages. Ook week 7 en twee sets zijn schemakeuzes.</p><a class="underline" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10511399/" target="_blank" rel="noopener noreferrer">Expertconsensus over individuele deloadplanning (2023)</a></details>
     </div>
 
     <!-- DAG TITEL -->
@@ -788,7 +824,7 @@
           </div>
           <div>
             <h3 class="font-black text-sm uppercase tracking-wider text-slate-100 flex items-center gap-2">
-              Trainingshistorie & Periodisering
+              Periodedashboard & historie
             </h3>
             <p class="text-[11px] text-slate-400">Beheer periodes (mesocycles), bekijk PR's en prestaties</p>
           </div>
@@ -1013,8 +1049,8 @@
               📜
             </div>
             <div class="flex-1">
-              <div class="text-xs font-bold text-slate-200">Historie</div>
-              <div class="text-[10px] text-slate-400">Vorige periodes en PR's</div>
+              <div class="text-xs font-bold text-slate-200">Periodedashboard</div>
+              <div class="text-[10px] text-slate-400">Deze periode, voortgang en historie</div>
             </div>
           </button>
 
@@ -3140,7 +3176,7 @@
       };
     }
 
-    /* Wetenschappelijk bepaalde streef-herhalingen per specifieke oefening (inclusief dynamische overload per week) */
+    /* Ingestelde repdoelen per oefening, met opgeslagen progressiedoelen. */
     function getExerciseTargetReps(exerciseName, slotKey = null, weekNum = null, dayKey = null) {
       const w = weekNum || (typeof appState !== "undefined" ? appState.currentWeek : 1);
       const d = dayKey || (typeof appState !== "undefined" ? appState.currentDay : "mon");
@@ -3445,7 +3481,7 @@
 
     function setFingerprint(set) {
       if (!set) return "";
-      return [set.weight || "", set.reps || "", set.completed ? "1" : "0", set.exertion || "good", JSON.stringify(set.inputFields || {})].join("|");
+      return [set.weight || "", set.reps || "", set.completed ? "1" : "0", set.exertion || "unknown", JSON.stringify(set.inputFields || {})].join("|");
     }
 
     async function persistIncrementalToLaravel() {
@@ -3460,7 +3496,7 @@
         const next = appState;
         if ((next.currentCycle || 1) > (prev.currentCycle || 1)) {
           const schema = next.pendingCycleSchema || null;
-          const started = await jsonApi("/api/cycles", "POST", schema ? { schema } : {});
+          const started = await jsonApi("/api/cycles", "POST", schema ? { schema, close_current_period: true } : { close_current_period: true });
           if (!started.ok) throw new Error("cycles HTTP " + started.status);
           delete next.pendingCycleSchema;
           const fresh = await fetch("/api/marker-state", { headers: { Accept: "application/json" }, cache: "no-store" });
@@ -3512,11 +3548,12 @@
               || prevDay.sessionId
               || Object.values(nextDay).find((slot) => slot && slot.sessionId)?.sessionId
               || Object.values(prevDay).find((slot) => slot && slot.sessionId)?.sessionId;
-            if (sessionId && (nextDay.actualDuration !== prevDay.actualDuration || nextDay.actualAvgRest !== prevDay.actualAvgRest || nextDay.actualRestCount !== prevDay.actualRestCount)) {
+            if (sessionId && (nextDay.actualDuration !== prevDay.actualDuration || nextDay.actualAvgRest !== prevDay.actualAvgRest || nextDay.actualRestCount !== prevDay.actualRestCount || !!nextDay.skipped !== !!prevDay.skipped)) {
               requests.push(jsonApi("/api/sessions/" + sessionId, "PATCH", {
                 actual_duration: nextDay.actualDuration ?? null,
                 actual_avg_rest: nextDay.actualAvgRest ?? null,
-                actual_rest_count: nextDay.actualRestCount ?? null
+                actual_rest_count: nextDay.actualRestCount ?? null,
+                skipped: !!nextDay.skipped
               }));
             }
             Object.keys(nextDay).forEach((slotKey) => {
@@ -3541,7 +3578,7 @@
                   weight: set.weight ?? "",
                   reps: set.reps ?? "",
                   completed: !!set.completed,
-                  exertion: set.exertion || "good",
+                  exertion: set.exertion || "unknown",
                   inputFields: set.inputFields || {},
                   context: "live"
                 }));
@@ -4051,7 +4088,7 @@
           const slot = day?.[slotKey];
           if (!slot || (slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName).trim().toLowerCase() !== exerciseName.trim().toLowerCase()) continue;
           const progress = getSlotProgress(weekNum, dayKey, slotKey);
-          sessions.push({ dayKey, slotKey, progress });
+          sessions.push({ dayKey, slotKey, progress, skipped: !!day.skipped });
           sets.push(...slot.sets.slice(0, progress.requiredSets).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(exerciseName) || Number(set.weight) > 0)));
         }
       }
@@ -4060,9 +4097,9 @@
       const weights = sets.map(set => Number(set.weight)).filter(weight => weight > 0);
       const plans = sessions.map(session => session.progress.targetWeight).filter(weight => weight > 0);
       const achieved = sessions.length > 0 && sessions.every(session => session.progress.achieved);
-      const counts = sets.reduce((result, set) => { result[set.exertion || 'good']++; return result; }, { easy: 0, good: 0, max: 0 });
-      const exertion = counts.max > 0 ? 'max' : (sets.length > 0 && counts.easy >= Math.ceil(sets.length / 2) ? 'easy' : 'good');
-      return { sessions, sets, achieved, exertion, completedSets: sum('completedSets'), achievedSets: sum('achievedSets'), requiredSets: sum('requiredSets'),
+      const counts = sets.reduce((result, set) => { result[set.exertion || 'unknown']++; return result; }, { unknown: 0, easy: 0, good: 0, max: 0 });
+      const exertion = counts.max > 0 ? 'max' : counts.unknown > 0 ? 'unknown' : (sets.length > 0 && counts.easy >= Math.ceil(sets.length / 2) ? 'easy' : 'good');
+      return { skippedSets: sessions.reduce((sum, session) => sum + (session.skipped ? Math.max(0, session.progress.requiredSets - session.progress.completedSets) : 0), 0), unknownSets: counts.unknown, maxSets: counts.max, sessions, sets, achieved, exertion, completedSets: sum('completedSets'), achievedSets: sum('achievedSets'), requiredSets: sum('requiredSets'),
         remainingReps: sum('remainingReps'), requiredReps, creditedReps: sum('creditedReps'),
         percent: requiredReps ? Math.floor(100 * sum('creditedReps') / requiredReps) : 0,
         targetReps: Math.max(0, ...sessions.map(session => session.progress.targetReps)),
@@ -4073,33 +4110,57 @@
         isBodyweight: isExerciseBodyweight(exerciseName) };
     }
 
+    function getRecoveryLoad(progress) {
+      const recovery = progress.recovery || 'unknown';
+      const completed = Number(progress.completedSets || 0);
+      const maximal = Number(progress.maxSets || 0);
+      if (recovery === 'exhausted' || (completed >= 3 && maximal >= Math.ceil(completed / 2) && !progress.achieved)) {
+        return { factor: 0.6, reason: recovery === 'exhausted' ? 'Veel vermoeidheid gemeld: extra ontlasting.' : 'Doelen gemist en minstens de helft van de opgeslagen sets maximaal: extra ontlasting.' };
+      }
+      const complete = completed > 0 && completed >= progress.requiredSets && !progress.skippedSets;
+      if (recovery === 'recovered' && complete && progress.achieved && !progress.unknownSets && ['easy', 'good'].includes(progress.exertion)) {
+        return { factor: 0.8, reason: 'Goed hersteld gemeld en alle referentiesets met controle gehaald.' };
+      }
+      return { factor: 0.7, reason: recovery === 'tired' ? 'Nog vermoeid gemeld: standaard ontlasting.' : 'Onvoldoende bevestiging voor een lichtere deload: standaard ontlasting.' };
+    }
+
     function getNextProgression(progress, nextWeek) {
       const increment = Number(appState.overloadIncrement) > 0 ? Number(appState.overloadIncrement) : 2;
       let weight = progress.targetWeight;
       let reps = progress.targetReps;
       const minReps = Number(progress.minReps ?? 8);
       const maxReps = Math.max(minReps, Number(progress.maxReps ?? 12));
-      const provisional = progress.completedSets < progress.requiredSets;
+      const skippedSets = Number(progress.skippedSets || 0);
+      const provisional = progress.completedSets + skippedSets < progress.requiredSets;
       let status = 'Herhalen';
       let change = 'repeat';
       let reason = 'Alle sets uitgevoerd, maar het doel nog niet gehaald. Bouw eerst de ontbrekende herhalingen op.';
-      if (!progress.completedSets) {
+      if (skippedSets > 0 && !progress.completedSets) {
+        reason = 'Training overgeslagen; geen nieuwe prestaties om een verhoging te adviseren.';
+      } else if (!progress.completedSets) {
         status = 'Nog te beoordelen';
         reason = 'Deze week nog geen sets opgeslagen. Het advies voor volgende week staat nog niet vast.';
       } else if (isDeloadWeek(nextWeek)) {
         status = 'Herstelweek';
         change = 'deload';
+        const recoveryLoad = getRecoveryLoad(progress);
+        const factor = recoveryLoad.factor;
         if (progress.isBodyweight) {
-          reps = Math.max(1, Math.round(reps * 0.7));
+          reps = Math.max(1, Math.round(reps * factor));
         } else {
-          const lighter = Math.round(Math.round(weight * 0.7 / increment) * increment * 10) / 10;
+          const lighter = Math.round(Math.round(weight * factor / increment) * increment * 10) / 10;
           if (lighter > 0 && lighter < weight) weight = lighter;
-          else reps = Math.max(1, Math.round(reps * 0.7));
+          else reps = Math.max(1, Math.round(reps * factor));
         }
-        reason = 'Volgende week 2 herstelsets. Alleen een lager positief gewicht gebruiken; anders minder herhalingen op hetzelfde gewicht.';
+        reason = `2 herstelsets op circa ${Math.round(factor * 100)}% van de referentiebelasting. ${recoveryLoad.reason} Afgerond op gewichtstappen; als lager gewicht niet kan, minder reps.`;
       } else if (provisional) {
         status = 'Nog te beoordelen';
-        reason = `Nog ${progress.requiredSets - progress.completedSets} sets deze week te beoordelen. Nog geen definitief advies voor volgende week.`;
+        reason = `Nog ${progress.requiredSets - progress.completedSets - skippedSets} sets deze week te beoordelen. Nog geen definitief advies voor volgende week.`;
+      } else if (skippedSets > 0) {
+        reason = 'Een training is overgeslagen. Herhaal het doel; er zijn minder prestaties om opbouw te beoordelen.';
+      } else if (progress.unknownSets > 0 || progress.exertion === 'unknown') {
+        status = 'Inspanning niet beoordeeld';
+        reason = 'Gewicht en reps zijn opgeslagen. Beoordeel de inspanning voordat een verhoging wordt geadviseerd.';
       } else if (progress.achieved && isBiweeklyHoldWeek(nextWeek)) {
         status = 'Consolideren';
         reason = 'Doel gehaald; nog een week hetzelfde gewicht en dezelfde reps volgens je 2-weken schema.';
@@ -4159,27 +4220,23 @@
       const comparisons = previous ? slot.sets.slice(0, progress.requiredSets).map((set, index) => {
         const before = previous.slot.sets[index];
         if (!valid(set) || !valid(before)) return '';
-        const reps = Number(set.reps) - Number(before.reps);
-        const weight = Number(set.weight) - Number(before.weight);
-        if (weight === 0) return `Set ${index + 1}: ${reps > 0 ? '+' : ''}${reps} reps bij hetzelfde gewicht`;
-        return `Set ${index + 1}: ${weight > 0 ? '+' : ''}${Math.round(weight * 10) / 10} kg; ${Number(before.reps)} → ${Number(set.reps)} reps`;
+        return `Set ${index + 1}: ${performanceChangeHtml(before, set, isBW, isDeloadWeek(weekNum) || isDeloadWeek(previous.week))}`;
       }).filter(Boolean) : [];
       const format = sets => sets.map(set => `${isBW ? 'BW' : Number(set.weight) + ' kg'} × ${Number(set.reps)}`).join(' · ');
-      const remaining = progress.details.map((set, index) => set.achieved ? '' : !set.completed ? `Set ${index + 1}: nog uitvoeren` : !set.weightMet ? `Set ${index + 1}: onder ${progress.targetWeight} kg` : `Set ${index + 1}: nog ${set.missingReps} reps`).filter(Boolean).join(' · ');
+      const remaining = progress.details.map((set, index) => set.achieved ? '' : !set.completed ? `Set ${index + 1}: ${appState.weeks[weekNum][dayKey].skipped ? 'overgeslagen' : 'nog uitvoeren'}` : !set.weightMet ? `Set ${index + 1}: onder ${progress.targetWeight} kg` : `Set ${index + 1}: nog ${set.missingReps} reps`).filter(Boolean).join(' · ');
       const upperSets = week.sessions.reduce((total, session) => {
         const source = appState.weeks[weekNum][session.dayKey][session.slotKey];
         return total + calculateSetProgress(source.sets, session.progress.targetWeight, week.maxReps, session.progress.requiredSets, isBW).achievedSets;
       }, 0);
-      const projected = getNextProgression({ ...week, achieved: true, achievedReps: week.targetReps, completedSets: week.requiredSets, exertion: 'good' }, weekNum + 1);
-      const nextText = next.provisional
-        ? `Volgende week: nog te beoordelen. Nog ${Math.max(0, week.requiredSets - week.completedSets)} sets niet gelogd. Mogelijke stap als alle doelen zijn gehaald en geen set maximaal was: ${projected.requiredSets} × ${isBW ? 'BW' : projected.weight > 0 ? projected.weight + ' kg' : 'zelfgekozen startgewicht'} × ${projected.reps} reps (${projected.status.toLowerCase()}).`
-        : `Volgende week: ${next.requiredSets} × ${isBW ? 'BW' : next.weight + ' kg'} × ${next.reps} reps. ${next.status}: ${next.reason}`;
+
+      const outlook = getOverloadOutlook(weekNum, name);
+      const nextText = `${outlook.title}. ${outlook.reason}${outlook.remaining ? ` Nog ${outlook.remaining} sets niet gelogd.` : ''}${outlook.next ? ` ${outlook.provisional ? 'Mogelijke stap' : 'Volgende stap'}: ${outlook.next.requiredSets} × ${isBW ? 'BW' : outlook.next.weight + ' kg'} × ${outlook.next.reps} reps.` : ''}`;
       const planDiffers = slot.progressionPlan && ((Number(advice.advisedReps) !== progress.targetReps) || Number(advice.advisedWeight || 0) !== progress.targetWeight);
       const planReason = planDiffers ? 'Je volgt het bij de start vastgelegde doel. Je opgeslagen prestaties bepalen de volgende stap.' : advice.adviceText;
       return `<div class="space-y-3 rounded-xl border border-slate-700 bg-slate-950/70 p-3 text-xs">
         <div class="space-y-1"><div class="font-bold text-slate-100">Vandaag: ${progress.requiredSets} × ${isBW ? 'BW' : progress.targetWeight > 0 ? progress.targetWeight + ' kg' : 'startgewicht kiezen'} × ${progress.targetReps} reps</div><div class="text-slate-400">Gepland doel · ${planReason}</div></div>
-        <div class="space-y-1"><div class="font-bold text-blue-300">Progressive overload: ${isBW ? 'herhalingen opbouwen' : `eerst reps (${progress.minReps}–${progress.maxReps}), daarna gewicht`}</div>
-        <div class="text-slate-300">${isBW ? 'Na een behaald weekdoel: maximaal 2 reps per set erbij.' : `Volgende gewichtsstap: eerst alle weeksets op ${week.maxReps} reps halen, met voldoende controle. Nu ${upperSets}/${week.requiredSets} sets aan die bovengrens.`}</div></div>
+        <div class="space-y-1"><div class="font-bold text-blue-300">Progressive overload: ${isDeloadWeek(weekNum) ? 'herstelweek — geen opbouwdoel' : isBW ? 'herhalingen opbouwen' : `eerst reps (${progress.minReps}–${progress.maxReps}), daarna gewicht`}</div>
+        <div class="text-slate-300">${isDeloadWeek(weekNum) ? 'Deze week telt herstel: twee werksets per oefening. Bereid daarna de nieuwe periode voor.' : isBW ? 'Na een behaald weekdoel: maximaal 2 reps per set erbij.' : `Volgende gewichtsstap: eerst alle weeksets op ${week.maxReps} reps halen, met voldoende controle. Nu ${upperSets}/${week.requiredSets} sets aan die bovengrens.`}</div></div>
         <div class="flex flex-wrap justify-between gap-2"><span class="font-bold text-emerald-300">${progress.achieved ? 'Doel gehaald' : progress.percent >= 80 ? 'Bijna bij je doel' : 'Op weg naar je doel'}: ${progress.achievedSets}/${progress.requiredSets} sets</span><span class="text-slate-300">Vandaag ${progress.percent}%</span></div>
         <div role="progressbar" aria-label="Doel van vandaag" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress.percent}" class="h-2 overflow-hidden rounded bg-slate-800"><div class="h-full bg-emerald-500" style="width:${progress.percent}%"></div></div>
         <div class="text-slate-200">Sets uitgevoerd: ${progress.completedSets}/${progress.requiredSets} · Doel gehaald: ${progress.achievedSets}/${progress.requiredSets}</div>
@@ -4187,7 +4244,7 @@
         ${remaining ? `<div class="text-amber-300">${remaining}</div>` : ''}
         ${previous ? `<div class="text-slate-400">Vorige training (week ${previous.week}, ${SPLIT_INFO[previous.day].title.split(':')[0]}): ${format(previous.sets)}</div>` : ''}
         ${comparisons.length ? `<div class="text-slate-300">${isDeloadWeek(weekNum) ? 'Hersteltraining · ' : ''}Verschil met vorige training: ${comparisons.join(' · ')}</div>` : ''}
-        <div class="text-slate-400">De balk meet je geplande gewicht en reps. Een lichtere set telt wel als uitgevoerd. Inspanning: standaard ‘goed’; één ‘maximaal’ blokkeert extra reps of gewicht deze week.</div>
+        <div class="text-slate-400">De balk meet je geplande gewicht en reps. Een lichtere set telt wel als uitgevoerd. Inspanning: standaard ‘niet beoordeeld’; één ‘maximaal’ blokkeert extra reps of gewicht deze week.</div>
         <div class="border-t border-slate-800 pt-2 text-slate-300">Weekdoel: ${week.achievedSets}/${week.requiredSets} sets. ${nextText}</div>
       </div>`;
     }
@@ -4249,7 +4306,7 @@
         if (!slot) continue;
         const advice = getSlotTargetAdvice(weekNum, dayKey, slotKey);
         const name = slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
-        const sameWeek = getSameWeekExerciseLogged(weekNum, name, dayKey, slotKey);
+        const sameWeek = isDeloadWeek(weekNum) && day.recovery && day.recovery !== 'unknown' ? null : getSameWeekExerciseLogged(weekNum, name, dayKey, slotKey);
         slot.sets.forEach((set, index) => {
           if (set.completed || (isDeloadWeek(weekNum) && index >= 2)) return;
           if (!set.inputFields?.weight && set.weight === '' && advice.advisedWeight > 0) {
@@ -4271,10 +4328,12 @@
       const name = slot?.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
       const isBW = isExerciseBodyweight(name);
       const targetReps = getExerciseTargetReps(name, slotKey, weekNum, dayKey);
-      const previous = findPreviousExerciseSession(weekNum, dayKey, name);
+      const recovery = appState.weeks[weekNum]?.[dayKey]?.recovery || 'unknown';
+      const previous = findPreviousExerciseSession(weekNum, isDeloadWeek(weekNum) && recovery !== 'unknown' ? 'mon' : dayKey, name);
       const sameWeek = previous?.week === weekNum;
       const current = slot?.sets.find(set => set.completed && Number(set.reps) > 0 && (isBW || Number(set.weight) > 0));
       const priorProgress = previous ? getExerciseWeekProgress(previous.week, name) : null;
+      if (priorProgress) priorProgress.recovery = recovery;
       const next = previous && !sameWeek ? getNextProgression(priorProgress, weekNum) : null;
       const reference = previous?.sets[0];
       const advisedWeight = isBW ? 0 : Number(slot?.progressionPlan?.weight || (sameWeek ? reference?.weight : next?.weight) || current?.weight || slot?.sets[0]?.weight || 0) || null;
@@ -4330,12 +4389,13 @@
     }
 
     function getCycleReport(weeks) {
-      let totalVolume = 0, totalSets = 0, totalWorkouts = 0;
+      let totalVolume = 0, totalSets = 0, totalWorkouts = 0, skippedDays = 0;
       const exercises = {}, timings = [];
       Object.keys(weeks || {}).sort((a, b) => Number(a) - Number(b)).forEach(week => {
         ['mon', 'tue', 'thu', 'fri'].forEach(dayKey => {
           const day = weeks[week][dayKey];
           if (!day) return;
+          if (day.skipped) skippedDays++;
           let planned = 0, completed = 0;
           Object.entries(day).forEach(([key, slot]) => {
             if (!Array.isArray(slot?.sets)) return;
@@ -4354,12 +4414,12 @@
             }
           });
           totalSets += completed;
-          if (planned > 0 && completed === planned) totalWorkouts++;
+          if (!day.skipped && planned > 0 && completed === planned) totalWorkouts++;
           timings.push({ day, completedSets: completed });
         });
       });
       const timing = summarizeTrainingTimes(timings);
-      return { totalVolume, totalSets, totalWorkouts,
+      return { totalVolume, totalSets, totalWorkouts, skippedDays,
         avgDurationSeconds: timing.averageSessionDurationSeconds, avgRestSeconds: timing.averageRestSeconds,
         durationEstimated: timing.durationEstimated, restCount: timing.restCount, restIncomplete: timing.restIncomplete,
         progressHighlights: Object.values(exercises).map(ex => ({ name: ex.name, isBodyweight: ex.isBodyweight,
@@ -4446,10 +4506,10 @@
               totalCompletedSets++;
               if (!isBW && w > 0) totalVolume += (w * r);
               totalReps += r;
-              const exertion = s.exertion || "good";
+              const exertion = s.exertion || "unknown";
               if (exertion === "easy") exercisesMap[exName].easyCount++;
               else if (exertion === "max") exercisesMap[exName].maxCount++;
-              else exercisesMap[exName].goodCount++;
+              else if (exertion === 'good') exercisesMap[exName].goodCount++;
 
               if (!isBW && w > 0) exercisesMap[exName].weights.push(w);
               exercisesMap[exName].repsList.push(r);
@@ -4469,7 +4529,7 @@
         });
 
         const dayStatus = getDayCompletionStatus(weekNum, dKey);
-        if (dayAllCompleted) {
+        if (dayAllCompleted && !dData.skipped) {
           daysCompletedCount++;
         }
       });
@@ -4488,7 +4548,8 @@
           nextActionText: next.reason };
       });
 
-      const isCompleted = totalPlannedSets > 0 && totalCompletedSets >= totalPlannedSets;
+      const skippedDaysCount = dayKeys.filter(day => weekData[day]?.skipped).length;
+      const isCompleted = totalPlannedSets > 0 && dayKeys.every(day => getDayCompletionStatus(weekNum, day).isReviewed);
 
       return {
         weekNum: weekNum,
@@ -4499,6 +4560,7 @@
         totalPlannedSets: totalPlannedSets,
         totalReps: totalReps,
         daysCompletedCount: daysCompletedCount,
+        skippedDaysCount,
         ...timing,
         isCompleted: isCompleted,
         exercises: exercisesList
@@ -4673,7 +4735,7 @@
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
                   : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
               }">
-                ${evalData.isCompleted ? '✓ 100% Voltooid' : `${evalData.daysCompletedCount}/4 Dagen Voltooid`}
+                ${evalData.daysCompletedCount}/4 afgerond · ${evalData.skippedDaysCount} overgeslagen
               </span>
             </div>
             <h3 class="text-lg sm:text-xl font-black text-slate-100 mt-0.5 flex items-center gap-2">
@@ -4752,12 +4814,12 @@
             <div class="text-base sm:text-lg font-black font-mono text-purple-400 mt-0.5">
               ${evalData.daysCompletedCount} <span class="text-xs font-normal text-slate-400">/ 4</span>
             </div>
-            <div class="text-[10px] text-slate-500 font-mono mt-0.5">${Math.round((evalData.daysCompletedCount / 4) * 100)}% van weekplanning</div>
+            <div class="text-[10px] text-slate-500 font-mono mt-0.5">${evalData.skippedDaysCount} overgeslagen · ${4 - evalData.daysCompletedCount - evalData.skippedDaysCount} open</div>
           </div>
           <div class="p-3 rounded-2xl bg-slate-950/70 border border-slate-800">
             <div class="text-[10px] font-mono uppercase text-slate-400">Status & Discipline</div>
             <div class="text-sm sm:text-base font-bold text-slate-200 mt-0.5 flex items-center gap-1">
-              ${evalData.isCompleted ? '<span>🏆</span> 100% Voltooid' : '<span>⚡</span> In Uitvoering'}
+              ${evalData.isCompleted ? 'Week beoordeeld' : 'In uitvoering'}
             </div>
             <div class="text-[10px] text-slate-400 font-mono mt-0.5">Double progression</div>
           </div>
@@ -4979,7 +5041,7 @@
       if (canStartNewPeriod()) {
         const cycleStartBtn = document.createElement("button");
         cycleStartBtn.className = "flex-shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 transition flex items-center gap-1.5 shadow-sm cursor-pointer";
-        cycleStartBtn.title = "Deload is bereikt: start de volgende periode met schema-advies";
+        cycleStartBtn.title = "Bereid de volgende periode voor; afsluiten gebeurt pas bij de startbevestiging";
         cycleStartBtn.innerHTML = `<span>🏁</span><span>Nieuwe Periode</span>`;
         cycleStartBtn.onclick = startNewMesocyclePrompt;
         container.appendChild(cycleStartBtn);
@@ -4987,9 +5049,6 @@
     }
 
     function canStartNewPeriod() {
-      if (appState.nextCycle && typeof appState.nextCycle.available === "boolean") {
-        return !!appState.nextCycle.available;
-      }
       return (Number(appState.currentWeek) || 1) >= (Number(appState.totalWeeks) || 7);
     }
 
@@ -5084,11 +5143,11 @@
       const hint = document.getElementById("menuNewPeriodHint");
       const ready = canStartNewPeriod();
       if (title) {
-        title.textContent = "Nieuwe periode";
+        title.textContent = "Nieuwe periode voorbereiden";
         title.className = ready ? "text-xs font-bold text-amber-300" : "text-xs font-bold text-slate-400";
       }
       if (hint) {
-        hint.textContent = ready ? "Schema-advies na de deload" : "Eerst week 7 (deload) afronden";
+        hint.textContent = ready ? "Schema voorbereiden, daarna periode afsluiten" : "Eerst week 7 (deload) afronden";
         hint.className = ready ? "text-[10px] text-amber-400/80" : "text-[10px] text-slate-500";
       }
       if (btn) {
@@ -5173,7 +5232,7 @@
         </div>
         <div class="space-y-2 pt-1">
           <button onclick="acceptRecommendedNextCycle()" class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-black text-sm transition shadow-lg cursor-pointer active:scale-98">
-            Start periode ${curCycle + 1} met dit advies
+            Periode afsluiten & periode ${curCycle + 1} starten
           </button>
           <button onclick="closeStartCycleModal(); openSetupRoutineModal(true, true);" class="w-full p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs cursor-pointer">
             Schema zelf kiezen
@@ -5224,6 +5283,14 @@
     }
 
     function executeStartNewMesocycle(carryForwardWeights = true, customSchema = null) {
+      if (!canStartNewPeriod()) return;
+      let openDays = 0;
+      for (let week = 1; week <= appState.totalWeeks; week++) {
+        ['mon', 'tue', 'thu', 'fri'].forEach(day => {
+          if (!getDayCompletionStatus(week, day).isReviewed) openDays++;
+        });
+      }
+      if (!window.confirm(`Huidige periode afsluiten en de nieuwe periode starten? ${openDays ? `${openDays} trainingen zijn niet volledig afgerond. Je bevestigt dat je deze niet meer uitvoert; ze blijven onvoltooid in het archief.` : 'Alle trainingen zijn afgerond.'} Je opgeslagen sets blijven behouden.`)) return;
       const curCycleNum = appState.currentCycle || 1;
 
       const report = getCycleReport(appState.weeks);
@@ -5315,6 +5382,7 @@
       // Open het Historie Dashboard met confetti-viering
       triggerCelebration();
       openCycleHistoryModal();
+      return true;
     }
 
     function openCycleHistoryModal() {
@@ -5333,6 +5401,86 @@
     function toggleCycleSnapshotDetails(idx) {
       expandedCycleSnapshots[idx] = !expandedCycleSnapshots[idx];
       renderCycleHistoryModal();
+    }
+
+    function getPeriodDashboardData() {
+      const weeks = [], names = new Set(), attention = [];
+      for (let week = 1; week <= (appState.totalWeeks || 7); week++) {
+        const data = appState.weeks[week] || {};
+        const report = getCycleReport({ [week]: data });
+        const days = ['mon', 'tue', 'thu', 'fri'].map(day => {
+          const status = getDayCompletionStatus(week, day);
+          let unknown = 0;
+          Object.entries(data[day] || {}).forEach(([key, slot]) => {
+            if (!Array.isArray(slot?.sets)) return;
+            const name = slot.selectedName || EXERCISE_CATALOG[key]?.defaultName || key;
+            names.add(name);
+            unknown += slot.sets.slice(0, isDeloadWeek(week) ? 2 : 3).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(name) || Number(set.weight) > 0) && !['easy', 'good', 'max'].includes(set.exertion)).length;
+          });
+          if (unknown) attention.push({ week, day, count: unknown });
+          return { day, status: status.isSkipped ? 'Overgeslagen' : status.isFullyCompleted ? 'Voltooid' : status.hasStarted ? 'Bezig' : 'Open' };
+        });
+        weeks.push({ week, days, volume: report.totalVolume, sets: report.totalSets, deload: isDeloadWeek(week) });
+      }
+      const completed = weeks.flatMap(w => w.days).filter(d => d.status === 'Voltooid').length;
+      const skipped = weeks.flatMap(w => w.days).filter(d => d.status === 'Overgeslagen').length;
+      const exercises = [...names].map(name => ({ name, sessions: getExerciseHistory(name).filter(entry => entry.cycle === (appState.currentCycle || 1) && !entry.isDeload) })).filter(ex => ex.sessions.length);
+      return { weeks, completed, skipped, total: weeks.length * 4, attention, exercises };
+    }
+
+    function openPeriodDay(week, day) {
+      closeCycleHistoryModal();
+      switchWeek(week);
+      switchDay(day);
+    }
+
+    function performanceChangeHtml(before, current, isBodyweight = false, deload = false) {
+      if (!before) return '<span class="text-slate-400">● Eerste meting</span>';
+      if (deload) return '<span class="text-purple-300">◈ Deload</span>';
+      return (isBodyweight ? ['reps'] : ['weight', 'reps']).map(key => {
+        const difference = Math.round((Number(current[key]) - Number(before[key])) * 10) / 10;
+        if (!Number.isFinite(difference)) return '';
+        const color = difference > 0 ? 'text-emerald-400' : difference < 0 ? 'text-rose-400' : 'text-slate-400';
+        const icon = difference > 0 ? '▲' : difference < 0 ? '▼' : '=';
+        const label = difference > 0 ? 'Toename' : difference < 0 ? 'Afname' : 'Gelijk';
+        return `<span class="${color} font-bold whitespace-nowrap" aria-label="${label}: ${Math.abs(difference)} ${key === 'weight' ? 'kg' : 'reps'}">${icon} ${difference > 0 ? '+' : ''}${difference} ${key === 'weight' ? 'kg' : 'reps'}</span>`;
+      }).join(' · ');
+    }
+
+    function comparisonIndicatorHtml(text) {
+      const icon = /^\+\d/.test(text) ? '▲' : /^-\d/.test(text) ? '▼' : /^0\b/.test(text) ? '=' : /Herstel|Deload/.test(text) ? '◈' : '•';
+      const color = /Herstel|Deload/.test(text) ? 'text-purple-300' : volumeComparisonClass(text);
+      return `<span class="${color}">${icon} ${escapeReportText(text)}</span>`;
+    }
+
+    function periodDashboardHtml() {
+      const data = getPeriodDashboardData();
+      const labels = { mon: 'MA', tue: 'DI', thu: 'DO', fri: 'VR' };
+      const maxVolume = Math.max(1, ...data.weeks.map(w => w.volume));
+      const colors = { Voltooid: 'text-emerald-300', Overgeslagen: 'text-slate-400', Bezig: 'text-amber-300', Open: 'text-slate-300' };
+      return `<section class="rounded-2xl border border-indigo-500/40 bg-slate-950/60 p-4 space-y-4">
+        <h4 class="font-bold text-indigo-200">Periode ${appState.currentCycle || 1} — ${Math.round(data.completed / data.total * 100)}% voltooid</h4>
+        <p class="text-xs text-slate-300">${data.completed}/${data.total} trainingen voltooid · ${data.skipped} overgeslagen · ${data.total - data.completed - data.skipped} open of bezig</p>
+        ${trainingEvidenceHtml()}
+        <h5 class="text-sm font-bold">Trainingskalender</h5>
+        <div class="space-y-2">${data.weeks.map(w => `<div class="grid grid-cols-5 gap-1 rounded-xl p-2 ${w.deload ? 'bg-purple-950 border border-purple-500/50' : 'bg-slate-900'}"><span class="text-xs self-center">Week ${w.week}${w.deload ? '<br><span class="text-purple-300">Deload</span>' : ''}</span>${w.days.map(d => `<button onclick="openPeriodDay(${w.week}, '${d.day}')" class="rounded-lg border border-slate-700 p-1 text-[10px] hover:bg-slate-800 ${colors[d.status]}" aria-label="Week ${w.week}, ${labels[d.day]}, ${d.status}">${labels[d.day]}<br>${d.status}</button>`).join('')}</div>`).join('')}</div>
+        <h5 class="text-sm font-bold">Uitgevoerd volume per week</h5>
+        <p class="text-xs text-slate-400">Inclusief deels uitgevoerde trainingen. Open weken zijn nog niet vergelijkbaar met afgeronde weken.</p>
+        <div class="space-y-2">${data.weeks.map(w => `<div class="grid grid-cols-[5rem_1fr_5rem] gap-2 items-center text-xs"><span class="${w.deload ? 'text-purple-300' : 'text-slate-300'}">W${w.week}${w.deload ? ' · Deload' : ''}</span><div class="h-4 rounded bg-slate-800"><div class="h-4 rounded ${w.deload ? 'bg-purple-500' : w.days.every(d => d.status === 'Voltooid') ? 'bg-emerald-500' : w.week === appState.currentWeek ? 'bg-blue-500' : 'bg-slate-500'}" style="width:${w.volume / maxVolume * 100}%"></div></div><span class="text-right">${Math.round(w.volume).toLocaleString('nl-NL')} kg</span></div>`).join('')}</div>
+        <h5 class="text-sm font-bold">Voortgang per oefening</h5>
+        <p class="text-xs text-slate-400">Zwaarste opgeslagen set per training; bij gelijk gewicht de meeste reps. Alleen opbouwweken. Open een oefening voor alle sets en de deloadtrainingen.</p>
+        ${data.exercises.length ? data.exercises.map(ex => {
+          const points = ex.sessions.map(session => {
+            const best = [...session.sets].sort((a, b) => Number(b.weight) - Number(a.weight) || Number(b.reps) - Number(a.reps))[0];
+            return { week: session.week, day: session.day, weight: Number(best.weight) || 0, reps: Number(best.reps) };
+          });
+          const format = p => `${isExerciseBodyweight(ex.name) ? 'Lichaamsgewicht' : p.weight + ' kg'} × ${p.reps} reps`;
+          return `<div class="border border-slate-800 rounded-xl p-3 space-y-2"><h6 class="font-bold text-xs">${escapeReportText(ex.name)}</h6><p class="text-xs text-slate-300">${format(points[0])}${points.length > 1 ? ' → ' + format(points.at(-1)) : ' · Eerste meting'}</p><p class="text-xs">${performanceChangeHtml(points.length > 1 ? points[0] : null, points.at(-1), isExerciseBodyweight(ex.name))}</p>${exerciseHistoryHtml(ex.name)}</div>`;
+        }).join('') : '<p class="text-xs text-slate-400">Nog geen prestaties in de opbouwweken opgeslagen.</p>'}
+        <h5 class="text-sm font-bold">Nog te beoordelen</h5>
+        ${data.attention.length ? data.attention.map(item => `<button onclick="openPeriodDay(${item.week}, '${item.day}')" class="block text-xs text-amber-300 underline">Week ${item.week} ${labels[item.day]}: inspanning van ${item.count} sets ontbreekt</button>`).join('') : '<p class="text-xs text-slate-400">Geen ontbrekende inspanningsbeoordelingen bij opgeslagen sets.</p>'}
+        ${canStartNewPeriod() ? `<button onclick="closeCycleHistoryModal(); startNewMesocyclePrompt();" class="rounded-xl bg-purple-950 border border-purple-500 p-3 text-xs text-purple-200">Periode afronden & volgende periode voorbereiden</button>` : '<p class="text-xs text-slate-400">In week 7 kun je de volgende periode voorbereiden.</p>'}
+      </section>`;
     }
 
     function renderCycleHistoryModal() {
@@ -5396,44 +5544,7 @@
           </div>
         </div>
 
-        <!-- ACTIEVE MESOCYCLE KAART -->
-        <div class="p-4 rounded-2xl bg-gradient-to-r from-indigo-950/40 via-slate-900 to-indigo-950/30 border border-indigo-500/40 space-y-3 shadow-lg">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-              <h4 class="text-xs font-black uppercase tracking-wider text-indigo-200">
-                Actieve Mesocycle ${curCycle}
-              </h4>
-            </div>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/30">
-              Gestart: ${appState.cycleStartedAt || 'Recent'}
-            </span>
-          </div>
-
-          <div class="grid grid-cols-3 gap-2 text-center text-xs">
-            <div class="p-2 rounded-xl bg-slate-950/70 border border-slate-800">
-              <div class="text-[10px] text-slate-400 font-mono">Geplande Duur</div>
-              <div class="font-bold text-slate-200 font-mono">${appState.totalWeeks} Weken</div>
-              <div class="text-[9px] text-slate-500">6 Overload + 1 Deload</div>
-            </div>
-            <div class="p-2 rounded-xl bg-slate-950/70 border border-slate-800">
-              <div class="text-[10px] text-slate-400 font-mono">Cyclus Volume</div>
-              <div class="font-bold text-emerald-400 font-mono">${Math.round(curCycleVol).toLocaleString()} kg</div>
-              <div class="text-[9px] text-slate-500">${curCycleSetsDone} sets gelogd</div>
-            </div>
-            <div class="p-2 rounded-xl bg-slate-950/70 border border-slate-800">
-              <div class="text-[10px] text-slate-400 font-mono">Voortgang</div>
-              <div class="font-bold text-purple-400 font-mono">${Math.round((appState.currentWeek / appState.totalWeeks) * 100)}%</div>
-              <div class="text-[9px] text-slate-500">Week ${appState.currentWeek} actief</div>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-end pt-1">
-            <button onclick="closeCycleHistoryModal(); startNewMesocyclePrompt();" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-mono font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer">
-              <span>🏁</span><span>Afronden & Start Periode ${curCycle + 1} (7 Weken)</span>
-            </button>
-          </div>
-        </div>
+        ${periodDashboardHtml()}
 
         <!-- GEARCHIVEERDE MESOCYCLES SECTIE -->
         <div class="space-y-3">
@@ -5479,7 +5590,7 @@
                       </div>
                       <div class="p-2 rounded-xl bg-slate-900 border border-slate-800/70">
                         <div class="text-[10px] text-slate-500">Trainingen</div>
-                        <div class="font-bold text-blue-400 mt-0.5">${c.totalWorkouts || 0} dagen</div>
+                        <div class="font-bold text-blue-400 mt-0.5">${c.totalWorkouts || 0} afgerond · ${c.skippedDays || 0} overgeslagen</div>
                       </div>
                       <div class="p-2 rounded-xl bg-slate-900 border border-slate-800/70">
                         <div class="text-[10px] text-slate-500">Gem. Duur</div>
@@ -5503,7 +5614,7 @@
                               <span class="text-slate-400">${p.isBodyweight ? 'BW' : p.startWeight + ' kg'} × ${p.startReps ?? '?'} reps</span>
                               <span class="text-slate-500">➔</span>
                               <span class="text-slate-200 font-bold">${p.isBodyweight ? 'BW' : p.endWeight + ' kg'} × ${p.endReps ?? '?'} reps</span>
-                              ${p.diff === 0 && p.repDiff > 0 ? `<span class="text-emerald-300 text-[10px] font-black">(+${p.repDiff} reps)</span>` : ''}
+                              ${performanceChangeHtml({ weight: p.startWeight, reps: p.startReps }, { weight: p.endWeight, reps: p.endReps }, p.isBodyweight)}
                             </span>
                           `).join("")}
                         </div>
@@ -5744,8 +5855,7 @@
 
     function saveAndLockRoutine(forNewCycle = false) {
       if (forNewCycle || setupWizardState.forNewCycle) {
-        executeStartNewMesocycle(true, setupWizardState.schema);
-        closeSetupRoutineModal();
+        if (executeStartNewMesocycle(true, setupWizardState.schema)) closeSetupRoutineModal();
         return;
       }
 
@@ -6000,7 +6110,7 @@
             ${isNewCycle ? `
               <button onclick="saveAndLockRoutine(true)" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition shadow-lg active:scale-95 cursor-pointer">
                 <span>🚀</span>
-                <span>Schema Vastzetten & Mesocycle ${nextCycleNum} Starten</span>
+                <span>Periode afsluiten & periode ${nextCycleNum} starten</span>
               </button>
             ` : `
               <button onclick="saveAndLockRoutine(false)" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg active:scale-95 cursor-pointer">
@@ -6253,7 +6363,7 @@
           <div class="space-y-1">
             <div class="font-bold text-slate-200">Thuisgym Overload Vuistregel:</div>
             <p class="leading-relaxed text-[11px] text-slate-400">
-              Verhoog pas in gewicht (+1 of +2 kg per dumbbell / +2.5 kg barbell) wanneer je alle 3 de geplande sets voltooit én je beleving minimaal 🟢 Vlot of 🟡 Goed is. Forceer nooit een gewichtsverhoging als de reps slordig worden; consolidatie is de sleutel tot blessurevrije krachtopbouw.
+              Verhoog pas in gewicht (+1 of +2 kg per dumbbell / +2.5 kg barbell) wanneer je alle 3 de geplande sets voltooit én je beleving minimaal 🟢 Vlot of 🟡 Goed is. Forceer nooit een gewichtsverhoging als de reps slordig worden; consolidatie geeft ruimte om dezelfde belasting met controle te herhalen; blessurevrij trainen is daarmee niet gegarandeerd.
             </p>
           </div>
         </div>
@@ -6344,7 +6454,7 @@
       const entries = getExerciseHistory(name, before);
       const rows = entries.map((entry, index) => ({ entry, comparison: compareHistoryEntries(entries[index - 1], entry) })).reverse();
       return `<details class="border-t border-slate-800 pt-2"><summary class="cursor-pointer text-xs text-blue-300">Oefeningshistorie · ${entries.length} uitvoeringen</summary>
-        <div class="mt-3 max-h-80 overflow-auto space-y-3">${rows.length ? rows.map(({ entry, comparison }) => `<div class="text-xs space-y-1"><p class="text-slate-400">Cyclus ${entry.cycle} · week ${entry.week} · ${escapeReportText(SPLIT_INFO[entry.day]?.title.split(':')[0] || entry.day)}${entry.isDeload ? ' · herstel' : ''}</p><p class="text-slate-100">${formatHistorySets(entry)}</p><p class="text-slate-400">${comparison}</p></div>`).join('') : '<p class="text-xs text-slate-400">Nog geen opgeslagen uitvoeringen.</p>'}</div>
+        <div class="mt-3 max-h-80 overflow-auto space-y-3">${rows.length ? rows.map(({ entry, comparison }) => `<div class="text-xs space-y-1"><p class="text-slate-400">Cyclus ${entry.cycle} · week ${entry.week} · ${escapeReportText(SPLIT_INFO[entry.day]?.title.split(':')[0] || entry.day)}${entry.isDeload ? ' · herstel' : ''}</p><p class="text-slate-100">${formatHistorySets(entry)}</p><p>${comparisonIndicatorHtml(comparison)}</p></div>`).join('') : '<p class="text-xs text-slate-400">Nog geen opgeslagen uitvoeringen.</p>'}</div>
       </details>`;
     }
 
@@ -6370,25 +6480,28 @@
       const next = outlook.next;
       return `<article class="p-4 rounded-2xl bg-slate-950/70 border border-slate-700 space-y-3">
         <h4 class="font-bold text-slate-100">${escapeReportText(exercise.name)}</h4>
-        <p class="text-xs text-slate-300">${exercise.progress.completedSets}/${exercise.progress.requiredSets} sets uitgevoerd · ${exercise.progress.achievedSets}/${exercise.progress.requiredSets} setdoelen gehaald</p>
+        <p class="text-xs text-slate-300">${exercise.progress.completedSets}/${exercise.progress.requiredSets} sets uitgevoerd · ${exercise.progress.skippedSets || 0} overgeslagen · ${exercise.progress.achievedSets}/${exercise.progress.requiredSets} setdoelen gehaald</p>
         <div class="space-y-1"><p class="text-xs text-slate-400">${outlook.provisional ? 'Voorlopige verwachting' : 'Advies voor volgende week'}</p><p class="font-bold text-blue-300">${escapeReportText(outlook.title)}</p>
         ${next ? `<p class="text-sm text-slate-100">${outlook.provisional ? 'Mogelijke stap' : 'Volgende stap'}: ${next.requiredSets} × ${exercise.isBodyweight ? 'BW' : next.weight + ' kg'} × ${next.reps} reps</p>` : ''}
-        <p class="text-xs text-slate-300">${escapeReportText(outlook.reason)}</p><p class="text-xs text-slate-400">${outlook.remaining ? `Nog ${outlook.remaining} sets te beoordelen.` : 'Alle weeksets beoordeeld.'}</p></div>
-        <details><summary class="cursor-pointer text-xs text-slate-300">Bekijk prestaties per trainingsdag</summary><div class="mt-3 space-y-3">${exercise.progress.sessions.map(session => `<div class="text-xs text-slate-400">${escapeReportText(SPLIT_INFO[session.dayKey].title.split(':')[0])}</div>${renderProgressDetails(weekNum, session.dayKey, session.slotKey)}`).join('')}</div></details>
+        <p class="text-xs text-slate-300">${escapeReportText(outlook.reason)}</p><p class="text-xs text-slate-400">${outlook.remaining ? `Nog ${outlook.remaining} sets te beoordelen.` : 'Geen open weeksets.'}</p></div>
+        <details><summary class="cursor-pointer text-xs text-slate-300">Bekijk prestaties per trainingsdag</summary><div class="mt-3 space-y-3">${exercise.progress.sessions.map(session => `<div class="text-xs text-slate-400">${escapeReportText(SPLIT_INFO[session.dayKey].title.split(':')[0])}${session.skipped ? ' · overgeslagen' : ''}</div>${renderProgressDetails(weekNum, session.dayKey, session.slotKey)}`).join('')}</div></details>
         ${exerciseHistoryHtml(exercise.name, { week: weekNum + 1, day: 'mon' })}
       </article>`;
     }
 
     function getOverloadOutlook(weekNum, name) {
       const week = getExerciseWeekProgress(weekNum, name);
-      const remaining = Math.max(0, week.requiredSets - week.completedSets);
+      const remaining = Math.max(0, week.requiredSets - week.completedSets - (week.skippedSets || 0));
       const next = getNextProgression(week, weekNum + 1);
       if (weekNum >= Number(appState.totalWeeks || 7)) {
         return { title: 'Nieuwe cyclus voorbereiden', reason: 'Dit is de laatste week van deze cyclus. Het nieuwe schema bepaalt je volgende startdoel.', remaining, next: null, provisional: true };
       }
       if (!remaining) return { title: next.status, reason: next.reason, remaining, next, provisional: false };
+      if (week.completedSets && isDeloadWeek(weekNum + 1)) return { title: 'Herstelweek gepland', reason: next.reason, remaining, next, provisional: true };
+      if (week.skippedSets > 0) return { title: 'Herhalen na overgeslagen training', reason: 'Overgeslagen sets tellen niet als behaald. Met minder prestaties wordt geen verhoging geadviseerd.', remaining, next: null, provisional: true };
+      if (week.unknownSets > 0) return { title: 'Inspanning niet beoordeeld', reason: 'Beoordeel de opgeslagen sets voor een onderbouwd verhogingsadvies.', remaining, next: null, provisional: true };
       if (!week.completedSets) return { title: 'Nog onvoldoende gegevens', reason: 'Sla eerst een uitvoering van deze oefening op.', remaining, next: null, provisional: true };
-      if (isDeloadWeek(weekNum + 1)) return { title: 'Herstelweek gepland', reason: next.reason, remaining, next, provisional: true };
+
       if (week.exertion === 'max' || week.achievedSets < week.completedSets) {
         return { title: 'Voorlopig herhalen', reason: week.exertion === 'max'
           ? 'Minstens één set is als maximaal opgeslagen. Met deze gegevens geen verhoging; het definitieve advies volgt na alle weeksets.'
@@ -6442,22 +6555,101 @@
             <p class="font-bold text-blue-300 text-sm">${escape(outlook.title)}</p>
             ${next ? `<p class="text-sm text-slate-100">${outlook.provisional ? 'Mogelijke volgende stap' : 'Volgende stap'}: ${next.requiredSets} × ${isBW ? 'BW' : next.weight + ' kg'} × ${next.reps} reps</p>` : ''}
             <p class="text-xs text-slate-300">${escape(outlook.reason)}</p>
-            <p class="text-xs text-slate-400">${week.achievedSets}/${week.requiredSets} weeksetdoelen gehaald · ${outlook.remaining ? `nog ${outlook.remaining} sets te beoordelen` : 'alle weeksets beoordeeld'}</p>
+            <p class="text-xs text-slate-400">${week.achievedSets}/${week.requiredSets} weeksetdoelen gehaald · ${week.skippedSets || 0} sets overgeslagen · ${outlook.remaining ? `nog ${outlook.remaining} sets te beoordelen` : 'alle weeksets beoordeeld'}</p>
           </div>
           ${exerciseHistoryHtml(name, { week: weekNum + 1, day: 'mon' })}
         </article>`;
       }).join('');
       const nextDay = getNextSplitDay(dayKey);
       return `<section class="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 sm:p-6 space-y-5">
-        <header><h3 class="font-black text-slate-100 text-lg">Resultaten & vooruitblik</h3><p class="text-sm text-emerald-300 mt-1">${escape(SPLIT_INFO[dayKey].title.split(':')[0])} afgerond</p><p class="text-xs text-slate-300 mt-1">${status.completedSets}/${status.totalSets} sets uitgevoerd · ${achieved}/${status.totalSets} setdoelen gehaald</p></header>
+        ${recoveryCheckHtml(weekNum, dayKey)}<header><h3 class="font-black text-slate-100 text-lg">Resultaten & vooruitblik</h3><p class="text-sm text-emerald-300 mt-1">${escape(SPLIT_INFO[dayKey].title.split(':')[0])} afgerond</p><p class="text-xs text-slate-300 mt-1">${status.completedSets}/${status.totalSets} sets uitgevoerd · ${achieved}/${status.totalSets} setdoelen gehaald</p></header>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${cards}</div>
-        <p class="text-xs text-slate-400">De verwachting gebruikt alle opgeslagen sets van deze oefening in deze week. Inspanning telt mee: standaard ‘goed’; één maximale set blokkeert verhogen.</p>
+        <p class="text-xs text-slate-400">De verwachting gebruikt alle opgeslagen sets van deze oefening in deze week. Inspanning telt mee: standaard ‘niet beoordeeld’; één maximale set blokkeert verhogen.</p>
         <footer class="flex flex-wrap items-center gap-3 border-t border-slate-800 pt-4">
           ${nextDay.nextDayKey ? `<button onclick="switchDay('${nextDay.nextDayKey}')" class="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold">Bekijk ${escape(nextDay.nextDayLabel.toLowerCase())}</button>` : `<button onclick="openWeekReportModal(${weekNum})" class="px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold">Bekijk weekrapport</button>`}
           <button onclick="openCompletedWorkoutView()" class="px-3 py-2 text-xs text-slate-300 hover:text-white">Volledig dagrapport</button>
           <button onclick="openCompletedWorkoutView(); resumeLiveWorkoutFromSummary()" class="px-3 py-2 text-xs text-slate-300 hover:text-white">Sets corrigeren</button>
         </footer>
       </section>`;
+    }
+
+    async function setTrainingSkipped(skipped) {
+      const week = appState.currentWeek, dayKey = appState.currentDay;
+      if (liveWorkout.active && liveWorkout.weekNum === week && liveWorkout.dayKey === dayKey) {
+        showToast('Sluit eerst de actieve training.', 'error');
+        return;
+      }
+      const day = appState.weeks[week][dayKey];
+      const sessionId = day.sessionId || Object.values(day).find(slot => slot?.sessionId)?.sessionId;
+      if (!sessionId) { showToast('Training kan nog niet worden opgeslagen.', 'error'); return; }
+      try {
+        const response = await jsonApi('/api/sessions/' + sessionId, 'PATCH', { skipped });
+        if (!response.ok) throw new Error('Opslaan mislukt');
+        day.skipped = skipped;
+        renderExercises(); updateDashboard(); saveState();
+      } catch (error) { showToast('Overslaan kon niet worden opgeslagen. Probeer opnieuw.', 'error'); }
+    }
+
+    async function setRecoveryCheck(value) {
+      const week = appState.currentWeek, dayKey = appState.currentDay;
+      const day = appState.weeks[week]?.[dayKey];
+      if (!day || !['unknown', 'recovered', 'tired', 'exhausted'].includes(value)) return;
+      if (liveWorkout.active || Object.values(day).some(slot => slot?.sets?.some(set => set.completed))) {
+        showToast('De herstelcheck staat vast zodra je training is gestart.', 'error'); return;
+      }
+      const sessionId = day.sessionId || Object.values(day).find(slot => slot?.sessionId)?.sessionId;
+      if (!sessionId) { showToast('Training kan nog niet worden opgeslagen.', 'error'); return; }
+      try {
+        const response = await jsonApi('/api/sessions/' + sessionId, 'PATCH', { recovery: value });
+        if (!response.ok) throw new Error('Opslaan mislukt');
+        day.recovery = value;
+        if (isDeloadWeek(week)) Object.values(day).forEach(slot => {
+          if (!slot?.sets) return;
+          slot.progressionPlan = null;
+          slot.sets.forEach(set => { for (const field of ['weight', 'reps']) if (!set.inputFields?.[field]) set[field] = ''; });
+        });
+        saveState(); renderExercises(); updateDashboard();
+      } catch (error) { showToast('Herstelcheck niet opgeslagen. Probeer opnieuw.', 'error'); }
+    }
+
+    function trainingEvidenceHtml() {
+      return `<details class="rounded-xl border border-slate-700 bg-slate-950/60 p-3 text-xs space-y-3"><summary class="cursor-pointer font-bold text-blue-300">ⓘ Hoe en waarom? Onderbouwing & bronnen</summary>
+        <p><strong class="text-slate-100">Onderzoek · trainen en opbouwen.</strong> Regelmatig trainen en afstemmen op je doel zijn belangrijker dan een ingewikkeld schema. Altijd tot spierfalen trainen is niet nodig. <a class="text-blue-300 underline" href="https://acsm.org/resistance-training-guidelines-update-2026/" target="_blank" rel="noopener noreferrer">ACSM-richtlijn (2026)</a>.</p>
+        <p><strong class="text-slate-100">Appregels · progressive overload.</strong> Eerst reps opbouwen binnen 8–12 of 12–15, daarna een ingestelde gewichtsstap. Maximaal 2 reps erbij, alle weekdoelen halen en niet verhogen na een maximale of onbeoordeelde set zijn conservatieve schemakeuzes. Deze exacte combinatie is niet als persoonlijk optimaal bewezen. ‘Vlot / goed / maximaal’ zijn jouw inschattingen, geen gemeten RPE.</p>
+        <p><strong class="text-slate-100">Expertconsensus · deload.</strong> Een tijdelijke verlaging van de trainingsbelasting kan ruimte voor herstel geven. De optimale timing en grootte zijn niet vastgesteld. <a class="text-blue-300 underline" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10511399/" target="_blank" rel="noopener noreferrer">Delphi-onderzoek (2023)</a>. Week 7, twee sets en de 60/70/80%-regels zijn instellingen van deze app. Je herstelcheck is zelfrapportage. Het vroege herstelvoorstel gebruikt twee opeenvolgende dalingen bij minstens twee oefeningen, met gelijke gewichten en aantallen sets, maximale inspanning én gemelde vermoeidheid. Dat is een signaleringsregel, geen gevalideerde vermoeidheidstest.</p>
+        <p><strong class="text-slate-100">Schatting · 1RM.</strong> De app gebruikt gewicht × (1 + reps / 30), behalve bij één rep. Dit is de Epley-schatting, geen gemeten maximum. De fout hangt onder meer af van oefening, repaantal en hoe dicht je bij falen kwam. <a class="text-blue-300 underline" href="https://pubmed.ncbi.nlm.nih.gov/39495260/" target="_blank" rel="noopener noreferrer">Validatieonderzoek (2025)</a>. Vergelijk ook je echte gewicht en reps.</p>
+        <p><strong class="text-slate-100">Registratie · rapportages.</strong> Volume is de som van opgeslagen gewicht × reps. Lichaamsgewicht telt niet mee als externe kilo’s. Dezelfde dagen en hetzelfde schema worden vergeleken; onvolledige weken en herstelweken krijgen geen oordeel over krachtverlies. Groen en rood geven de richting van een getal aan. Een zwaardere set met minder reps heeft twee afzonderlijke verschillen.</p>
+        <p><strong class="text-slate-100">Schemavoorkeuren · startgewichten, rust en nieuwe periodes.</strong> Startgewichten, leeftijdsfactoren, rusttijden en doelen zijn richtwaarden uit het schema, geen persoonlijk gevalideerde normen. Opgeslagen prestaties gaan vóór die referenties. Oefeningen hoeven na zeven weken niet te wisselen; behoud wat past en goed te volgen is. Een nieuwe periode is een evaluatiemoment.</p>
+      </details>`;
+    }
+
+    function recoveryCheckHtml(week, dayKey) {
+      const day = appState.weeks[week]?.[dayKey] || {};
+      const labels = { unknown: 'Niet beoordeeld', recovered: 'Goed hersteld', tired: 'Nog vermoeid', exhausted: 'Veel vermoeidheid' };
+      const value = labels[day.recovery] ? day.recovery : 'unknown';
+      const locked = Object.values(day).some(slot => slot?.sets?.some(set => set.completed)) || liveWorkout.active;
+      return `<section class="rounded-xl border border-purple-500/40 bg-purple-950/40 p-3 space-y-2 text-xs"><h4 class="font-bold text-purple-200">◈ Herstelcheck vóór deze training</h4><p class="text-slate-300">Hoe hersteld voel je je, rekening houdend met slaap, vermoeidheid en spierpijn?</p><select aria-label="Herstel vóór de training" onchange="setRecoveryCheck(this.value)" ${locked ? 'disabled' : ''} class="w-full rounded-lg bg-slate-950 border border-purple-500/40 p-2 text-white">${Object.entries(labels).map(([key, label]) => `<option value="${key}" ${value === key ? 'selected' : ''}>${label}</option>`).join('')}</select><p class="text-slate-400">${locked ? 'Opgeslagen bij de start; doelen en prestaties blijven behouden.' : isDeloadWeek(week) ? 'Past het deloadadvies aan. Eigen setinvoer blijft leidend.' : 'Wordt opgeslagen voor het hersteladvies; verandert deze training niet automatisch.'}</p>${earlyRecoveryAdviceHtml(week, dayKey)}${trainingEvidenceHtml()}</section>`;
+    }
+
+    function earlyRecoveryAdviceHtml(week, dayKey) {
+      if (isDeloadWeek(week)) return '';
+      const names = new Set();
+      Object.values(appState.weeks[week]?.[dayKey] || {}).forEach(slot => { if (slot?.selectedName) names.add(slot.selectedName); });
+      const signals = [...names].filter(name => {
+        const entries = getExerciseHistory(name, { week, day: dayKey }).filter(e => e.cycle === (appState.currentCycle || 1) && !e.isDeload).slice(-3);
+        if (entries.length !== 3) return false;
+        return [1, 2].every(index => {
+          const current = entries[index], before = entries[index - 1];
+          const day = appState.weeks[current.week]?.[current.day];
+          const required = 3;
+          if (day?.skipped || !['tired', 'exhausted'].includes(day?.recovery) || current.sets.length !== required || before.sets.length !== required) return false;
+          if (!current.sets.some(set => set.exertion === 'max')) return false;
+          if (!current.sets.every((set, i) => set.position === before.sets[i].position && (current.isBodyweight || Number(set.weight) === Number(before.sets[i].weight)))) return false;
+          return current.sets.reduce((sum, set) => sum + Number(set.reps), 0) < before.sets.reduce((sum, set) => sum + Number(set.reps), 0);
+        });
+      });
+      if (signals.length < 2) return '';
+      return `<div class="border-t border-purple-500/40 pt-2 text-purple-200"><strong>◈ Overweeg eerder extra herstel</strong><p>Bij ${signals.map(escapeReportText).join(', ')}: tweemaal achtereen minder reps bij gelijk gewicht en aantal sets, maximale sets én vermoeidheid gemeld.</p><p>Praktische signaleringsregel, geen diagnose. Overweeg een lichtere training of extra rust; je schema wordt niet automatisch gewijzigd.</p></div>`;
     }
 
     function renderLockedRoutineView(container, currentDayData, slotKeys, isDeload, isDayLocked, isWeekDone) {
@@ -6513,8 +6705,9 @@
       });
 
       const card = document.createElement("div");
-      card.className = "bg-slate-900/90 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-xl space-y-5";
+      card.className = `border rounded-3xl p-4 sm:p-6 shadow-xl space-y-5 ${isDeload ? "deload-training" : "bg-slate-900/90 border-slate-800"}`;
       card.innerHTML = `
+        ${recoveryCheckHtml(appState.currentWeek, appState.currentDay)}
         <!-- Bovenste Status & Hoofd Actie -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
           <div class="flex items-start sm:items-center gap-3.5">
@@ -6547,7 +6740,7 @@
             ` : `
               <button onclick="handleWorkoutHeroButtonClick()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 transition shadow-md shadow-emerald-600/30 active:scale-95 cursor-pointer">
                 <span>▶</span>
-                <span>${isDayStarted ? 'Hervat Training' : 'Start Live Training'}</span>
+                <span>${isDeload ? (isDayStarted ? 'Hervat Deloadtraining' : 'Start Deloadtraining') : (isDayStarted ? 'Hervat Training' : 'Start Live Training')}</span>
               </button>
             `}
           </div>
@@ -6568,6 +6761,7 @@
           </div>
         </div>
 
+        <button onclick="setTrainingSkipped(true)" class="text-xs text-slate-400 hover:text-white underline">${isDayStarted ? 'Resterende training overslaan' : 'Training overslaan'}</button>
         <!-- Footer Acties: Schema Openen of Uitgebreide Sets Inzien -->
         <div class="pt-3.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5">
           <button onclick="handleRoutineLockButtonClick()" class="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 font-mono font-bold text-[11px] border border-slate-700 transition flex items-center gap-1.5 cursor-pointer">
@@ -6592,6 +6786,8 @@
       const slotKeys = SPLIT_INFO[appState.currentDay].slots;
       const isDeload = isDeloadWeek(appState.currentWeek);
 
+      document.body?.classList.toggle("deload-week", isDeload);
+
       // Deload banner zichtbaarheid
       const deloadBanner = document.getElementById("deloadExplanationBanner");
       if (isDeload) {
@@ -6609,6 +6805,11 @@
       const isDayLocked = isDayLockedOnHoofdscherm(appState.currentWeek, appState.currentDay);
       const isWeekDone = ["mon", "tue", "thu", "fri"].every(d => getDayCompletionStatus(appState.currentWeek, d).isFullyCompleted);
 
+      if (currentDayData.skipped) {
+        const status = getDayCompletionStatus(appState.currentWeek, appState.currentDay);
+        container.innerHTML = `<section class="p-5 rounded-2xl border border-slate-700 bg-slate-900 space-y-3"><h3 class="font-bold text-slate-100">Training overgeslagen</h3><p class="text-sm text-slate-400">${status.completedSets} sets uitgevoerd. Opgeslagen prestaties blijven behouden; de overige sets tellen niet als behaald.</p><button onclick="setTrainingSkipped(false)" class="px-4 py-2 rounded-xl bg-blue-600 text-white">Overslaan ongedaan maken</button></section>`;
+        return;
+      }
       if (getDayCompletionStatus(appState.currentWeek, appState.currentDay).isFullyCompleted) {
         container.innerHTML = completedDayResultsHtml(appState.currentWeek, appState.currentDay);
         return;
@@ -6620,6 +6821,10 @@
         renderLockedRoutineView(container, currentDayData, slotKeys, isDeload, isDayLocked, isWeekDone);
         return;
       }
+
+      const recoveryCard = document.createElement("div");
+      recoveryCard.innerHTML = recoveryCheckHtml(appState.currentWeek, appState.currentDay);
+      container.appendChild(recoveryCard);
 
       // Banner als het schema vast staat maar de details bekeken worden
       if (appState.routineLocked && window.showDetailedSetsOnMainScreen) {
@@ -6910,7 +7115,7 @@
                             set.exertion === 'max' ? 'bg-rose-950/80 text-rose-300 border-rose-500/50' :
                             'bg-amber-950/80 text-amber-300 border-amber-500/50'
                           }">
-                          ${set.exertion === 'easy' ? '🟢 Vlot' : set.exertion === 'max' ? '🔴 Max' : '🟡 Goed'}
+                          ${set.exertion === 'easy' ? '🟢 Vlot' : set.exertion === 'max' ? '🔴 Max' : set.exertion === 'good' ? '🟡 Goed' : '⚪ Niet beoordeeld'}
                         </span>
                       ` : `
                         <button 
@@ -6922,7 +7127,7 @@
                             set.exertion === 'max' ? 'bg-rose-950/80 text-rose-300 border-rose-500/50' :
                             'bg-amber-950/80 text-amber-300 border-amber-500/50'
                           }">
-                          ${set.exertion === 'easy' ? '🟢 Vlot' : set.exertion === 'max' ? '🔴 Max' : '🟡 Goed'}
+                          ${set.exertion === 'easy' ? '🟢 Vlot' : set.exertion === 'max' ? '🔴 Max' : set.exertion === 'good' ? '🟡 Goed' : '⚪ Niet beoordeeld'}
                         </button>
                       `}
                     ` : ''}
@@ -7031,8 +7236,8 @@
         return;
       }
       const setObj = appState.weeks[appState.currentWeek][appState.currentDay][slotKey].sets[setIndex];
-      const cycle = { "good": "max", "max": "easy", "easy": "good" };
-      setObj.exertion = cycle[setObj.exertion || "good"] || "good";
+      const cycle = { "unknown": "easy", "easy": "good", "good": "max", "max": "unknown" };
+      setObj.exertion = cycle[setObj.exertion || "unknown"] || "unknown";
       saveState();
       renderExercises();
       updateDashboard();
@@ -7915,7 +8120,7 @@
       slotAdaptations: {},
       tempWeight: 0,
       tempReps: 0,
-      tempExertion: "good",
+      tempExertion: "unknown",
       confettiAnimId: null
     };
 
@@ -8029,6 +8234,7 @@
     }
 
     function startLiveWorkoutSession() {
+      if (appState.weeks[appState.currentWeek]?.[appState.currentDay]?.skipped) { showToast('Maak overslaan eerst ongedaan.', 'error'); return; }
       // Audio context activeren via directe gebruikersklik
       if (appState.soundEnabled) {
         try {
@@ -8123,7 +8329,8 @@
       const index = liveWorkout.currentSetIndex;
       const set = slot.sets[index] || {};
       const previous = slot.sets.slice(0, index).reverse().find(item => item.completed && Number(item.reps) > 0 && (isBW || Number(item.weight) > 0));
-      const sameWeek = getSameWeekExerciseLogged(liveWorkout.weekNum, name, liveWorkout.dayKey, slotKey);
+      const recovery = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey].recovery;
+      const sameWeek = isDeloadWeek(liveWorkout.weekNum) && recovery && recovery !== 'unknown' ? null : getSameWeekExerciseLogged(liveWorkout.weekNum, name, liveWorkout.dayKey, slotKey);
       const reference = sameWeek?.sets[index] || sameWeek?.sets[0];
       const value = field => {
         if ((set.completed || set.inputFields?.[field]) && set[field] !== '' && set[field] != null) return Number(set[field]);
@@ -8133,7 +8340,7 @@
       };
       liveWorkout.tempWeight = isBW ? 0 : value('weight');
       liveWorkout.tempReps = value('reps');
-      liveWorkout.tempExertion = set.exertion || 'good';
+      liveWorkout.tempExertion = set.exertion || 'unknown';
       liveWorkout.valueSource = set.completed || set.inputFields?.weight || set.inputFields?.reps ? 'Eigen invoer voor deze set' : previous ? 'Overgenomen van de vorige set' : reference ? 'Overgenomen van eerder deze week' : 'Vooraf ingevuld trainingsdoel';
     }
 
@@ -8260,7 +8467,9 @@
     }
 
     function updateLiveExertionUI() {
-      const current = liveWorkout.tempExertion || "good";
+      const current = liveWorkout.tempExertion || "unknown";
+      const unknownBtn = document.getElementById("lwExertionBtn_unknown");
+      if (unknownBtn) unknownBtn.className = `py-2.5 px-2 rounded-xl border text-xs ${current === 'unknown' ? 'border-slate-300 text-white bg-slate-700' : 'border-slate-800 text-slate-400 bg-slate-950'}`;
       const easyBtn = document.getElementById("lwExertionBtn_easy");
       const goodBtn = document.getElementById("lwExertionBtn_good");
       const maxBtn = document.getElementById("lwExertionBtn_max");
@@ -8359,7 +8568,7 @@
           weight: isBW ? 0 : (loggedWeight > 0 ? loggedWeight : ""),
           reps: loggedReps > 0 ? loggedReps : "",
           completed: true,
-          exertion: liveWorkout.tempExertion || "good"
+          exertion: liveWorkout.tempExertion || "unknown"
         };
       }
 
@@ -9000,6 +9209,7 @@
       if (!container) return;
 
       const isDeload = isDeloadWeek(liveWorkout.weekNum);
+      cardEl?.classList.toggle("deload-training", isDeload);
       const maxSetsPerSlot = isDeload ? 2 : 3;
       const totalSlots = liveWorkout.slots.length;
       const totalSetsInWorkout = totalSlots * maxSetsPerSlot;
@@ -9029,7 +9239,7 @@
       if (progressBar) progressBar.style.width = `${overallProgressPct}%`;
 
       if (dayPhaseBadge) {
-        dayPhaseBadge.textContent = `WEEK ${liveWorkout.weekNum} • ${SPLIT_INFO[liveWorkout.dayKey].title.toUpperCase()}`;
+        dayPhaseBadge.textContent = `WEEK ${liveWorkout.weekNum}${isDeload ? " · DELOAD" : ""} • ${SPLIT_INFO[liveWorkout.dayKey].title.toUpperCase()}`;
       }
 
       if (stepperSub) {
@@ -9261,11 +9471,12 @@
               <span class="text-[11px] font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
                 <span>⚡ Hoe voelde deze set?</span>
               </span>
-              <span class="text-[10px] text-slate-400 font-mono">Standaard: goed</span>
+              <span class="text-[10px] text-slate-400 font-mono">Standaard: niet beoordeeld</span>
             </div>
 
             <p class="text-[11px] text-slate-400">Jouw beoordeling bepaalt het advies. Eén maximale set houdt de verhoging voor deze oefening deze week tegen.</p>
-            <div class="grid grid-cols-3 gap-2" id="lwExertionGroup">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="lwExertionGroup">
+              <button type="button" onclick="setLiveExertion('unknown')" id="lwExertionBtn_unknown" class="py-2.5 px-2 rounded-xl border text-xs ${!liveWorkout.tempExertion || liveWorkout.tempExertion === 'unknown' ? 'border-slate-300 text-white bg-slate-700' : 'border-slate-800 text-slate-400 bg-slate-950'}">⚪ Niet beoordeeld</button>
               <button 
                 type="button" 
                 onclick="setLiveExertion('easy')" 
@@ -9285,7 +9496,7 @@
                 onclick="setLiveExertion('good')" 
                 id="lwExertionBtn_good" 
                 class="py-2.5 px-2 rounded-xl text-center border transition-all cursor-pointer flex flex-col items-center gap-1 ${
-                  (liveWorkout.tempExertion === 'good' || !liveWorkout.tempExertion) 
+                  (liveWorkout.tempExertion === 'good')
                     ? 'bg-amber-950/80 border-amber-500 text-amber-300 shadow-md shadow-amber-950/50 ring-2 ring-amber-500/40' 
                     : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-amber-500/40 hover:text-slate-200'
                 }">
@@ -9643,7 +9854,7 @@
                       <span class="uppercase tracking-wider">Week ${targetW} Volledig Voltooid!</span>
                     </div>
                     <p class="text-xs text-slate-300 leading-relaxed">
-                      Alle 4 dagen van Week ${targetW} zijn afgerond. Bekijk het weekrapport voor het advies van Week ${Number(targetW) + 1}${isBiweeklyHoldWeek(Number(targetW) + 1) ? ' (2-weken consolidatie: zelfde gewicht)' : ''}.
+                      Alle 4 dagen van Week ${targetW} zijn afgerond. ${Number(targetW) >= Number(appState.totalWeeks || 7) ? 'Bereid je nieuwe periode van 7 weken voor via het weekrapport.' : `Bekijk het weekrapport voor het advies van week ${Number(targetW) + 1}.`}
                     </p>
                     <button onclick="closeLiveWorkoutModal(); openWeekReportModal(${targetW})" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition shadow-lg cursor-pointer">
                       <span>📋</span>
@@ -9694,6 +9905,7 @@
 
       // Render of ververs Athlean-X video companion paneel (tablet & desktop side-by-side)
       renderLiveVideoCompanion();
+      if (liveWorkout.phase === 'set') container.innerHTML += recoveryCheckHtml(liveWorkout.weekNum, liveWorkout.dayKey);
     }
 
     /* 11. DASHBOARD & WORKLOAD GRAFIEK MET PERIODISERING */
@@ -9721,11 +9933,44 @@
       return total;
     }
 
+    function getVolumeComparison(weekNum, dayKey = null) {
+      if (isDeloadWeek(weekNum)) return 'Herstelweek — lager volume gepland.';
+      if (dayKey && appState.weeks[weekNum]?.[dayKey]?.skipped) return 'Training overgeslagen.';
+      if (weekNum <= 1) return 'Start van een nieuwe periode. Nog geen vergelijkbare vorige week.';
+      let previousWeek = weekNum - 1;
+      while (previousWeek > 0 && isDeloadWeek(previousWeek)) previousWeek--;
+      if (!previousWeek) return 'Geen vergelijkbare opbouwweek beschikbaar.';
+      const days = dayKey ? [dayKey] : ['mon', 'tue', 'thu', 'fri'].filter(day => getDayCompletionStatus(weekNum, day).isFullyCompleted);
+      if (!days.length || days.some(day => !getDayCompletionStatus(weekNum, day).isFullyCompleted)) return 'Vergelijking volgt zodra de training is afgerond.';
+      if (days.some(day => !getDayCompletionStatus(previousWeek, day).isFullyCompleted)) return `Week ${previousWeek}: dezelfde trainingsdagen zijn nog niet volledig gelogd.`;
+      const signature = (week, day) => (SPLIT_INFO[day]?.slots || []).map(key => {
+        const slot = appState.weeks[week]?.[day]?.[key];
+        return `${(slot?.selectedName || EXERCISE_CATALOG[key]?.defaultName || '').trim().toLowerCase()}:${getSlotProgress(week, day, key).requiredSets}`;
+      }).sort().join('|');
+      if (days.some(day => signature(weekNum, day) !== signature(previousWeek, day))) return 'Schema gewijzigd: volume niet rechtstreeks vergelijkbaar.';
+      const current = days.reduce((sum, day) => sum + calculateSessionVolume(weekNum, day), 0);
+      const previous = days.reduce((sum, day) => sum + calculateSessionVolume(previousWeek, day), 0);
+      if (previous <= 0) return 'Geen positief referentievolume; lichaamsgewichtsets vergelijk je op reps.';
+      const difference = Math.round((current - previous) * 10) / 10;
+      const percentage = Math.round(1000 * difference / previous) / 10;
+      const sign = difference > 0 ? '+' : '';
+      const label = dayKey ? (SPLIT_INFO[dayKey]?.title.split(':')[0] || dayKey) : days.map(day => SPLIT_INFO[day]?.title.split(':')[0] || day).join(', ');
+      return `${sign}${difference.toLocaleString('nl-NL')} kg (${sign}${percentage.toLocaleString('nl-NL')}%)`;
+    }
+
+    function volumeComparisonClass(text) {
+      return /^\+\d/.test(text) ? 'text-emerald-400' : /^-\d/.test(text) ? 'text-rose-400' : 'text-slate-400';
+    }
+
     function updateDashboard() {
       updateNewPeriodMenuItem();
       const dashWeekEl = document.getElementById("dashWeekNum");
       if (dashWeekEl) dashWeekEl.textContent = appState.currentWeek;
 
+      const weekComparison = document.getElementById('weeklyVolumeComparison');
+      const sessionComparison = document.getElementById('sessionVolumeComparison');
+      if (weekComparison) { weekComparison.innerHTML = comparisonIndicatorHtml(getVolumeComparison(appState.currentWeek)); weekComparison.className = 'text-[11px] mt-2 leading-relaxed ' + volumeComparisonClass(weekComparison.textContent); }
+      if (sessionComparison) { sessionComparison.innerHTML = comparisonIndicatorHtml(getVolumeComparison(appState.currentWeek, appState.currentDay)); sessionComparison.className = 'text-[11px] mt-2 leading-relaxed ' + volumeComparisonClass(sessionComparison.textContent); }
       const sessionVol = calculateSessionVolume(appState.currentWeek, appState.currentDay);
       const weekVol = calculateWeekVolume(appState.currentWeek);
 
@@ -9745,7 +9990,7 @@
 
       const pct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
       const compPctEl = document.getElementById("completionPercent");
-      if (compPctEl) compPctEl.textContent = `${pct}% Voltooid`;
+      if (compPctEl) compPctEl.textContent = `${pct}% van deze training`;
       const compRatioEl = document.getElementById("completedSetsRatio");
       if (compRatioEl) compRatioEl.textContent = `${completedSets}/${totalSets}`;
       const dayProgEl = document.getElementById("dayProgressBar");
@@ -9781,7 +10026,7 @@
         totalSets += progress.requiredSets;
         completedSets += progress.completedSets;
       }
-      return { totalSets, completedSets, isFullyCompleted: totalSets > 0 && completedSets === totalSets, hasStarted: completedSets > 0 };
+      return { totalSets, completedSets, isSkipped: !!day.skipped, isReviewed: !!day.skipped || (totalSets > 0 && completedSets === totalSets), isFullyCompleted: !day.skipped && totalSets > 0 && completedSets === totalSets, hasStarted: completedSets > 0 };
     }
 
     function getNextSplitDay(currentDayKey) {
@@ -9872,6 +10117,10 @@
         mainBtn.innerHTML = `<span>⚡</span><span>Hervat Training (${formatTime(liveWorkout.elapsedSeconds)})</span>`;
         mainBtn.title = "Gepauzeerde training hervatten";
         if (nextBtn) nextBtn.classList.add("hidden");
+      } else if (status.isSkipped) {
+        mainBtn.innerHTML = '<span>Training overgeslagen</span>';
+        mainBtn.className = 'text-xs text-slate-400';
+        if (nextBtn) nextBtn.classList.add('hidden');
       } else if (status.isFullyCompleted) {
         mainBtn.className = "flex-shrink-0 px-3 py-1.5 text-xs font-mono font-bold bg-emerald-700/90 hover:bg-emerald-600 text-white rounded-xl border border-emerald-500/50 transition flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap";
         mainBtn.innerHTML = `<span>🏆</span><span>Sessie Rapport / Doorgaan</span>`;
@@ -9897,7 +10146,7 @@
         if (nextBtn) nextBtn.classList.add("hidden");
       } else {
         mainBtn.className = "flex-shrink-0 px-3 py-1.5 text-xs font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap";
-        mainBtn.innerHTML = `<span>▶</span><span>Start Training</span>`;
+        mainBtn.innerHTML = `<span>▶</span><span>${isDeloadWeek(appState.currentWeek) ? "Start Deloadtraining" : "Start Training"}</span>`;
         mainBtn.title = "Start de live workout sessie";
         if (nextBtn) nextBtn.classList.add("hidden");
       }
@@ -9912,11 +10161,11 @@
         const isCurrent = d === appState.currentDay;
 
         let checkBadge = tab.querySelector(".day-completion-check");
-        if (status.isFullyCompleted) {
+        if (status.isFullyCompleted || status.isSkipped) {
           if (!checkBadge) {
             checkBadge = document.createElement("span");
             checkBadge.className = "day-completion-check text-[11px] text-emerald-400 font-bold ml-1";
-            checkBadge.textContent = "✓";
+            checkBadge.textContent = status.isSkipped ? "—" : "✓";
             const topSpan = tab.querySelector("span:first-child");
             if (topSpan) topSpan.appendChild(checkBadge);
           }
@@ -9924,6 +10173,7 @@
           checkBadge.remove();
         }
 
+        if (checkBadge) checkBadge.textContent = status.isSkipped ? "—" : "✓";
         if (isCurrent) {
           tab.classList.add("bg-blue-600/20", "text-blue-400", "border-blue-500/40", "shadow-sm");
           tab.classList.remove("text-slate-400", "border-transparent");
@@ -9945,7 +10195,12 @@
       const badgeEl = document.getElementById("dayHeaderStatusBadge");
 
       const status = getDayCompletionStatus(appState.currentWeek, appState.currentDay);
-      if (status.isFullyCompleted) {
+      if (status.isSkipped) {
+        if (badgeTextEl) badgeTextEl.textContent = 'Overgeslagen';
+        if (noticeEl) noticeEl.textContent = 'Bewust overgeslagen · Opgeslagen sets blijven behouden';
+        if (badgeIconEl) badgeIconEl.textContent = '—';
+        if (badgeEl) badgeEl.className = 'text-xs text-slate-400';
+      } else if (status.isFullyCompleted) {
         if (noticeEl) noticeEl.textContent = "✓ Training succesvol afgerond • Alle sets geregistreerd";
         if (badgeIconEl) badgeIconEl.textContent = "✓";
         if (badgeTextEl) badgeTextEl.textContent = "Alle sets uitgevoerd";
@@ -9979,35 +10234,34 @@
       for (let w = 1; w <= totalWeeks; w++) {
         weeklyVolumes.push(calculateWeekVolume(w));
       }
-      const maxVol = Math.max(...weeklyVolumes, 1500);
+      const maxVol = Math.max(...weeklyVolumes, 1);
 
       weeklyVolumes.forEach((vol, idx) => {
         const weekNum = idx + 1;
-        const heightPct = Math.max(10, Math.round((vol / maxVol) * 100));
+        const heightPct = (vol / maxVol) * 100;
         const isCurrent = weekNum === appState.currentWeek;
         const isDeload = isDeloadWeek(weekNum);
 
-        const col = document.createElement("div");
-        col.className = "flex-1 min-w-[28px] flex flex-col items-center h-full justify-end group cursor-pointer";
+        const col = document.createElement("button");
+        col.type = "button";
+        col.className = "flex-1 min-w-[40px] flex flex-col items-center group cursor-pointer";
         col.title = `Week ${weekNum}${isDeload ? ' (Deload)' : ''}: ${vol.toLocaleString()} kg workload`;
         col.onclick = () => switchWeek(weekNum);
 
-        // Styling van de staaf afhankelijk van Overload vs Deload
-        let barClass = "";
-        if (isCurrent) {
-          barClass = isDeload ? "bg-purple-400 shadow-md shadow-purple-400/50" : "bg-emerald-400 shadow-md shadow-emerald-400/50";
-        } else if (isDeload) {
-          barClass = vol > 0 ? "bg-purple-500/60 group-hover:bg-purple-400" : "bg-purple-950/40 border border-dashed border-purple-800/60";
-        } else {
-          barClass = vol > 0 ? "bg-blue-500/60 group-hover:bg-blue-400" : "bg-slate-800 group-hover:bg-slate-700";
-        }
+        const isCompleted = ['mon', 'tue', 'thu', 'fri'].every(day => getDayCompletionStatus(weekNum, day).isFullyCompleted);
+        const barClass = isDeload ? 'bg-purple-500' : isCompleted ? 'bg-emerald-500' : isCurrent ? 'bg-blue-500' : 'bg-slate-500';
+        const statusLabel = isDeload ? 'Deload' : isCompleted ? 'Afgerond' : isCurrent ? 'Huidige selectie' : 'Open';
+        col.title += ` · ${statusLabel}`;
+        if (isCurrent) col.className += ' ring-1 ring-blue-400 rounded px-1';
 
         col.innerHTML = `
-          <div class="text-[8px] font-mono text-slate-500 group-hover:text-emerald-400 mb-0.5 transition hidden sm:block">
-            ${vol > 0 ? Math.round(vol/1000) + 'k' : ''}
+          <div class="text-[9px] font-mono text-slate-300 mb-1">
+            ${Math.round(vol).toLocaleString('nl-NL')}
           </div>
-          <div class="w-full rounded-t transition-all ${barClass}" style="height: ${heightPct}%;"></div>
-          <span class="text-[9px] font-mono mt-1 ${isCurrent ? (isDeload ? 'font-bold text-purple-400' : 'font-bold text-emerald-400') : (isDeload ? 'text-purple-400 font-semibold' : 'text-slate-500')}">
+          <div class="w-full flex items-end border-b border-slate-600" style="height:160px;background:repeating-linear-gradient(to top,transparent 0,transparent 39px,#33415566 39px,#33415566 40px)">
+            <div class="w-full rounded-t transition-all ${barClass}" style="height:${heightPct}%;flex-shrink:0"></div>
+          </div>
+          <span class="text-[9px] font-mono mt-1 ${isCurrent ? (isDeload ? 'font-bold text-purple-400' : 'font-bold text-blue-400') : (isDeload ? 'text-purple-400 font-semibold' : 'text-slate-500')}">
             ${isDeload ? '🌿' : ''}W${weekNum}
           </span>
         `;

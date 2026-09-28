@@ -31,7 +31,7 @@ class WorkoutProgressionTest extends TestCase
         $thursday = $this->bench(1, 'thu');
         foreach ([$monday, $thursday] as $slot) {
             foreach ($slot->sets as $set) {
-                $set->update(['weight' => '15', 'reps' => '12', 'completed' => true]);
+                $set->update(['weight' => '15', 'reps' => '12', 'completed' => true, 'exertion' => 'good']);
             }
         }
         $thursday->sets->last()->update(['reps' => '11']);
@@ -112,7 +112,7 @@ class WorkoutProgressionTest extends TestCase
     {
         $slot = $this->bench(7, 'mon');
         foreach ($slot->sets as $set) {
-            $set->update(['weight' => '15', 'reps' => '12', 'completed' => true]);
+            $set->update(['weight' => '15', 'reps' => '12', 'completed' => true, 'exertion' => 'good']);
         }
 
         $this->getJson('/api/weeks/7/report')->assertOk()
@@ -124,7 +124,7 @@ class WorkoutProgressionTest extends TestCase
     public function test_switching_an_exercise_does_not_relabel_completed_history(): void
     {
         $past = $this->bench(1, 'mon');
-        $past->sets->first()->update(['weight' => '15', 'reps' => '12', 'completed' => true]);
+        $past->sets->first()->update(['weight' => '15', 'reps' => '12', 'completed' => true, 'exertion' => 'good']);
         $future = $this->bench(2, 'mon');
 
         $this->patchJson('/api/slots/'.$future->id, ['selectedName' => 'Barbell Bench Press', 'context' => 'setup'])->assertOk();
@@ -212,13 +212,13 @@ class WorkoutProgressionTest extends TestCase
     {
         Storage::fake('local');
         $slot = $this->bench(1, 'mon');
-        $slot->sets->first()->update(['weight' => '20', 'reps' => '12', 'completed' => true]);
+        $slot->sets->first()->update(['weight' => '20', 'reps' => '12', 'completed' => true, 'exertion' => 'good']);
         $this->patchJson('/api/preferences', ['current_week' => 7])->assertOk();
-        $this->postJson('/api/cycles')->assertOk();
+        $this->postJson('/api/cycles', ['close_current_period' => true])->assertOk();
         $this->getJson('/api/marker-state')->assertOk()
             ->assertJsonPath('appState.cyclesHistory.0.snapshot.weeksSnapshot.1.mon.slot_a1.sets.0.weight', '20');
         $current = $this->bench(1, 'mon');
-        $current->sets->first()->update(['weight' => '12', 'reps' => '8', 'completed' => true]);
+        $current->sets->first()->update(['weight' => '12', 'reps' => '8', 'completed' => true, 'exertion' => 'good']);
         $payload = app(TrainingBackup::class)->payload();
         app(TrainingBackup::class)->import($payload);
         $state = $this->getJson('/api/state')->assertOk()->json();
@@ -234,9 +234,55 @@ class WorkoutProgressionTest extends TestCase
         $slot = $this->bench(6, 'mon');
         ProgramSlot::query()->where('slot_key', 'slot_a1')->update(['alternatives' => ['Dumbbell Bench Press']]);
         $slot->sets[0]->update(['weight' => '50', 'reps' => '12', 'completed' => false]);
-        $slot->sets[1]->update(['weight' => '40', 'reps' => '0', 'completed' => true]);
-        $slot->sets[2]->update(['weight' => '12', 'reps' => '10', 'completed' => true]);
+        $slot->sets[1]->update(['weight' => '40', 'reps' => '0', 'completed' => true, 'exertion' => 'good']);
+        $slot->sets[2]->update(['weight' => '12', 'reps' => '10', 'completed' => true, 'exertion' => 'good']);
         $this->getJson('/api/cycles/next-advice')->assertOk()
             ->assertJsonPath('schema.mon.slot_a1.weight', 12);
+    }
+
+    public function test_unknown_effort_is_preserved_and_does_not_authorize_progression(): void
+    {
+        $monday = $this->bench(1, 'mon');
+        $thursday = $this->bench(1, 'thu');
+        foreach ([$monday, $thursday] as $slot) {
+            foreach ($slot->sets as $set) {
+                $set->update(['weight' => '15', 'reps' => '12', 'completed' => true, 'exertion' => 'good']);
+            }
+        }
+        $this->patchJson('/api/sets/'.$monday->sets->first()->id, ['exertion' => 'unknown'])->assertOk();
+        $report = $this->getJson('/api/weeks/1/report')->assertOk()->json();
+        $bench = collect($report['exercises'])->firstWhere('name', 'Dumbbell Bench Press');
+        $this->assertSame(1, $bench['progress']['unknownSets']);
+        $this->assertSame('Inspanning niet beoordeeld', $bench['next']['status']);
+        $this->assertSame('repeat', $bench['next']['change']);
+        $this->assertDatabaseHas('workout_sets', ['id' => $monday->sets->first()->id, 'exertion' => 'unknown', 'completed' => true]);
+        $payload = $this->getJson('/api/marker-state')->assertOk()->json();
+        $this->putJson('/api/marker-state', $payload)->assertOk()
+            ->assertJsonPath('appState.weeks.1.mon.slot_a1.sets.0.exertion', 'unknown');
+    }
+
+    public function test_skipping_resolves_pending_work_preserves_sets_and_can_be_undone(): void
+    {
+        $monday = $this->bench(1, 'mon');
+        $thursday = $this->bench(1, 'thu');
+        foreach ($monday->sets as $set) {
+            $set->update(['weight' => '15', 'reps' => '12', 'completed' => true, 'exertion' => 'good']);
+        }
+        $thursday->sets->first()->update(['weight' => '15', 'reps' => '12', 'completed' => true, 'exertion' => 'good']);
+        $this->patchJson('/api/sessions/'.$thursday->workout_session_id, ['skipped' => true])->assertOk();
+        $report = $this->getJson('/api/weeks/1/report')->assertOk()->json();
+        $bench = collect($report['exercises'])->firstWhere('name', 'Dumbbell Bench Press');
+        $this->assertSame(4, $bench['progress']['completedSets']);
+        $this->assertSame(2, $bench['progress']['skippedSets']);
+        $this->assertFalse($bench['next']['provisional']);
+        $this->assertSame('repeat', $bench['next']['change']);
+        $payload = $this->getJson('/api/marker-state')->assertOk()->json();
+        $this->putJson('/api/marker-state', $payload)->assertOk()->assertJsonPath('appState.weeks.1.thu.skipped', true);
+        $this->patchJson('/api/sets/'.$thursday->sets->last()->id, ['weight' => 15, 'reps' => 12, 'completed' => true])
+            ->assertUnprocessable()->assertJsonValidationErrors('set');
+        $this->assertDatabaseHas('workout_sets', ['id' => $thursday->sets->first()->id, 'completed' => true]);
+        $this->patchJson('/api/sessions/'.$thursday->workout_session_id, ['skipped' => false])->assertOk();
+        $this->assertDatabaseHas('workout_sessions', ['id' => $thursday->workout_session_id, 'skipped' => false]);
+        $this->patchJson('/api/sets/'.$thursday->sets->last()->id, ['weight' => 15, 'reps' => 12, 'completed' => true])->assertOk();
     }
 }

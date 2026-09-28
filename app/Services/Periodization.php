@@ -156,6 +156,26 @@ class Periodization
 
     /**
      * @param  array<string, mixed>  $progress
+     * @return array{factor: float, reason: string}
+     */
+    public function recoveryLoad(array $progress): array
+    {
+        $recovery = $progress['recovery'] ?? 'unknown';
+        $completed = (int) ($progress['completedSets'] ?? 0);
+        $maximal = (int) ($progress['maxSets'] ?? 0);
+        if ($recovery === 'exhausted' || ($completed >= 3 && $maximal >= ceil($completed / 2) && ! $progress['achieved'])) {
+            return ['factor' => 0.6, 'reason' => $recovery === 'exhausted' ? 'Veel vermoeidheid gemeld: extra ontlasting.' : 'Doelen gemist en minstens de helft van de opgeslagen sets maximaal: extra ontlasting.'];
+        }
+        $complete = $completed > 0 && $completed >= $progress['requiredSets'] && ! ($progress['skippedSets'] ?? 0);
+        if ($recovery === 'recovered' && $complete && $progress['achieved'] && ! ($progress['unknownSets'] ?? 0) && in_array($progress['exertion'] ?? 'unknown', ['easy', 'good'], true)) {
+            return ['factor' => 0.8, 'reason' => 'Goed hersteld gemeld en alle referentiesets met controle gehaald.'];
+        }
+
+        return ['factor' => 0.7, 'reason' => $recovery === 'tired' ? 'Nog vermoeid gemeld: standaard ontlasting.' : 'Onvoldoende bevestiging voor een lichtere deload: standaard ontlasting.'];
+    }
+
+    /**
+     * @param  array<string, mixed>  $progress
      * @return array{weight: float, reps: int, minReps: int, maxReps: int, status: string, reason: string, requiredSets: int, provisional: bool, change: string}
      */
     public function nextProgression(array $progress, int $nextWeek, float $increment, string $frequency): array
@@ -165,30 +185,40 @@ class Periodization
         $reps = (int) $progress['targetReps'];
         $minReps = (int) ($progress['minReps'] ?? 8);
         $maxReps = max($minReps, (int) ($progress['maxReps'] ?? 12));
-        $provisional = $progress['completedSets'] < $progress['requiredSets'];
+        $skippedSets = (int) ($progress['skippedSets'] ?? 0);
+        $provisional = $progress['requiredSets'] > $progress['completedSets'] + $skippedSets;
         $status = 'Herhalen';
         $change = 'repeat';
         $reason = 'Alle sets uitgevoerd, maar het doel nog niet gehaald. Bouw eerst de ontbrekende herhalingen op.';
-        if (! $progress['completedSets']) {
+        if ($skippedSets > 0 && ! $progress['completedSets']) {
+            $reason = 'Training overgeslagen; geen nieuwe prestaties om een verhoging te adviseren.';
+        } elseif (! $progress['completedSets']) {
             $status = 'Nog te beoordelen';
             $reason = 'Deze week nog geen sets opgeslagen. Het advies voor volgende week staat nog niet vast.';
         } elseif ($this->isDeloadWeek($nextWeek)) {
             $status = 'Herstelweek';
             $change = 'deload';
+            $recoveryLoad = $this->recoveryLoad($progress);
+            $factor = $recoveryLoad['factor'];
             if ($progress['isBodyweight']) {
-                $reps = max(1, (int) round($reps * 0.7));
+                $reps = max(1, (int) round($reps * $factor));
             } else {
-                $lighter = $this->roundToIncrement($weight * 0.7, $increment);
+                $lighter = $this->roundToIncrement($weight * $factor, $increment);
                 if ($lighter > 0 && $lighter < $weight) {
                     $weight = $lighter;
                 } else {
-                    $reps = max(1, (int) round($reps * 0.7));
+                    $reps = max(1, (int) round($reps * $factor));
                 }
             }
-            $reason = 'Volgende week 2 herstelsets. Alleen een lager positief gewicht gebruiken; anders minder herhalingen op hetzelfde gewicht.';
+            $reason = '2 herstelsets op circa '.(int) round($factor * 100).'% van de referentiebelasting. '.$recoveryLoad['reason'].' Afgerond op gewichtstappen; als lager gewicht niet kan, minder reps.';
         } elseif ($provisional) {
             $status = 'Nog te beoordelen';
-            $reason = 'Nog '.($progress['requiredSets'] - $progress['completedSets']).' sets deze week te beoordelen. Nog geen definitief advies voor volgende week.';
+            $reason = 'Nog '.($progress['requiredSets'] - $progress['completedSets'] - $skippedSets).' sets deze week te beoordelen. Nog geen definitief advies voor volgende week.';
+        } elseif ($skippedSets > 0) {
+            $reason = 'Een training is overgeslagen. Herhaal het doel; er zijn minder prestaties om opbouw te beoordelen.';
+        } elseif (($progress['unknownSets'] ?? 0) > 0 || $progress['exertion'] === 'unknown') {
+            $status = 'Inspanning niet beoordeeld';
+            $reason = 'Gewicht en reps zijn opgeslagen. Beoordeel de inspanning voordat een verhoging wordt geadviseerd.';
         } elseif ($progress['achieved'] && $this->isBiweeklyHoldWeek($nextWeek, $frequency)) {
             $status = 'Consolideren';
             $reason = 'Doel gehaald; nog een week hetzelfde gewicht en dezelfde reps volgens je 2-weken schema.';

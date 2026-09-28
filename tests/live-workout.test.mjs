@@ -27,7 +27,7 @@ function setup() {
         showLiveWorkoutSummary() { context.finished = true; },
         console,
     });
-    for (const name of ['escapeReportText', 'getExerciseHistory', 'formatHistorySets', 'compareHistoryEntries', 'exerciseHistoryHtml', 'preparationDetailsHtml', 'weekExerciseOutlookHtml', 'getOverloadOutlook', 'completedDayResultsHtml', 'getNextSplitDay', 'getLiveRestStats', 'getTrainingTiming', 'summarizeTrainingTimes', 'getCycleReport', 'getCycleHistoryReport', 'calculate1RM', 'getAllTimeRecord', 'isSetNewAllTimePR', 'lastHeavyWeekNum', 'peakSlotWeight', 'calculateSetProgress', 'getSlotProgress', 'getExerciseWeekProgress', 'getNextProgression', 'findPreviousExerciseSession', 'rememberLiveInput', 'renderProgressDetails', 'getDayCompletionStatus', 'getWeekEvaluation', 'getSameWeekExerciseLogged', 'getSlotTargetAdvice', 'autoApplyOverloadAndDeloadInheritance', 'prepareCurrentLiveSetValues', 'submitLiveSet', 'adjustLiveReps', 'setLiveRepsManual', 'setLiveWeightManual', 'updateLiveSubmitButtonText']) {
+    for (const name of ['trainingEvidenceHtml', 'getRecoveryLoad', 'recoveryCheckHtml', 'earlyRecoveryAdviceHtml', 'performanceChangeHtml', 'comparisonIndicatorHtml', 'updateWorkoutHeroButtons', 'renderLockedRoutineView', 'renderWorkloadChart', 'getPeriodDashboardData', 'periodDashboardHtml', 'updateDayTitleBanner', 'volumeComparisonClass', 'getVolumeComparison', 'calculateSessionVolume', 'calculateWeekVolume', 'canStartNewPeriod', 'executeStartNewMesocycle', 'escapeReportText', 'getExerciseHistory', 'formatHistorySets', 'compareHistoryEntries', 'exerciseHistoryHtml', 'preparationDetailsHtml', 'weekExerciseOutlookHtml', 'getOverloadOutlook', 'completedDayResultsHtml', 'getNextSplitDay', 'getLiveRestStats', 'getTrainingTiming', 'summarizeTrainingTimes', 'getCycleReport', 'getCycleHistoryReport', 'calculate1RM', 'getAllTimeRecord', 'isSetNewAllTimePR', 'lastHeavyWeekNum', 'peakSlotWeight', 'calculateSetProgress', 'getSlotProgress', 'getExerciseWeekProgress', 'getNextProgression', 'findPreviousExerciseSession', 'rememberLiveInput', 'renderProgressDetails', 'getDayCompletionStatus', 'getWeekEvaluation', 'getSameWeekExerciseLogged', 'getSlotTargetAdvice', 'autoApplyOverloadAndDeloadInheritance', 'prepareCurrentLiveSetValues', 'submitLiveSet', 'adjustLiveReps', 'setLiveRepsManual', 'setLiveWeightManual', 'updateLiveSubmitButtonText']) {
         const start = html.indexOf(`    function ${name}(`);
         const end = html.indexOf('\n    function ', start + 1);
         vm.runInContext(html.slice(start, end), context);
@@ -37,7 +37,7 @@ function setup() {
 
 test('Thursday inherits three completed sets of 15 kg and 12 reps without completing them', () => {
     const { context: c } = setup();
-    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true }));
+    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true, exertion: 'good' }));
     c.autoApplyOverloadAndDeloadInheritance(1, 'thu');
     assert.deepEqual(JSON.parse(JSON.stringify(c.appState.weeks[1].thu.bench.sets)), Array.from({ length: 3 }, () => ({ weight: 15, reps: 12, completed: false })));
     c.prepareCurrentLiveSetValues();
@@ -49,7 +49,7 @@ test('planned or later sets are never treated as an earlier performance', () => 
     const { context: c } = setup();
     Object.assign(c.appState.weeks[1].mon.bench.sets[0], { weight: 15, reps: 12 });
     assert.equal(c.getSameWeekExerciseLogged(1, 'Dumbbell Bench Press', 'thu', 'bench'), null);
-    Object.assign(c.appState.weeks[1].thu.bench.sets[0], { weight: 20, reps: 15, completed: true });
+    Object.assign(c.appState.weeks[1].thu.bench.sets[0], { weight: 20, reps: 15, completed: true, exertion: 'good' });
     assert.equal(c.getSameWeekExerciseLogged(1, 'Dumbbell Bench Press', 'mon', 'bench'), null);
 });
 
@@ -87,7 +87,7 @@ test('bodyweight repetitions carry to Thursday without requiring a weight', () =
     const { context: c } = setup();
     c.appState.weeks[1].mon.bench.selectedName = 'Push-up';
     c.appState.weeks[1].thu.bench.selectedName = 'Push-up';
-    Object.assign(c.appState.weeks[1].mon.bench.sets[0], { weight: 0, reps: 16, completed: true });
+    Object.assign(c.appState.weeks[1].mon.bench.sets[0], { weight: 0, reps: 16, completed: true, exertion: 'good' });
     c.prepareCurrentLiveSetValues();
     assert.equal(c.liveWorkout.tempWeight, 0);
     assert.equal(c.liveWorkout.tempReps, 16);
@@ -95,14 +95,14 @@ test('bodyweight repetitions carry to Thursday without requiring a weight', () =
 
 test('inheritance fills missing reps but preserves completed and manually entered sets', () => {
     const { context: c } = setup();
-    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true }));
+    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true, exertion: 'good' }));
     const sets = c.appState.weeks[1].thu.bench.sets;
-    Object.assign(sets[0], { weight: 17, reps: 10, completed: true });
+    Object.assign(sets[0], { weight: 17, reps: 10, completed: true, exertion: 'good' });
     Object.assign(sets[1], { weight: 16 });
     Object.assign(sets[2], { weight: 18, reps: 9 });
     c.autoApplyOverloadAndDeloadInheritance(1, 'thu');
     assert.deepEqual(JSON.parse(JSON.stringify(sets)), [
-        { weight: 17, reps: 10, completed: true },
+        { weight: 17, reps: 10, completed: true, exertion: 'good' },
         { weight: 16, reps: 12, completed: false },
         { weight: 18, reps: 9, completed: false },
     ]);
@@ -114,7 +114,7 @@ test('inheritance fills missing reps but preserves completed and manually entere
 
 test('saving the last set still opens the workout summary', () => {
     const { context: c } = setup();
-    c.appState.weeks[1].thu.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true }));
+    c.appState.weeks[1].thu.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true, exertion: 'good' }));
     c.appState.weeks[1].thu.bench.sets[2].completed = false;
     c.liveWorkout.currentSetIndex = 2;
     c.prepareCurrentLiveSetValues();
@@ -133,7 +133,7 @@ test('all inline application scripts parse successfully', () => {
 
 test('one missing repetition gives 97 percent and identifies the unfinished target', () => {
     const { context: c } = setup();
-    const sets = [12, 12, 11].map(reps => ({ weight: 15, reps, completed: true }));
+    const sets = [12, 12, 11].map(reps => ({ weight: 15, reps, completed: true, exertion: 'good' }));
     const progress = c.calculateSetProgress(sets, 15, 12, 3, false);
     assert.equal(progress.percent, 97);
     assert.equal(progress.remainingReps, 1);
@@ -144,8 +144,8 @@ test('one missing repetition gives 97 percent and identifies the unfinished targ
 test('extra reps cannot compensate for a light or missing set', () => {
     const { context: c } = setup();
     const progress = c.calculateSetProgress([
-        { weight: 15, reps: 30, completed: true },
-        { weight: 10, reps: 12, completed: true },
+        { weight: 15, reps: 30, completed: true, exertion: 'good' },
+        { weight: 10, reps: 12, completed: true, exertion: 'good' },
     ], 15, 12, 3, false);
     assert.equal(progress.percent, 33);
     assert.equal(progress.achievedSets, 1);
@@ -157,7 +157,7 @@ test('explicit input for a future set wins over the previous set after resuming'
     const { context: c } = setup();
     const slot = c.appState.weeks[1].thu.bench;
     slot.progressionPlan = { weight: 15, reps: 8 };
-    slot.sets[0] = { weight: 17, reps: 12, completed: true };
+    slot.sets[0] = { weight: 17, reps: 12, completed: true, exertion: 'good' };
     slot.sets[1] = { weight: 16, reps: 10, completed: false, inputFields: { weight: true, reps: true } };
     c.liveWorkout.currentSetIndex = 1;
     c.prepareCurrentLiveSetValues();
@@ -214,7 +214,7 @@ test('PHP and frontend calculate identical progress and next-week advice', () =>
         { reps: [12, 12, 12], weights: [0, 0, 0], target: 0, bw: true, effort: 'max', nextWeek: 3, frequency: 'weekly' },
     ];
     for (const item of cases) {
-        const sets = item.reps.map((reps, index) => ({ reps, weight: item.weights[index], completed: true }));
+        const sets = item.reps.map((reps, index) => ({ reps, weight: item.weights[index], completed: true, exertion: 'good' }));
         const progress = c.calculateSetProgress(sets, item.target, item.goal || 12, 3, item.bw);
         const full = { ...progress, isBodyweight: item.bw, exertion: item.effort };
         c.appState.overloadFrequency = item.frequency;
@@ -231,7 +231,7 @@ test('PHP and frontend calculate identical progress and next-week advice', () =>
 test('week report totals only saved work and uses the shared exercise progress', () => {
     const { context: c } = setup();
     c.appState.weeks[1].mon.bench.progressionPlan = { weight: 15, reps: 12 };
-    c.appState.weeks[1].mon.bench.sets = [12, 12, 11].map(reps => ({ weight: 15, reps, completed: true }));
+    c.appState.weeks[1].mon.bench.sets = [12, 12, 11].map(reps => ({ weight: 15, reps, completed: true, exertion: 'good' }));
     c.appState.weeks[1].thu.bench.sets.forEach(set => Object.assign(set, { weight: 15, reps: 12 }));
     const report = c.getWeekEvaluation(1);
     assert.equal(report.totalVolume, 525);
@@ -265,6 +265,19 @@ test('live view renders actual save values and the original plan together', () =
     assert.match(elements.lwContentArea.innerHTML, /Gepland doel/);
     assert.match(elements.lwContentArea.innerHTML, /Eigen invoer voor deze set/);
     assert.doesNotMatch(elements.lwContentArea.innerHTML, /Afronden met aangepaste|Confetti & Rapport/);
+    const classes = new Set();
+    elements.liveWorkoutCard = { classList: { toggle: (name, enabled) => enabled ? classes.add(name) : classes.delete(name), add: (...names) => names.forEach(n => classes.add(n)), remove: (...names) => names.forEach(n => classes.delete(n)) } };
+    elements.lwDayPhaseBadge = {};
+    c.appState.weeks[7] = c.appState.weeks[1];
+    c.liveWorkout.weekNum = 7;
+    c.renderLiveWorkoutView();
+    assert.equal(classes.has('deload-training'), true);
+    assert.match(elements.lwDayPhaseBadge.textContent, /WEEK 7 · DELOAD/);
+    c.liveWorkout.weekNum = 1;
+    c.renderLiveWorkoutView();
+    assert.equal(classes.has('deload-training'), false);
+    assert.doesNotMatch(elements.lwDayPhaseBadge.textContent, /DELOAD/);
+
 });
 
 
@@ -293,24 +306,24 @@ test('higher rep range caps at 15 and credits reps already achieved', () => {
 
 test('zero new sets shows provisional advice alongside older training history', () => {
     const { context: c } = setup();
-    c.appState.weeks[1].mon.bench.sets.forEach(set => Object.assign(set, { weight: 6, reps: 12, completed: true }));
+    c.appState.weeks[1].mon.bench.sets.forEach(set => Object.assign(set, { weight: 6, reps: 12, completed: true, exertion: 'good' }));
     c.appState.weeks[2] = { mon: { bench: { selectedName: 'Dumbbell Bench Press', progressionPlan: { weight: 6, reps: 12, minReps: 12, maxReps: 15 }, sets: Array.from({ length: 3 }, () => ({ weight: 6, reps: '', completed: false })) } } };
     const output = c.renderProgressDetails(2, 'mon', 'bench');
     assert.match(output, /Nog 3 sets niet gelogd/);
-    assert.match(output, /Volgende week: nog te beoordelen/);
+    assert.match(output, /Nog onvoldoende gegevens/);
     assert.match(output, /eerst reps \(12–15\), daarna gewicht/);
     assert.match(output, /Vorige training/);
-    assert.match(output, /6 kg × 14 reps \(reps opbouwen\)/);
+    assert.doesNotMatch(output, /Mogelijke stap:/);
 });
 
 test('partial sessions show more reps or heavier weight without claiming an overall gain', () => {
     const { context: c } = setup();
-    c.appState.weeks[1].mon.bench.sets.forEach(set => Object.assign(set, { weight: 6, reps: 10, completed: true }));
-    Object.assign(c.appState.weeks[1].thu.bench.sets[0], { weight: 6, reps: 12, completed: true });
-    Object.assign(c.appState.weeks[1].thu.bench.sets[1], { weight: 8, reps: 8, completed: true });
+    c.appState.weeks[1].mon.bench.sets.forEach(set => Object.assign(set, { weight: 6, reps: 10, completed: true, exertion: 'good' }));
+    Object.assign(c.appState.weeks[1].thu.bench.sets[0], { weight: 6, reps: 12, completed: true, exertion: 'good' });
+    Object.assign(c.appState.weeks[1].thu.bench.sets[1], { weight: 8, reps: 8, completed: true, exertion: 'good' });
     const output = c.renderProgressDetails(1, 'thu', 'bench');
-    assert.match(output, /Set 1: \+2 reps bij hetzelfde gewicht/);
-    assert.match(output, /Set 2: \+2 kg; 10 → 8 reps/);
+    assert.match(output, /Set 1: .*?= 0 kg.*?▲ \+2 reps/);
+    assert.match(output, /Set 2: .*?▲ \+2 kg.*?▼ -2 reps/);
 });
 
 test('low-weight recovery and reductions never increase weight or produce zero', () => {
@@ -330,7 +343,7 @@ test('a new week starts with the earned weight and lower rep goal instead of sta
     const { context: c } = setup();
     for (const day of ['mon', 'thu']) {
         c.appState.weeks[1][day].bench.progressionPlan = { weight: 15, reps: 12, minReps: 8, maxReps: 12 };
-        c.appState.weeks[1][day].bench.sets.forEach(set => Object.assign(set, { weight: 15, reps: 12, completed: true }));
+        c.appState.weeks[1][day].bench.sets.forEach(set => Object.assign(set, { weight: 15, reps: 12, completed: true, exertion: 'good' }));
     }
     c.appState.weeks[2] = { mon: { bench: { selectedName: 'Dumbbell Bench Press', sets: Array.from({ length: 3 }, () => ({ weight: 15, reps: 12, completed: false })) } } };
     c.liveWorkout.weekNum = 2;
@@ -364,13 +377,13 @@ test('cycle history includes rep progress, excludes drafts and ignores the deloa
 test('all-time records include archived sets and use weight or estimated strength like the server', () => {
     const { context: c } = setup();
     c.appState.cyclesHistory = [{ snapshot: { weeksSnapshot: { 1: { mon: { bench: {
-        selectedName: 'Dumbbell Bench Press', sets: [{ weight: 20, reps: 12, completed: true }, { weight: 100, reps: 12, completed: false }],
+        selectedName: 'Dumbbell Bench Press', sets: [{ weight: 20, reps: 12, completed: true, exertion: 'good' }, { weight: 100, reps: 12, completed: false }],
     } } } } } }];
     assert.equal(c.getAllTimeRecord('Dumbbell Bench Press').maxWeight, 20);
     assert.equal(c.isSetNewAllTimePR('Dumbbell Bench Press', 18, 10, 1, 'thu', 'bench', 0), false);
     assert.equal(c.isSetNewAllTimePR('Dumbbell Bench Press', 22, 1, 1, 'thu', 'bench', 0), true);
     assert.equal(c.isSetNewAllTimePR('Dumbbell Bench Press', 20, 13, 1, 'thu', 'bench', 0), true);
-    Object.assign(c.appState.weeks[1].thu.bench.sets[0], { weight: 30, reps: 12, completed: true });
+    Object.assign(c.appState.weeks[1].thu.bench.sets[0], { weight: 30, reps: 12, completed: true, exertion: 'good' });
     assert.equal(c.isSetNewAllTimePR('Dumbbell Bench Press', 30, 12, 1, 'thu', 'bench', 0), true);
 });
 
@@ -394,22 +407,22 @@ test('next cycle peak ignores uncompleted and invalid sets', () => {
     c.appState.totalWeeks = 7;
     c.appState.weeks[6] = { mon: { bench: { sets: [
         { weight: 50, reps: 12, completed: false },
-        { weight: 40, reps: 0, completed: true },
-        { weight: 12, reps: 10, completed: true },
+        { weight: 40, reps: 0, completed: true, exertion: 'good' },
+        { weight: 12, reps: 10, completed: true, exertion: 'good' },
     ] } } };
     assert.equal(c.peakSlotWeight('mon', 'bench'), 12);
 });
 
 test('training card counts lighter work without presenting it as meeting the weight goal', () => {
     const { context: c } = setup();
-    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true }));
+    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true, exertion: 'good' }));
     const slot = c.appState.weeks[1].thu.bench;
     slot.progressionPlan = { weight: 15, reps: 12 };
-    Object.assign(slot.sets[0], { weight: 12, reps: 10, completed: true });
+    Object.assign(slot.sets[0], { weight: 12, reps: 10, completed: true, exertion: 'good' });
     const rendered = c.renderProgressDetails(1, 'thu', 'bench');
     assert.match(rendered, /Sets uitgevoerd: 1\/3 · Doel gehaald: 0\/3/);
-    assert.match(rendered, /class="text-slate-300">Verschil met vorige training: Set 1: -3 kg/);
-    assert.match(rendered, /standaard ‘goed’/);
+    assert.match(rendered, /Verschil met vorige training: Set 1: .*?text-rose-400.*?▼ -3 kg/);
+    assert.match(rendered, /standaard ‘niet beoordeeld’/);
 });
 
 
@@ -425,7 +438,7 @@ test('resuming a saved summary preserves the previous rest count without countin
 test('completed day shows actual work and a conditional repetition forecast without starting the next workout', () => {
     const { context: c } = setup();
     for (const day of ['mon', 'thu']) c.appState.weeks[1][day].bench.progressionPlan = { weight: 15, reps: 10 };
-    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 10, completed: true }));
+    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 10, completed: true, exertion: 'good' }));
     const result = c.completedDayResultsHtml(1, 'mon');
     assert.match(result, /Resultaten & vooruitblik/);
     assert.match(result, /3\/3 sets uitgevoerd · 3\/3 setdoelen gehaald/);
@@ -441,7 +454,7 @@ test('missed or maximal sets prevent an optimistic forecast and final advice reu
     const { context: c } = setup();
     for (const day of ['mon', 'thu']) c.appState.weeks[1][day].bench.progressionPlan = { weight: 15, reps: 12 };
     const monday = c.appState.weeks[1].mon.bench.sets;
-    monday.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true }));
+    monday.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true, exertion: 'good' }));
     monday[0].reps = 11;
     assert.equal(c.getOverloadOutlook(1, 'Dumbbell Bench Press').title, 'Voorlopig herhalen');
     monday[0].reps = 12;
@@ -449,14 +462,14 @@ test('missed or maximal sets prevent an optimistic forecast and final advice reu
     assert.equal(c.getOverloadOutlook(1, 'Dumbbell Bench Press').next, null);
     monday[0].exertion = 'good';
     assert.equal(c.getOverloadOutlook(1, 'Dumbbell Bench Press').title, 'Op koers voor meer gewicht');
-    c.appState.weeks[1].thu.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true }));
+    c.appState.weeks[1].thu.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true, exertion: 'good' }));
     assert.equal(c.getOverloadOutlook(1, 'Dumbbell Bench Press').provisional, false);
     assert.equal(c.getOverloadOutlook(1, 'Dumbbell Bench Press').next.weight, 17);
 });
 
 test('outlook respects consolidation, recovery and the cycle boundary', () => {
     const { context: c } = setup();
-    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true }));
+    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true, exertion: 'good' }));
     c.appState.overloadFrequency = 'biweekly';
     assert.equal(c.getOverloadOutlook(1, 'Dumbbell Bench Press').title, 'Consolidatieweek gepland');
     c.appState.weeks[6] = c.appState.weeks[1];
@@ -468,7 +481,7 @@ test('outlook respects consolidation, recovery and the cycle boundary', () => {
 
 test('unfinished future sets without a start weight use the known exercise weight for the forecast', () => {
     const { context: c } = setup();
-    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 10, completed: true }));
+    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 10, completed: true, exertion: 'good' }));
     assert.equal(c.getOverloadOutlook(1, 'Dumbbell Bench Press').next.weight, 15);
 });
 
@@ -487,7 +500,7 @@ test('main screen switches to results only when all valid working sets are saved
     c.renderExercises();
     assert.equal(c.plannedViewShown, true);
     assert.doesNotMatch(elements.exerciseSlotsList.innerHTML, /Resultaten & vooruitblik/);
-    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 10, completed: true }));
+    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 10, completed: true, exertion: 'good' }));
     c.renderExercises();
     assert.match(elements.exerciseSlotsList.innerHTML, /Resultaten & vooruitblik/);
 });
@@ -497,10 +510,10 @@ test('exercise history includes prior cycles, excludes drafts and preserves the 
     const { context: c } = setup();
     c.appState.currentCycle = 2;
     c.appState.cyclesHistory = [{ number: 1, snapshot: { weeksSnapshot: { 6: { mon: { bench: {
-        selectedName: 'Dumbbell Bench Press', sets: [{ weight: 12, reps: 8, completed: false }, { weight: 12, reps: 8, completed: true }],
+        selectedName: 'Dumbbell Bench Press', sets: [{ weight: 12, reps: 8, completed: false }, { weight: 12, reps: 8, completed: true, exertion: 'good' }],
     } } } } } }];
-    Object.assign(c.appState.weeks[1].mon.bench.sets[1], { weight: 12, reps: 10, completed: true });
-    Object.assign(c.appState.weeks[1].thu.bench.sets[0], { weight: 14, reps: 8, completed: true });
+    Object.assign(c.appState.weeks[1].mon.bench.sets[1], { weight: 12, reps: 10, completed: true, exertion: 'good' });
+    Object.assign(c.appState.weeks[1].thu.bench.sets[0], { weight: 14, reps: 8, completed: true, exertion: 'good' });
     const history = c.getExerciseHistory('Dumbbell Bench Press', { week: 1, day: 'thu' });
     assert.equal(history.length, 2);
     assert.equal(history[0].cycle, 1);
@@ -522,7 +535,7 @@ test('history avoids claiming progression when load, number of sets or recovery 
 
 test('preparation displays the stored goal separately from the latest actual performance without modifying sets', () => {
     const { context: c } = setup();
-    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true }));
+    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true, exertion: 'good' }));
     c.appState.weeks[1].thu.bench.progressionPlan = { weight: 17, reps: 8 };
     const before = JSON.stringify(c.appState.weeks);
     const result = c.preparationDetailsHtml(1, 'thu', 'bench');
@@ -536,11 +549,11 @@ test('preparation displays the stored goal separately from the latest actual per
 test('weekly card distinguishes a provisional projection from final advice and escapes exercise titles', () => {
     const { context: c } = setup();
     for (const day of ['mon', 'thu']) c.appState.weeks[1][day].bench.progressionPlan = { weight: 15, reps: 12 };
-    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true }));
+    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true, exertion: 'good' }));
     let exercise = c.getWeekEvaluation(1).exercises[0];
     assert.match(c.weekExerciseOutlookHtml(1, exercise), /Voorlopige verwachting/);
     assert.match(c.weekExerciseOutlookHtml(1, exercise), /Nog 3 sets te beoordelen/);
-    c.appState.weeks[1].thu.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true }));
+    c.appState.weeks[1].thu.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true, exertion: 'good' }));
     exercise = c.getWeekEvaluation(1).exercises[0];
     assert.match(c.weekExerciseOutlookHtml(1, exercise), /Advies voor volgende week/);
     assert.match(c.weekExerciseOutlookHtml(1, exercise), /3 × 17 kg × 8 reps/);
@@ -549,4 +562,217 @@ test('weekly card distinguishes a provisional projection from final advice and e
     const result = c.weekExerciseOutlookHtml(1, exercise);
     assert.match(result, /&lt;script&gt;/);
     assert.doesNotMatch(result, /<script>/);
+});
+
+
+test('volume compares matching completed days instead of an incomplete week against a full week', () => {
+    const { context: c } = setup();
+    c.appState.weeks[2] = JSON.parse(JSON.stringify(c.appState.weeks[1]));
+    for (const day of ['mon', 'thu']) c.appState.weeks[1][day].bench.sets.forEach(s => Object.assign(s, { weight: 10, reps: 10, completed: true, exertion: 'good' }));
+    c.appState.weeks[2].mon.bench.sets.forEach(s => Object.assign(s, { weight: 10, reps: 12, completed: true, exertion: 'good' }));
+    assert.match(c.getVolumeComparison(2), /\+60 kg \(\+20%\)/);
+    assert.doesNotMatch(c.getVolumeComparison(2), /Volume is geen/);
+    assert.match(c.getVolumeComparison(2, 'thu'), /zodra de training is afgerond/);
+    c.appState.weeks[2].mon.bench.sets[0].reps = 4;
+    assert.match(c.getVolumeComparison(2, 'mon'), /-20 kg/);
+    c.appState.weeks[2].mon.bench.selectedName = 'Another exercise';
+    assert.match(c.getVolumeComparison(2), /Schema gewijzigd/);
+});
+
+test('volume suppresses comparison for recovery, a new cycle and missing reference data', () => {
+    const { context: c } = setup();
+    assert.match(c.getVolumeComparison(7), /Herstelweek/);
+    assert.match(c.getVolumeComparison(1), /nieuwe periode/);
+    c.appState.weeks[2] = JSON.parse(JSON.stringify(c.appState.weeks[1]));
+    c.appState.weeks[2].mon.bench.sets.forEach(s => Object.assign(s, { weight: 10, reps: 12, completed: true, exertion: 'good' }));
+    assert.match(c.getVolumeComparison(2, 'mon'), /nog niet volledig gelogd/);
+});
+
+test('week seven detail card prepares a new cycle instead of prescribing a week eight target', () => {
+    const { context: c } = setup();
+    c.appState.weeks[7] = JSON.parse(JSON.stringify(c.appState.weeks[1]));
+    c.appState.weeks[7].mon.bench.sets.forEach(s => Object.assign(s, { weight: 10, reps: 8, completed: true, exertion: 'good' }));
+    const result = c.renderProgressDetails(7, 'mon', 'bench');
+    assert.match(result, /Nieuwe cyclus voorbereiden/);
+    assert.doesNotMatch(result, /Volgende week:/);
+});
+
+test('cancelling cycle closure leaves the entire training state intact', () => {
+    const { context: c } = setup();
+    Object.assign(c.appState, { currentWeek: 7, totalWeeks: 7, currentCycle: 1, nextCycle: { available: false } });
+    let message;
+    c.window = { confirm(text) { message = text; return false; } };
+    const before = JSON.stringify(c.appState);
+    assert.equal(c.canStartNewPeriod(), true);
+    c.executeStartNewMesocycle();
+    assert.match(message, /blijven onvoltooid in het archief/);
+    assert.equal(JSON.stringify(c.appState), before);
+});
+
+
+test('saving without an effort choice preserves work but does not count it as good', () => {
+    const { context: c } = setup();
+    c.prepareCurrentLiveSetValues();
+    assert.equal(c.liveWorkout.tempExertion, 'unknown');
+    c.setLiveWeightManual('15'); c.setLiveRepsManual('12'); c.submitLiveSet(false);
+    assert.equal(c.appState.weeks[1].thu.bench.sets[0].exertion, 'unknown');
+    assert.equal(c.getExerciseWeekProgress(1, 'Dumbbell Bench Press').unknownSets, 1);
+    assert.equal(c.getOverloadOutlook(1, 'Dumbbell Bench Press').title, 'Inspanning niet beoordeeld');
+});
+
+test('skipped sets are resolved without counting as completed or authorizing an increase', () => {
+    const { context: c, elements } = setup();
+    for (const day of ['mon', 'thu']) c.appState.weeks[1][day].bench.progressionPlan = { weight: 15, reps: 12 };
+    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true, exertion: 'good' }));
+    c.appState.weeks[1].thu.skipped = true;
+    const progress = c.getExerciseWeekProgress(1, 'Dumbbell Bench Press');
+    assert.equal(progress.skippedSets, 3);
+    assert.equal(progress.completedSets, 3);
+    assert.equal(c.getNextProgression(progress, 2).provisional, false);
+    assert.equal(c.getNextProgression(progress, 2).change, 'repeat');
+    assert.equal(c.getDayCompletionStatus(1, 'thu').isReviewed, true);
+    assert.equal(c.getDayCompletionStatus(1, 'thu').isFullyCompleted, false);
+    Object.assign(c.appState, { currentWeek: 1, currentDay: 'thu' });
+    elements.dayHeaderStatusText = {};
+    c.updateDayTitleBanner();
+    assert.equal(elements.dayHeaderStatusText.textContent, 'Overgeslagen');
+    c.appState.weeks[1].thu.skipped = false;
+    assert.equal(c.getNextProgression(c.getExerciseWeekProgress(1, 'Dumbbell Bench Press'), 2).provisional, true);
+});
+
+test('volume colours are positive, negative or neutral and recovery never shows a loss', () => {
+    const { context: c } = setup();
+    assert.equal(c.volumeComparisonClass('+60 kg (+20%)'), 'text-emerald-400');
+    assert.equal(c.volumeComparisonClass('-60 kg (-20%)'), 'text-rose-400');
+    assert.equal(c.volumeComparisonClass('0 kg (0%)'), 'text-slate-400');
+    assert.equal(c.volumeComparisonClass(c.getVolumeComparison(7)), 'text-slate-400');
+});
+
+
+test('period dashboard counts performed sessions instead of the selected week and distinguishes skipped days', () => {
+    const { context: c } = setup();
+    c.appState.currentWeek = 7;
+    c.appState.totalWeeks = 7;
+    c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { completed: true, weight: 20, reps: 8, exertion: 'good' }));
+    c.appState.weeks[1].thu.skipped = true;
+    Object.assign(c.appState.weeks[1].thu.bench.sets[0], { completed: true, weight: 20, reps: 8 });
+    const dashboard = c.getPeriodDashboardData();
+    assert.equal(dashboard.completed, 1);
+    assert.equal(dashboard.skipped, 1);
+    assert.equal(dashboard.total, 28);
+    assert.equal(dashboard.weeks[0].volume, 640);
+    assert.equal(dashboard.attention[0].count, 1);
+    assert.equal(dashboard.weeks[6].deload, true);
+    assert.match(c.periodDashboardHtml(), /4% voltooid/);
+    assert.match(c.periodDashboardHtml(), /Week 7/);
+});
+
+test('period exercise progress excludes deload but its volume includes only two valid sets', () => {
+    const { context: c } = setup();
+    c.appState.currentCycle = 1;
+    c.appState.weeks[7] = { mon: { bench: { selectedName: 'Dumbbell Bench Press', sets: Array.from({ length: 3 }, () => ({ completed: true, weight: 14, reps: 8, exertion: 'good' })) } } };
+    const dashboard = c.getPeriodDashboardData();
+    assert.equal(dashboard.weeks[6].volume, 224);
+    assert.equal(dashboard.weeks[6].sets, 2);
+    assert.equal(dashboard.exercises.length, 0);
+    assert.equal(dashboard.attention.length, 0);
+    assert.match(c.periodDashboardHtml(), /Nog geen prestaties/);
+});
+
+
+test('volume bars use an unclipped linear scale and empty weeks have zero height', () => {
+    const { context: c, elements } = setup();
+    const columns = [];
+    elements.trendChartContainer = { innerHTML: '', appendChild: col => columns.push(col) };
+    c.document.createElement = () => ({});
+    c.appState.totalWeeks = 7;
+    c.calculateWeekVolume = week => ({ 1: 7000, 2: 8000 }[week] || 0);
+    c.renderWorkloadChart();
+    assert.match(columns[0].innerHTML, /height:87.5%/);
+    assert.match(columns[1].innerHTML, /height:100%/);
+    assert.match(columns[2].innerHTML, /height:0%/);
+    assert.match(columns[0].innerHTML, /7\.000/);
+    assert.match(columns[6].innerHTML, /purple/);
+    assert.equal(columns[0].type, 'button');
+});
+
+
+test('week chart colors distinguish completed weeks, selection, open weeks and deload', () => {
+    const { context: c, elements } = setup();
+    const columns = [];
+    elements.trendChartContainer = { innerHTML: '', appendChild: col => columns.push(col) };
+    c.document.createElement = () => ({});
+    c.appState.currentWeek = 4;
+    c.calculateWeekVolume = () => 1000;
+    c.getDayCompletionStatus = (week, day) => ({ isFullyCompleted: week < 4 && !(week === 2 && day === 'fri') });
+    c.renderWorkloadChart();
+    assert.match(columns[0].innerHTML, /bg-emerald-500/);
+    assert.match(columns[1].innerHTML, /bg-slate-500/);
+    assert.match(columns[2].innerHTML, /bg-emerald-500/);
+    assert.match(columns[3].innerHTML, /bg-blue-500/);
+    assert.match(columns[6].innerHTML, /bg-purple-500/);
+});
+
+
+test('week seven shows a purple deload start card and explicit start labels', () => {
+    const { context: c, elements } = setup();
+    c.appState.currentWeek = 7;
+    c.appState.currentDay = 'mon';
+    c.appState.weeks[7] = c.appState.weeks[1];
+    elements.startWorkoutHeroBtn = {};
+    c.updateWorkoutHeroButtons();
+    assert.match(elements.startWorkoutHeroBtn.innerHTML, /Start Deloadtraining/);
+    c.document.createElement = () => ({});
+    let card;
+    const container = { appendChild: item => { card = item; } };
+    c.renderLockedRoutineView(container, c.appState.weeks[7].mon, [], true, true, false);
+    assert.match(card.className, /deload-training/);
+    assert.match(card.innerHTML, /Start Deloadtraining/);
+    c.appState.currentWeek = 1;
+    c.updateWorkoutHeroButtons();
+    assert.match(elements.startWorkoutHeroBtn.innerHTML, /Start Training/);
+    c.renderLockedRoutineView(container, c.appState.weeks[1].mon, [], false, true, false);
+    assert.doesNotMatch(card.className, /deload-training/);
+});
+
+
+test('performance indicators show weight and reps separately and keep deload neutral', () => {
+    const { context: c } = setup();
+    const mixed = c.performanceChangeHtml({ weight: 15, reps: 12 }, { weight: 17, reps: 8 });
+    assert.match(mixed, /text-emerald-400[^]*▲ \+2 kg/);
+    assert.match(mixed, /text-rose-400[^]*▼ -4 reps/);
+    assert.match(c.performanceChangeHtml({ weight: 6, reps: 12 }, { weight: 6, reps: 12 }), /= 0 reps/);
+    const deload = c.performanceChangeHtml({ weight: 15, reps: 12 }, { weight: 10, reps: 8 }, false, true);
+    assert.match(deload, /text-purple-300/);
+    assert.doesNotMatch(deload, /▼|text-rose/);
+    assert.doesNotMatch(c.performanceChangeHtml({ weight: 0, reps: 8 }, { weight: 0, reps: 12 }, true), /kg/);
+    assert.match(c.comparisonIndicatorHtml('+480 kg (+12%)'), /▲ \+480 kg/);
+});
+
+
+test('adaptive deload uses readiness and never treats missing or partial evidence as recovered', () => {
+    const { context: c } = setup();
+    const base = { targetWeight: 20, targetReps: 8, completedSets: 6, requiredSets: 6, achieved: true, exertion: 'good', recovery: 'recovered' };
+    assert.equal(c.getNextProgression(base, 7).weight, 16);
+    assert.equal(c.getNextProgression({ ...base, recovery: 'exhausted' }, 7).weight, 12);
+    for (const override of [{ recovery: 'unknown' }, { unknownSets: 1 }, { completedSets: 3 }, { exertion: 'max' }]) {
+        assert.equal(c.getNextProgression({ ...base, ...override }, 7).weight, 14);
+    }
+    assert.equal(c.getNextProgression({ ...base, achieved: false, maxSets: 3 }, 7).weight, 12);
+    assert.equal(c.getNextProgression({ ...base, isBodyweight: true, recovery: 'exhausted' }, 7).reps, 5);
+});
+
+test('early recovery proposal requires repeated comparable declines and fatigue at multiple exercises', () => {
+    const { context: c } = setup();
+    c.appState.currentCycle = 1;
+    c.appState.weeks = { 1: { mon: { recovery: 'tired' } }, 2: { mon: { recovery: 'tired' } }, 3: { mon: { recovery: 'tired' } }, 4: { mon: { a: { selectedName: 'Bench' }, b: { selectedName: 'Row' } } } };
+    const entries = [1, 2, 3].map(week => ({ cycle: 1, week, day: 'mon', isDeload: false, sets: [1, 2, 3].map(position => ({ position, weight: 20, reps: 13 - week, exertion: 'max' })) }));
+    c.getExerciseHistory = () => entries;
+    assert.match(c.earlyRecoveryAdviceHtml(4, 'mon'), /Overweeg eerder extra herstel/);
+    c.appState.weeks[3].mon.recovery = 'unknown';
+    assert.equal(c.earlyRecoveryAdviceHtml(4, 'mon'), '');
+    c.appState.weeks[3].mon.recovery = 'tired';
+    entries[2].sets[0].weight = 22;
+    assert.equal(c.earlyRecoveryAdviceHtml(4, 'mon'), '');
+    assert.equal(c.earlyRecoveryAdviceHtml(7, 'mon'), '');
 });

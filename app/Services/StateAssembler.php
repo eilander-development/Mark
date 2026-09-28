@@ -60,7 +60,7 @@ class StateAssembler
                         'reps' => $set->reps,
                         'completed' => $set->completed,
                         'isPr' => $set->is_pr,
-                        'exertion' => $set->exertion ?: 'good',
+                        'exertion' => $set->exertion ?: 'unknown',
                         'inputFields' => $set->input_fields ?? [],
                         'estimated1Rm' => $this->periodization->calculate1Rm($set->weight, $set->reps),
                     ])->values(),
@@ -72,6 +72,8 @@ class StateAssembler
                 'duration' => $session->actual_duration,
                 'avgRest' => $session->actual_avg_rest,
                 'restCount' => $session->actual_rest_count,
+                'skipped' => (bool) $session->skipped,
+                'recovery' => $session->recovery ?? 'unknown',
                 'dayName' => $this->periodization->dayName($session->day),
                 'dayShort' => $this->periodization->dayShort($session->day),
                 'slots' => $slots,
@@ -150,7 +152,10 @@ class StateAssembler
         $prefs = $this->factory->preferences();
         foreach ($exercises as $name => &$exercise) {
             $exercise['progress'] = $this->advisor->exerciseProgress($cycle, $week, $name);
-            $exercise['next'] = $this->periodization->nextProgression($exercise['progress'], $week + 1, (float) $prefs->overload_increment, $prefs->overload_frequency);
+            $exercise['next'] = $week >= (int) $cycle->total_weeks
+                ? null
+                : $this->periodization->nextProgression($exercise['progress'], $week + 1, (float) $prefs->overload_increment, $prefs->overload_frequency);
+            $exercise['nextPeriodRequired'] = $week >= (int) $cycle->total_weeks;
         }
         unset($exercise);
 
@@ -160,6 +165,7 @@ class StateAssembler
             'volume' => round($volume, 1),
             'completedSets' => $completedSets,
             'totalSets' => $totalSets,
+            'skippedDays' => $sessions->where('skipped', true)->count(),
             'exercises' => array_values($exercises),
         ];
     }

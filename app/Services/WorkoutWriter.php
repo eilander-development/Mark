@@ -25,7 +25,10 @@ class WorkoutWriter
     public function updateSet(WorkoutSet $set, array $data, string $context = 'live'): array
     {
         $this->guardMainScreen($context);
-        $set->loadMissing('slot');
+        $set->loadMissing('slot.session');
+        if ($set->slot->session->skipped) {
+            throw ValidationException::withMessages(['set' => 'Maak overslaan eerst ongedaan voordat je deze training wijzigt.']);
+        }
 
         if (array_key_exists('weight', $data)) {
             $set->weight = $data['weight'] === null || $data['weight'] === '' ? '' : (string) $data['weight'];
@@ -36,7 +39,7 @@ class WorkoutWriter
         if (array_key_exists('completed', $data)) {
             $set->completed = (bool) $data['completed'];
         }
-        if (array_key_exists('exertion', $data) && in_array($data['exertion'], ['easy', 'good', 'max'], true)) {
+        if (array_key_exists('exertion', $data) && in_array($data['exertion'], ['unknown', 'easy', 'good', 'max'], true)) {
             $set->exertion = $data['exertion'];
         }
 
@@ -65,7 +68,7 @@ class WorkoutWriter
                 'reps' => $set->reps,
                 'completed' => (bool) $set->completed,
                 'isPr' => (bool) $set->is_pr,
-                'exertion' => $set->exertion ?: 'good',
+                'exertion' => $set->exertion ?: 'unknown',
             ],
         ];
     }
@@ -126,12 +129,14 @@ class WorkoutWriter
         foreach ($session->slots as $slot) {
             $slot->update(['progression_plan' => null]);
             foreach ($slot->sets as $set) {
-                $set->fill(['weight' => '', 'reps' => '', 'completed' => false, 'is_pr' => false, 'exertion' => 'good', 'input_fields' => null])->save();
+                $set->fill(['weight' => '', 'reps' => '', 'completed' => false, 'is_pr' => false, 'exertion' => 'unknown', 'input_fields' => null])->save();
             }
         }
         $session->actual_duration = null;
         $session->actual_avg_rest = null;
         $session->actual_rest_count = null;
+        $session->skipped = false;
+        $session->recovery = null;
         $session->save();
 
         return $this->state->payload();
@@ -193,8 +198,32 @@ class WorkoutWriter
     /**
      * @return array<string, mixed>
      */
-    public function updateSession(WorkoutSession $session, ?int $duration, ?int $avgRest, ?int $restCount = null): array
+    public function updateSession(WorkoutSession $session, ?int $duration, ?int $avgRest, ?int $restCount = null, ?bool $skipped = null, ?string $recovery = null): array
     {
+        if ($recovery !== null && $recovery !== ($session->recovery ?? 'unknown')) {
+            $session->loadMissing('slots.sets');
+            if ($session->slots->contains(fn ($slot): bool => $slot->sets->contains('completed', true))) {
+                throw ValidationException::withMessages(['recovery' => 'De herstelcheck staat vast zodra je sets hebt opgeslagen.']);
+            }
+            $session->recovery = $recovery;
+            if ($this->periodization->isDeloadWeek((int) $session->week)) {
+                foreach ($session->slots as $slot) {
+                    $slot->update(['progression_plan' => null]);
+                    foreach ($slot->sets as $set) {
+                        $changes = [];
+                        foreach (['weight', 'reps'] as $field) {
+                            if (! ($set->input_fields[$field] ?? false)) {
+                                $changes[$field] = '';
+                            }
+                        }
+                        $set->update($changes);
+                    }
+                }
+            }
+        }
+        if ($skipped !== null) {
+            $session->skipped = $skipped;
+        }
         if ($duration !== null) {
             $session->actual_duration = $duration;
         }
@@ -215,6 +244,8 @@ class WorkoutWriter
                 'actual_duration' => $session->actual_duration,
                 'actual_avg_rest' => $session->actual_avg_rest,
                 'actual_rest_count' => $session->actual_rest_count,
+                'skipped' => (bool) $session->skipped,
+                'recovery' => $session->recovery ?? 'unknown',
             ],
         ];
     }
@@ -259,7 +290,7 @@ class WorkoutWriter
      * @param  array<string, array<string, array<string, mixed>>>|null  $schema
      * @return array<string, mixed>
      */
-    public function startNextCycle(?array $schema = null): array
+    public function startNextCycle(?array $schema = null, bool $closeCurrentPeriod = false): array
     {
         $current = $this->factory->ensureCurrent();
         $prefs = $this->factory->preferences();
@@ -267,6 +298,12 @@ class WorkoutWriter
         if (! $advice['available']) {
             throw ValidationException::withMessages([
                 'cycle' => $advice['reason'],
+            ]);
+        }
+
+        if (! $closeCurrentPeriod) {
+            throw ValidationException::withMessages([
+                'close_current_period' => 'Sluit eerst de huidige periode bewust af. Open trainingen blijven onvoltooid in het archief.',
             ]);
         }
 

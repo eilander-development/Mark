@@ -55,6 +55,7 @@ class NextCycleTest extends TestCase
         $this->patchJson('/api/preferences', ['current_week' => 7])->assertOk();
 
         $this->postJson('/api/cycles', [
+            'close_current_period' => true,
             'schema' => [
                 'mon' => [
                     'slot_a1' => [
@@ -72,5 +73,36 @@ class NextCycleTest extends TestCase
             ->assertJsonPath('appState.weeks.1.mon.slot_a1.selectedName', 'Dumbbell Bench Press')
             ->assertJsonPath('appState.weeks.1.mon.slot_a1.targetReps', 8)
             ->assertJsonPath('appState.weeks.1.mon.slot_a1.sets.0.weight', '26');
+    }
+
+    public function test_preparing_week_seven_does_not_allow_start_without_explicit_closure(): void
+    {
+        $this->getJson('/api/state')->assertOk();
+        $this->patchJson('/api/preferences', ['current_week' => 7])->assertOk();
+        $this->getJson('/api/cycles/next-advice')->assertOk()->assertJsonPath('available', true);
+        $this->postJson('/api/cycles')->assertUnprocessable()
+            ->assertJsonPath('errors.close_current_period.0', 'Sluit eerst de huidige periode bewust af. Open trainingen blijven onvoltooid in het archief.');
+        $this->assertDatabaseCount('cycles', 1);
+        $this->assertDatabaseHas('cycles', ['number' => 1, 'is_current' => true]);
+    }
+
+    public function test_explicit_closure_keeps_unfinished_sets_unfinished_in_the_archive(): void
+    {
+        $this->getJson('/api/state')->assertOk();
+        $set = WorkoutSet::query()->firstOrFail();
+        $set->update(['weight' => '20', 'reps' => '8', 'completed' => false]);
+        $this->patchJson('/api/preferences', ['current_week' => 7])->assertOk();
+        $this->postJson('/api/cycles', ['close_current_period' => true])->assertOk()
+            ->assertJsonPath('currentWeek', 1)->assertJsonPath('totalWeeks', 7);
+        $this->assertDatabaseHas('workout_sets', ['id' => $set->id, 'weight' => '20', 'completed' => false]);
+        $this->assertDatabaseHas('cycles', ['number' => 1, 'is_current' => false]);
+    }
+
+    public function test_week_seven_report_does_not_prescribe_week_eight(): void
+    {
+        $report = $this->getJson('/api/weeks/7/report')->assertOk()->json();
+        $this->assertTrue($report['isDeload']);
+        $this->assertNull($report['exercises'][0]['next']);
+        $this->assertTrue($report['exercises'][0]['nextPeriodRequired']);
     }
 }

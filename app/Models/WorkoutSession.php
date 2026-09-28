@@ -7,9 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['cycle_id', 'week', 'day', 'actual_duration', 'actual_avg_rest', 'actual_rest_count'])]
+#[Fillable(['cycle_id', 'week', 'day', 'actual_duration', 'actual_avg_rest', 'actual_rest_count', 'skipped', 'recovery'])]
 class WorkoutSession extends Model
 {
+    protected function casts(): array
+    {
+        return ['skipped' => 'boolean'];
+    }
+
     public function cycle(): BelongsTo
     {
         return $this->belongsTo(Cycle::class);

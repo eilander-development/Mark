@@ -96,7 +96,7 @@ class IronforgeApiTest extends TestCase
 
         $name = $set->fresh()->slot->selected_name;
         $this->patchJson('/api/preferences', ['current_week' => 7])->assertOk();
-        $this->postJson('/api/cycles')->assertOk()->assertJsonPath('currentCycle', 2);
+        $this->postJson('/api/cycles', ['close_current_period' => true])->assertOk()->assertJsonPath('currentCycle', 2);
 
         $record = app(PersonalRecord::class)->allTime($name);
         $this->assertSame(100.0, $record['maxWeight']);

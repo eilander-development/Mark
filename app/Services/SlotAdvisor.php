@@ -36,6 +36,7 @@ class SlotAdvisor
         $isBw = $this->periodization->isBodyweight($name);
         $sessions = [];
         $sets = collect();
+        $skippedSets = 0;
         foreach (config('ironforge.days') as $day) {
             $session = $cycle->sessions->first(fn ($session): bool => (int) $session->week === $week && $session->day === $day);
             foreach ($session?->slots ?? [] as $slot) {
@@ -43,17 +44,20 @@ class SlotAdvisor
                     continue;
                 }
                 $progress = $this->slotProgress($slot, $week);
-                $sessions[] = ['dayKey' => $day, 'slotKey' => $slot->slot_key, 'progress' => $progress];
+                if ($session->skipped) {
+                    $skippedSets += max(0, $progress['requiredSets'] - $progress['completedSets']);
+                }
+                $sessions[] = ['skipped' => (bool) $session->skipped, 'dayKey' => $day, 'slotKey' => $slot->slot_key, 'progress' => $progress];
                 $sets = $sets->concat($slot->sets->take($progress['requiredSets'])->filter(fn ($set): bool => $set->completed && (int) $set->reps > 0 && ($isBw || (float) $set->weight > 0)));
             }
         }
         $progresses = collect($sessions)->pluck('progress');
         $achieved = $progresses->isNotEmpty() && $progresses->every(fn (array $item): bool => $item['achieved']);
-        $counts = $sets->countBy(fn ($set): string => $set->exertion ?: 'good');
-        $exertion = ($counts['max'] ?? 0) > 0 ? 'max' : ($sets->isNotEmpty() && ($counts['easy'] ?? 0) >= ceil($sets->count() / 2) ? 'easy' : 'good');
+        $counts = $sets->countBy(fn ($set): string => $set->exertion ?: 'unknown');
+        $exertion = ($counts['max'] ?? 0) > 0 ? 'max' : (($counts['unknown'] ?? 0) > 0 ? 'unknown' : ($sets->isNotEmpty() && ($counts['easy'] ?? 0) >= ceil($sets->count() / 2) ? 'easy' : 'good'));
         $requiredReps = (int) $progresses->sum('requiredReps');
 
-        return ['sessions' => $sessions, 'achieved' => $achieved, 'exertion' => $exertion,
+        return ['skippedSets' => $skippedSets, 'unknownSets' => (int) ($counts['unknown'] ?? 0), 'maxSets' => (int) ($counts['max'] ?? 0), 'sessions' => $sessions, 'achieved' => $achieved, 'exertion' => $exertion,
             'completedSets' => (int) $progresses->sum('completedSets'), 'achievedSets' => (int) $progresses->sum('achievedSets'),
             'requiredSets' => (int) $progresses->sum('requiredSets'), 'remainingReps' => (int) $progresses->sum('remainingReps'),
             'requiredReps' => $requiredReps, 'creditedReps' => (int) $progresses->sum('creditedReps'),
@@ -78,6 +82,9 @@ class SlotAdvisor
         $reference = null;
         $referenceSlot = null;
         for ($priorWeek = $week; $priorWeek >= 1; $priorWeek--) {
+            if ($priorWeek === $week && $this->periodization->isDeloadWeek($week) && $session->recovery && $session->recovery !== 'unknown') {
+                continue;
+            }
             $earlierDays = array_reverse(array_slice($days, 0, $priorWeek === $week ? $currentDayIndex : count($days)));
             foreach ($earlierDays as $day) {
                 $candidate = $cycle->sessions->first(fn ($item): bool => (int) $item->week === $priorWeek && $item->day === $day);
@@ -96,6 +103,9 @@ class SlotAdvisor
         }
         $sameWeek = $previous && (int) $previous->week === $week;
         $prior = $previous ? $this->exerciseProgress($cycle, (int) $previous->week, $name) : null;
+        if ($prior) {
+            $prior['recovery'] = $session->recovery ?? 'unknown';
+        }
         $next = $previous && ! $sameWeek ? $this->periodization->nextProgression($prior, $week, $increment, $frequency) : null;
         $current = $slot->sets->first(fn ($set): bool => $set->completed && (int) $set->reps > 0 && ($isBw || (float) $set->weight > 0));
         $plan = $slot->progression_plan;

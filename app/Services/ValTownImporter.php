@@ -183,7 +183,7 @@ class ValTownImporter
                         if (! $set) {
                             continue;
                         }
-                        $exertion = $setData['exertion'] ?? 'good';
+                        $exertion = $setData['exertion'] ?? 'unknown';
                         $setRows[] = [
                             'id' => $set->id,
                             'workout_slot_id' => $set->workout_slot_id,
@@ -193,7 +193,7 @@ class ValTownImporter
                             'completed' => (bool) ($setData['completed'] ?? false),
                             'is_pr' => (bool) $set->is_pr,
                             'input_fields' => json_encode($setData['inputFields'] ?? []),
-                            'exertion' => in_array($exertion, ['easy', 'good', 'max'], true) ? $exertion : 'good',
+                            'exertion' => in_array($exertion, ['unknown', 'easy', 'good', 'max'], true) ? $exertion : 'unknown',
                             'created_at' => $set->created_at ?? $now,
                             'updated_at' => $now,
                         ];
@@ -215,6 +215,12 @@ class ValTownImporter
                     if ($session->actual_rest_count === 0) {
                         $session->actual_avg_rest = null;
                     }
+                }
+                if (array_key_exists('recovery', $slots)) {
+                    $session->recovery = in_array($slots['recovery'], ['unknown', 'recovered', 'tired', 'exhausted'], true) ? $slots['recovery'] : 'unknown';
+                }
+                if (array_key_exists('skipped', $slots)) {
+                    $session->skipped = (bool) $slots['skipped'];
                 }
                 $session->save();
             }
@@ -271,6 +277,8 @@ class ValTownImporter
             $session->actual_duration = null;
             $session->actual_avg_rest = null;
             $session->actual_rest_count = null;
+            $session->skipped = false;
+            $session->recovery = null;
             $session->save();
         }
 
@@ -279,7 +287,7 @@ class ValTownImporter
                 'weight' => '',
                 'reps' => '',
                 'completed' => false,
-                'exertion' => 'good',
+                'exertion' => 'unknown',
             ]);
         }
     }

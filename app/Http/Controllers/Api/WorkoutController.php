@@ -23,7 +23,7 @@ class WorkoutController extends Controller
             'weight' => ['sometimes', 'nullable'],
             'reps' => ['sometimes', 'nullable'],
             'completed' => ['sometimes', 'boolean'],
-            'exertion' => ['sometimes', 'in:easy,good,max'],
+            'exertion' => ['sometimes', 'in:unknown,easy,good,max'],
             'inputFields' => ['sometimes', 'array:weight,reps'],
             'inputFields.*' => ['boolean'],
             'context' => ['sometimes', 'in:main,live,setup'],
@@ -94,6 +94,8 @@ class WorkoutController extends Controller
             'actual_duration' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'actual_avg_rest' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'actual_rest_count' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'skipped' => ['sometimes', 'boolean'],
+            'recovery' => ['sometimes', 'in:unknown,recovered,tired,exhausted'],
         ]);
 
         return response()->json($this->writer->updateSession(
@@ -101,6 +103,8 @@ class WorkoutController extends Controller
             $data['actual_duration'] ?? null,
             $data['actual_avg_rest'] ?? null,
             $data['actual_rest_count'] ?? null,
+            $data['skipped'] ?? null,
+            $data['recovery'] ?? null,
         ));
     }
 
@@ -128,6 +132,7 @@ class WorkoutController extends Controller
     public function startCycle(Request $request): JsonResponse
     {
         $data = $request->validate([
+            'close_current_period' => ['sometimes', 'boolean'],
             'schema' => ['sometimes', 'array'],
             'schema.*' => ['sometimes', 'array'],
             'schema.*.*' => ['sometimes', 'array'],
@@ -136,6 +141,6 @@ class WorkoutController extends Controller
             'schema.*.*.targetReps' => ['sometimes', 'integer', 'min:1', 'max:30'],
         ]);
 
-        return response()->json($this->writer->startNextCycle($data['schema'] ?? null));
+        return response()->json($this->writer->startNextCycle($data['schema'] ?? null, (bool) ($data['close_current_period'] ?? false)));
     }
 }

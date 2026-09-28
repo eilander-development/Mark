@@ -20,7 +20,7 @@ class NextCycleAdvisor
         $available = $currentWeek >= $totalWeeks;
         $schema = $this->schema($cycle);
         $reason = $available
-            ? 'Deloadweek is bereikt. Wissel naar een nabije variant en start week 1 met piekgewicht of een inregelgewicht.'
+            ? 'Bereid het schema voor de volgende periode voor. Start pas nadat je de huidige periode bewust hebt afgesloten; open trainingen blijven onvoltooid.'
             : 'Een nieuwe periode start ná week '.$totalWeeks.' (deload). Je zit nu in week '.$currentWeek.'.';
 
         return [

@@ -91,7 +91,7 @@ class MarkerState
                         'weight' => $set->weight ?? '',
                         'reps' => $set->reps ?? '',
                         'completed' => (bool) $set->completed,
-                        'exertion' => $set->exertion ?: 'good',
+                        'exertion' => $set->exertion ?: 'unknown',
                         'inputFields' => $set->input_fields ?? [],
                     ])->values()->all(),
                 ];
@@ -104,6 +104,10 @@ class MarkerState
             }
             if ($session->actual_rest_count !== null) {
                 $daySlots['actualRestCount'] = (int) $session->actual_rest_count;
+            }
+            $daySlots['recovery'] = $session->recovery ?? 'unknown';
+            if ($session->skipped) {
+                $daySlots['skipped'] = true;
             }
             $weeks[$week][$session->day] = $daySlots;
         }
