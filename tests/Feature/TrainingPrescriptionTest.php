@@ -69,6 +69,7 @@ class TrainingPrescriptionTest extends TestCase
         $this->assertSame(18, $report['groups']['chest']['planned']);
         $this->assertSame(0, $report['groups']['triceps']['completed']);
         $this->assertSame(1, $report['groups']['triceps']['indirect']);
+        $this->assertGreaterThan(0, $report['groups']['triceps']['indirectPlanned']);
         $deload = $this->getJson('/api/weeks/7/report')->assertOk()->json('muscleSets');
         $this->assertTrue($deload['isDeload']);
         $this->assertSame(12, $deload['groups']['chest']['planned']);
@@ -120,5 +121,21 @@ class TrainingPrescriptionTest extends TestCase
         $state = app(MarkerState::class)->export()['appState'];
         $this->assertSame('combined', $state['trainingGoal']);
         $this->assertSame('strength', $state['cyclesHistory'][0]['trainingGoal']);
+    }
+
+    public function test_repeated_exercise_keeps_the_same_strength_range_across_days(): void
+    {
+        $factory = app(CycleFactory::class);
+        $factory->ensureCurrent();
+        $factory->preferences()->update(['current_week' => 7]);
+        $schema = ['mon' => ['slot_a2' => ['selectedName' => 'Chest-Supported Dumbbell Row']], 'tue' => ['slot_b4' => ['selectedName' => 'Chest-Supported Dumbbell Row']]];
+        $state = $this->postJson('/api/cycles', ['close_current_period' => true, 'training_goal' => 'strength', 'schema' => $schema])->assertOk()->json();
+        $row = collect($state['weeks'][1]['tue']['slots'])->firstWhere('slotKey', 'slot_b4');
+        $this->assertSame(4, $row['targetReps']);
+        $this->assertSame(4, $row['advice']['minReps']);
+        $this->assertSame(6, $row['advice']['maxReps']);
+        $this->get('/beheer')->assertOk()->assertSee('Wanneer gebruik je welke pagina?');
+        $this->get('/beheer/voorkeuren')->assertOk()->assertSee('Periodedoel:')->assertSee('Kracht');
+        $this->get('/beheer/oefeningen')->assertOk()->assertSee('Indeling weeksets');
     }
 }

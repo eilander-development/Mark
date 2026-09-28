@@ -26,7 +26,7 @@ class AdminCatalogTest extends TestCase
         $dashboard
             ->assertOk()
             ->assertSee('IRONFORGE BEHEER')
-            ->assertSee('ATHLEAN-X™ alleen als de YouTube-video van Jeff Cavaliere is')
+            ->assertSee('Wanneer gebruik je welke pagina?')
             ->assertDontSee('Elke oefening heeft een Athlean-video')
             ->assertDontSee('muscleAnatomySvg', false)
             ->assertDontSee('Start Training', false);

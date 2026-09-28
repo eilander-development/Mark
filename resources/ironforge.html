@@ -3198,7 +3198,7 @@
       if (typeof appState !== "undefined" && appState.bodyweightTargetReps && appState.bodyweightTargetReps[w] && appState.bodyweightTargetReps[w][exerciseName]) {
         return Number(appState.bodyweightTargetReps[w][exerciseName]);
       }
-      const goalRange = goalRepetitionRange(appState.trainingGoal, slotKey, EXERCISE_CATALOG[slotKey]?.targetReps || 8, isExerciseBodyweight(exerciseName));
+      const goalRange = goalRepetitionRange(appState.trainingGoal, slotKey, EXERCISE_CATALOG[slotKey]?.targetReps || 8, isExerciseBodyweight(exerciseName), exerciseName);
       if (goalRange.minReps < 8) return goalRange.minReps;
       const details = getExerciseDetails(exerciseName, slotKey);
       if (details && details.targetReps) return details.targetReps;
@@ -4088,7 +4088,7 @@
       const firstPlanned = slot.sets.find(set => Number(set.weight) > 0);
       const plan = slot.progressionPlan || { weight: isBW ? 0 : Number(firstLogged?.weight || firstPlanned?.weight || 0), reps: getExerciseTargetReps(name, slotKey, weekNum, dayKey) };
       const baseReps = Number(EXERCISE_CATALOG[slotKey].targetReps || 8);
-      const range = goalRepetitionRange(appState.trainingGoal, slotKey, baseReps, isBW);
+      const range = goalRepetitionRange(appState.trainingGoal, slotKey, baseReps, isBW, name);
       const minReps = Number(plan.minReps || range.minReps);
       const maxReps = Number(plan.maxReps || range.maxReps);
       return { ...calculateSetProgress(slot.sets, Number(plan.weight), Number(plan.reps), isDeloadWeek(weekNum) ? 2 : 3, isBW), minReps, maxReps };
@@ -4106,9 +4106,14 @@
       return ({ hypertrophy: 'Spiergroei', strength: 'Kracht', combined: 'Combinatie' })[goal] || 'Niet vastgelegd';
     }
 
-    function goalRepetitionRange(goal, slotKey, baseReps, bodyweight = false) {
+    function goalRepetitionRange(goal, slotKey, baseReps, bodyweight = false, exerciseName = null, schema = null) {
       const strengthSlots = goal === 'strength' ? ['slot_a1', 'slot_a2', 'slot_b2'] : goal === 'combined' ? ['slot_a1', 'slot_a2'] : [];
-      return !bodyweight && strengthSlots.includes(slotKey) ? { minReps: 4, maxReps: 6 } : baseReps >= 12 ? { minReps: 12, maxReps: 15 } : { minReps: 8, maxReps: 12 };
+      let priority = strengthSlots.includes(slotKey);
+      if (exerciseName && strengthSlots.length) {
+        const days = schema ? Object.values(schema) : Object.values(appState.weeks || {}).flatMap(week => Object.values(week));
+        priority ||= days.some(day => Object.entries(day || {}).some(([key, slot]) => strengthSlots.includes(key) && slot?.selectedName?.trim().toLowerCase() === exerciseName.trim().toLowerCase()));
+      }
+      return !bodyweight && priority ? { minReps: 4, maxReps: 6 } : baseReps >= 12 ? { minReps: 12, maxReps: 15 } : { minReps: 8, maxReps: 12 };
     }
 
     function weekMuscleSets(weekNum, weeks = appState.weeks) {
@@ -4125,11 +4130,12 @@
           if (!classification) { unknown.add(name); continue; }
           const completed = (slot.sets || []).slice(0, required).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(name) || Number(set.weight) > 0)).length;
           for (const group of [classification.primary, ...classification.secondary]) {
-            groups[group] ||= { planned: 0, completed: 0, indirect: 0, exercises: [] };
+            groups[group] ||= { planned: 0, completed: 0, indirect: 0, indirectPlanned: 0, exercises: [] };
             const direct = group === classification.primary;
             groups[group].planned += direct ? required : 0;
             groups[group].completed += direct ? completed : 0;
             groups[group].indirect += direct ? 0 : completed;
+            groups[group].indirectPlanned += direct ? 0 : required;
             groups[group].exercises.push({ name, day: dayKey, direct, completed, planned: required, skipped: !!day.skipped });
           }
         }
@@ -4137,18 +4143,45 @@
       return { groups, unclassified: [...unknown], isDeload: isDeloadWeek(weekNum) };
     }
 
+    function muscleSetsAction(weekNum) {
+      if (isDeloadWeek(weekNum)) return 'Herstelweek: volg het lichtere schema. Minder sets zijn deze week gepland; aanvullen is niet nodig.';
+      const days = ['mon', 'tue', 'thu', 'fri'].filter(day => SPLIT_INFO[day] && appState.weeks[weekNum]?.[day]);
+      const statuses = days.map(day => getDayCompletionStatus(weekNum, day));
+      const remaining = statuses.filter(status => !status.isReviewed).length;
+      if (remaining) return `Nog ${remaining} training(en) open. Volg je geplande trainingen; deze teller is geen reden om extra sets toe te voegen.`;
+      if (days.some(day => appState.weeks[weekNum][day].skipped)) return 'De week is beoordeeld, met overgeslagen trainingen. Ontbrekende sets zijn geen inhaalschuld; bekijk het oefeningsadvies voor je volgende training.';
+      return 'Je weekplan is uitgevoerd. Bekijk het advies per oefening voor extra reps of gewicht; meer sets zijn niet automatisch beter.';
+    }
+
+    function muscleScheduleHtml(row, direct = true) {
+      const upcoming = {}, skipped = {};
+      for (const exercise of row.exercises) {
+        if (exercise.direct !== direct) continue;
+        const remaining = Math.max(0, exercise.planned - exercise.completed);
+        if (!remaining) continue;
+        const target = exercise.skipped ? skipped : upcoming;
+        target[exercise.day] = (target[exercise.day] || 0) + remaining;
+      }
+      const days = { mon: 'maandag', tue: 'dinsdag', thu: 'donderdag', fri: 'vrijdag' };
+      const total = Object.values(upcoming).reduce((sum, value) => sum + value, 0);
+      const missed = Object.values(skipped).reduce((sum, value) => sum + value, 0);
+      return `<span class="mt-2 block text-xs font-normal text-slate-300">${total ? `${direct ? 'Nog gepland' : 'Nog ondersteunend gepland'}: ${total} sets · ${Object.entries(upcoming).map(([day, sets]) => `${days[day]} ${sets}`).join(', ')}` : `Geen ${direct ? 'directe' : 'ondersteunende'} sets meer gepland deze week.`}${missed ? ` · ${missed} sets overgeslagen` : ''}</span>`;
+    }
+
     function muscleSetsHtml(weekNum) {
       const data = weekMuscleSets(weekNum);
       const labels = appState.trainingRules?.muscles || {};
       const color = data.isDeload ? 'bg-purple-400' : 'bg-blue-500';
-      return `<section class="rounded-2xl border ${data.isDeload ? 'border-purple-700 bg-purple-950/30' : 'border-slate-700 bg-slate-950/60'} p-4 space-y-3"><div class="flex flex-wrap justify-between gap-2"><h4 class="font-bold text-sm">${data.isDeload ? '☾ Herstelsets' : 'Weeksets per spiergroep'}</h4><span class="text-xs text-slate-400">Week ${weekNum} · uitgevoerd / gepland</span></div>
+      return `<section class="rounded-2xl border ${data.isDeload ? 'border-purple-700 bg-purple-950/30' : 'border-slate-700 bg-slate-950/60'} p-4 space-y-3"><div class="flex flex-wrap justify-between gap-2"><h4 class="font-bold text-sm">${data.isDeload ? '☾ Herstelsets' : 'Weeksets per spiergroep · gedaan & nog gepland'}</h4><span class="text-xs text-slate-400">Week ${weekNum} · uitgevoerd / gepland</span></div>
+        <p class="text-sm text-slate-200">${muscleSetsAction(weekNum)}</p><p class="text-xs text-slate-400">Zo zie je welke spiergroepen later deze week nog aan bod komen en wat een gemiste training verandert. Klik voor de oefeningen.</p>
         <div class="grid gap-3 sm:grid-cols-2">${Object.entries(labels).map(([key, label]) => {
-          const row = data.groups[key] || { completed: 0, planned: 0, indirect: 0, exercises: [] };
+          const row = data.groups[key] || { completed: 0, planned: 0, indirect: 0, indirectPlanned: 0, exercises: [] };
           const percent = row.planned ? Math.min(100, Math.round(100 * row.completed / row.planned)) : 0;
-          return `<details class="rounded-xl border border-slate-800 p-3"><summary class="cursor-pointer text-sm"><span class="font-bold">${escapeReportText(label)}</span> <span class="float-right ${!data.isDeload && row.planned && row.completed >= row.planned ? 'text-emerald-300' : 'text-slate-200'}">${row.planned && row.completed >= row.planned ? '✓ ' : ''}${row.completed}/${row.planned}</span><span class="mt-2 block h-1.5 rounded bg-slate-800"><span class="block h-full rounded ${color}" style="width:${percent}%"></span></span></summary><p class="mt-2 text-xs text-slate-400">${row.indirect} opgeslagen sets met ondersteunende belasting, apart van directe sets.</p><ul class="mt-2 space-y-1 text-xs text-slate-300">${row.exercises.map(ex => `<li>${escapeReportText(SPLIT_INFO[ex.day]?.title.split(':')[0] || ex.day)} · ${escapeReportText(ex.name)}: ${ex.completed}/${ex.planned} ${ex.direct ? 'direct' : 'ondersteunend'}${ex.skipped ? ' · training overgeslagen' : ''}</li>`).join('') || '<li>Geen oefeningen ingedeeld.</li>'}</ul></details>`;
+          const indirectPercent = row.indirectPlanned ? Math.min(100, Math.round(100 * row.indirect / row.indirectPlanned)) : 0;
+          return `<details class="rounded-xl border border-slate-800 p-3"><summary class="cursor-pointer text-sm"><span class="font-bold">${escapeReportText(label)}</span> <span class="float-right ${!data.isDeload && row.planned && row.completed >= row.planned ? 'text-emerald-300' : 'text-slate-200'}">${row.planned && row.completed >= row.planned ? '✓ ' : ''}Direct ${row.completed}/${row.planned}</span><span class="mt-2 block h-1.5 rounded bg-slate-800"><span class="block h-full rounded ${color}" style="width:${percent}%"></span></span>${muscleScheduleHtml(row)}<span class="mt-3 block text-xs font-normal text-slate-400">Ondersteunend ${row.indirect}/${row.indirectPlanned}</span><span class="mt-1 block h-1.5 rounded bg-slate-800"><span class="block h-full rounded ${data.isDeload ? 'bg-purple-300/50' : 'bg-slate-500'}" style="width:${indirectPercent}%"></span></span>${muscleScheduleHtml(row, false)}</summary><p class="mt-2 text-xs text-slate-400">${row.indirect} opgeslagen sets met ondersteunende belasting, apart van directe sets.</p><ul class="mt-2 space-y-1 text-xs text-slate-300">${row.exercises.map(ex => `<li>${escapeReportText(SPLIT_INFO[ex.day]?.title.split(':')[0] || ex.day)} · ${escapeReportText(ex.name)}: ${ex.completed}/${ex.planned} ${ex.direct ? 'direct' : 'ondersteunend'}${ex.skipped ? ' · training overgeslagen' : ''}</li>`).join('') || '<li>Geen oefeningen ingedeeld.</li>'}</ul></details>`;
         }).join('')}</div>
         ${data.unclassified.length ? `<p class="text-xs text-amber-300">Niet ingedeeld: ${data.unclassified.map(escapeReportText).join(', ')}. Deze oefeningen tellen niet mee in de spiertelling.</p>` : ''}
-        <details class="text-xs text-slate-400"><summary class="cursor-pointer text-blue-300">ⓘ Wat telt mee?</summary><p class="mt-2">Opgeslagen werksets tellen mee, ook als het repdoel niet is gehaald. Opwarmsets horen hier niet in. De indeling is een praktische schatting: uitvoering kan de spierbelasting veranderen. Ondersteunende sets worden niet omgerekend naar halve of hele directe sets. ${data.isDeload ? 'Deze herstelweek wordt niet met een opbouwdoel vergeleken.' : 'Rond 10 of meer weeksets per spiergroep is een onderzoeksrichtpunt voor spiergroei, geen minimum of persoonlijke norm. De teller meet je planuitvoering, geen spiergroei.'}</p></details></section>`;
+        <details class="text-xs text-slate-400"><summary class="cursor-pointer text-blue-300">ⓘ Wat zegt dit over mijn training?</summary><p class="mt-2">Direct = de spiergroep waarop de oefening is gericht. Ondersteunend = de spiergroep helpt mee. De balken tonen elk uitgevoerd/gepland; tel ze niet op tot één score. Weinig directe armsets kunnen bijvoorbeeld samengaan met veel ondersteunende sets uit presses en rows. Bekijk daarom beide vóór je je schema wilt aanpassen.</p><p class="mt-2">Opgeslagen werksets tellen mee, ook als het repdoel niet is gehaald. Opwarmsets horen hier niet in. De indeling is een praktische schatting: uitvoering kan de spierbelasting veranderen. Ondersteunende sets worden niet omgerekend naar halve of hele directe sets. ${data.isDeload ? 'Deze herstelweek wordt niet met een opbouwdoel vergeleken.' : 'Rond 10 of meer weeksets per spiergroep is een onderzoeksrichtpunt voor spiergroei, geen minimum of persoonlijke norm. Gebruik dit als planningscontrole. De teller meet geen spiergroei; prestaties, inspanning en herstel bepalen het opbouwadvies.'}</p></details></section>`;
     }
 
     function getExerciseIncrement(exerciseName) {
@@ -4521,8 +4554,8 @@
         advisedReps: slot?.progressionPlan?.reps || (sameWeek ? (previous.slot.progressionPlan?.reps || previous.slot.targetReps || targetReps) : next?.reps) || targetReps,
         prevMax: priorProgress?.targetWeight ?? null, prevWeekFound: previous ? `Week ${previous.week}` : null,
         prevOverload: priorProgress?.achieved || false, adviceType,
-        minReps: slot?.progressionPlan?.minReps || priorProgress?.minReps || goalRepetitionRange(appState.trainingGoal, slotKey, Number(EXERCISE_CATALOG[slotKey].targetReps), isBW).minReps,
-        maxReps: slot?.progressionPlan?.maxReps || priorProgress?.maxReps || goalRepetitionRange(appState.trainingGoal, slotKey, Number(EXERCISE_CATALOG[slotKey].targetReps), isBW).maxReps,
+        minReps: slot?.progressionPlan?.minReps || priorProgress?.minReps || goalRepetitionRange(appState.trainingGoal, slotKey, Number(EXERCISE_CATALOG[slotKey].targetReps), isBW, name).minReps,
+        maxReps: slot?.progressionPlan?.maxReps || priorProgress?.maxReps || goalRepetitionRange(appState.trainingGoal, slotKey, Number(EXERCISE_CATALOG[slotKey].targetReps), isBW, name).maxReps,
         adviceTitle: sameWeek ? 'Deze week herhalen' : next?.status || 'Startdoel',
         adviceText: sameWeek ? 'Herhaal de prestatie van eerder deze week. Opbouw wordt na de week beoordeeld.' : slot?.progressionPlan && next && (Number(slot.progressionPlan.weight) !== Number(next.weight) || Number(slot.progressionPlan.reps) !== Number(next.reps)) ? 'Je volgt het bij de start vastgelegde doel. Je opgeslagen prestaties bepalen de volgende stap.' : next?.reason || 'Leg eerst je startprestatie vast.',
         sameWeekDay: sameWeek ? SPLIT_INFO[previous.day].title.split(':')[0] : null,
@@ -4755,6 +4788,7 @@
       if (modal) {
         modal.classList.remove("hidden");
         modal.style.zIndex = "75";
+        document.getElementById("weekReportScrollArea")?.focus();
       }
     }
 
@@ -5230,7 +5264,7 @@
     function enrichNextCycleAdvice(advice) {
       (advice.days || []).forEach((day) => {
         (day.slots || []).forEach((slot) => {
-          const range = goalRepetitionRange(appState.nextTrainingGoal || appState.trainingGoal || 'hypertrophy', slot.slotKey, EXERCISE_CATALOG[slot.slotKey]?.targetReps || 8, slot.isBodyweight);
+          const range = goalRepetitionRange(appState.nextTrainingGoal || appState.trainingGoal || 'hypertrophy', slot.slotKey, EXERCISE_CATALOG[slot.slotKey]?.targetReps || 8, slot.isBodyweight, slot.selectedName, advice.schema);
           slot.targetReps = range.minReps < 8 ? range.minReps : Math.max(range.minReps, Math.min(range.maxReps, Number(slot.targetReps) || range.minReps));
           if (advice.schema?.[day.day]?.[slot.slotKey]) advice.schema[day.day][slot.slotKey].targetReps = slot.targetReps;
           if (slot.isBodyweight) {
@@ -5386,7 +5420,7 @@
           </p>
         </div>
         <label class="block text-sm font-bold">Doel voor deze nieuwe periode<select onchange="appState.nextTrainingGoal=this.value; startNewMesocyclePrompt()" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white">${['hypertrophy', 'strength', 'combined'].map(goal => `<option value="${goal}" ${appState.nextTrainingGoal === goal ? 'selected' : ''}>${trainingGoalLabel(goal)}</option>`).join('')}</select></label>
-        <p class="text-xs text-slate-400">${appState.nextTrainingGoal === 'hypertrophy' ? 'Spiergroei: 8–12 of 12–15 reps, weeksets per spiergroep en maximaal 2 reps per opbouwstap.' : appState.nextTrainingGoal === 'strength' ? 'Kracht: hoofdlifts 4–6 reps, maximaal 1 rep per stap; accessoires 8–12 of 12–15. Shoulder press krijgt voorrang op Upper B.' : 'Combinatie: eerste twee oefeningen van Upper A 4–6 reps; overige oefeningen met spiergroeiaccent.'} Dit zijn praktische schemakeuzes. Startgewichten zijn referenties; regel ze in op nette uitvoering.</p>
+        <p class="text-xs text-slate-400">${appState.nextTrainingGoal === 'hypertrophy' ? 'Spiergroei: 8–12 of 12–15 reps, weeksets per spiergroep en maximaal 2 reps per opbouwstap.' : appState.nextTrainingGoal === 'strength' ? 'Kracht: hoofdlifts 4–6 reps, maximaal 1 rep per stap; accessoires 8–12 of 12–15. Shoulder press krijgt voorrang op Upper B.' : 'Combinatie: eerste twee oefeningen van Upper A 4–6 reps; overige oefeningen met spiergroeiaccent.'} Een oefening met krachtaccent houdt dat accent bij iedere uitvoering in deze periode. Dit zijn praktische schemakeuzes. Startgewichten zijn referenties; regel ze in op nette uitvoering.</p>
         <div class="space-y-2 max-h-[45vh] overflow-y-auto pr-0.5">
           ${renderNextCycleAdviceSlots(advice)}
         </div>
@@ -5520,7 +5554,7 @@
               for (let w = 1; w <= 7; w++) {
                 if (appState.weeks[w] && appState.weeks[w][d] && appState.weeks[w][d][sKey]) {
                   appState.weeks[w][d][sKey].selectedName = item.selectedName;
-                  const range = goalRepetitionRange(appState.trainingGoal, sKey, EXERCISE_CATALOG[sKey].targetReps, isExerciseBodyweight(item.selectedName));
+                  const range = goalRepetitionRange(appState.trainingGoal, sKey, EXERCISE_CATALOG[sKey].targetReps, isExerciseBodyweight(item.selectedName), item.selectedName, customSchema);
                   appState.weeks[w][d][sKey].targetReps = range.minReps < 8 ? range.minReps : Math.max(range.minReps, Math.min(range.maxReps, Number(item.targetReps) || range.minReps));
                   item.targetReps = appState.weeks[w][d][sKey].targetReps;
                 }

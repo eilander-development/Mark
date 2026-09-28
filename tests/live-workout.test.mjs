@@ -27,7 +27,7 @@ function setup() {
         showLiveWorkoutSummary() { context.finished = true; },
         console,
     });
-    for (const name of ['applyGoalOrdering', 'goalRepetitionRange', 'trainingGoalLabel', 'weekMuscleSets', 'muscleSetsHtml', 'getExerciseIncrement', 'equipmentLabels', 'profileSummaryHtml', 'equipmentSummaryHtml', 'settingsExerciseNames', 'openSettingsModal', 'saveTrainingSettings', 'saveProfileSettings', 'saveDisplaySettings', 'renderBenchmarkModal', 'trainingEvidenceHtml', 'getRecoveryLoad', 'recoveryCheckHtml', 'earlyRecoveryAdviceHtml', 'performanceChangeHtml', 'comparisonIndicatorHtml', 'updateWorkoutHeroButtons', 'renderLockedRoutineView', 'renderWorkloadChart', 'getPeriodDashboardData', 'periodDashboardHtml', 'updateDayTitleBanner', 'volumeComparisonClass', 'getVolumeComparison', 'calculateSessionVolume', 'calculateWeekVolume', 'canStartNewPeriod', 'executeStartNewMesocycle', 'escapeReportText', 'getExerciseHistory', 'formatHistorySets', 'compareHistoryEntries', 'exerciseHistoryHtml', 'preparationDetailsHtml', 'weekExerciseOutlookHtml', 'getOverloadOutlook', 'completedDayResultsHtml', 'getNextSplitDay', 'getLiveRestStats', 'getTrainingTiming', 'summarizeTrainingTimes', 'getCycleReport', 'getCycleHistoryReport', 'calculate1RM', 'getAllTimeRecord', 'isSetNewAllTimePR', 'lastHeavyWeekNum', 'peakSlotWeight', 'calculateSetProgress', 'getSlotProgress', 'getExerciseWeekProgress', 'getNextProgression', 'findPreviousExerciseSession', 'rememberLiveInput', 'renderProgressDetails', 'getDayCompletionStatus', 'getWeekEvaluation', 'getSameWeekExerciseLogged', 'getSlotTargetAdvice', 'autoApplyOverloadAndDeloadInheritance', 'prepareCurrentLiveSetValues', 'submitLiveSet', 'adjustLiveReps', 'setLiveRepsManual', 'setLiveWeightManual', 'updateLiveSubmitButtonText']) {
+    for (const name of ['applyGoalOrdering', 'goalRepetitionRange', 'trainingGoalLabel', 'weekMuscleSets', 'muscleSetsAction', 'muscleScheduleHtml', 'muscleSetsHtml', 'getExerciseIncrement', 'equipmentLabels', 'profileSummaryHtml', 'equipmentSummaryHtml', 'settingsExerciseNames', 'openSettingsModal', 'saveTrainingSettings', 'saveProfileSettings', 'saveDisplaySettings', 'renderBenchmarkModal', 'trainingEvidenceHtml', 'getRecoveryLoad', 'recoveryCheckHtml', 'earlyRecoveryAdviceHtml', 'performanceChangeHtml', 'comparisonIndicatorHtml', 'updateWorkoutHeroButtons', 'renderLockedRoutineView', 'renderWorkloadChart', 'getPeriodDashboardData', 'periodDashboardHtml', 'updateDayTitleBanner', 'volumeComparisonClass', 'getVolumeComparison', 'calculateSessionVolume', 'calculateWeekVolume', 'canStartNewPeriod', 'executeStartNewMesocycle', 'escapeReportText', 'getExerciseHistory', 'formatHistorySets', 'compareHistoryEntries', 'exerciseHistoryHtml', 'preparationDetailsHtml', 'weekExerciseOutlookHtml', 'getOverloadOutlook', 'completedDayResultsHtml', 'getNextSplitDay', 'getLiveRestStats', 'getTrainingTiming', 'summarizeTrainingTimes', 'getCycleReport', 'getCycleHistoryReport', 'calculate1RM', 'getAllTimeRecord', 'isSetNewAllTimePR', 'lastHeavyWeekNum', 'peakSlotWeight', 'calculateSetProgress', 'getSlotProgress', 'getExerciseWeekProgress', 'getNextProgression', 'findPreviousExerciseSession', 'rememberLiveInput', 'renderProgressDetails', 'getDayCompletionStatus', 'getWeekEvaluation', 'getSameWeekExerciseLogged', 'getSlotTargetAdvice', 'autoApplyOverloadAndDeloadInheritance', 'prepareCurrentLiveSetValues', 'submitLiveSet', 'adjustLiveReps', 'setLiveRepsManual', 'setLiveWeightManual', 'updateLiveSubmitButtonText']) {
         const start = html.indexOf(`    function ${name}(`);
         const end = html.indexOf('\n    function ', start + 1);
         vm.runInContext(html.slice(start, end), context);
@@ -907,6 +907,8 @@ test('muscle sets separate direct and supporting work and keep missed-target wor
     assert.equal(report.groups.chest.planned, 6);
     assert.equal(report.groups.triceps.completed, 0);
     assert.equal(report.groups.triceps.indirect, 1);
+    assert.equal(report.groups.triceps.indirectPlanned, 6);
+    assert.match(c.muscleSetsHtml(1), /Ondersteunend 1\/6/);
     assert.match(c.muscleSetsHtml(1), /1\/6/);
     c.appState.weeks[7] = JSON.parse(JSON.stringify(c.appState.weeks[1]));
     const deload = c.weekMuscleSets(7);
@@ -972,4 +974,30 @@ test('week report uses a single focusable scroll container constrained to the vi
     assert.match(modal, /max-h-\[calc\(100dvh-2rem\)\]/);
     assert.equal((modal.match(/overflow-y-auto/g) || []).length, 1);
     assert.doesNotMatch(modal, /overflow-hidden|no-scrollbar/);
+});
+
+
+test('muscle overview gives a plan action and never treats deload as a volume deficit', () => {
+    const { context: c } = setup();
+    assert.match(c.muscleSetsAction(1), /Nog 2 training/);
+    for (const day of ['mon', 'thu']) c.appState.weeks[1][day].bench.sets.forEach(set => Object.assign(set, { weight: 15, reps: 8, completed: true }));
+    assert.match(c.muscleSetsAction(1), /weekplan is uitgevoerd/);
+    c.appState.weeks[1].thu.skipped = true;
+    assert.match(c.muscleSetsAction(1), /geen inhaalschuld/);
+    assert.match(c.muscleSetsAction(7), /Herstelweek/);
+});
+
+
+test('muscle schedule names remaining training days and separates skipped sets', () => {
+    const { context: c } = setup();
+    const row = { exercises: [
+        { day: 'mon', direct: true, planned: 3, completed: 3 },
+        { day: 'thu', direct: true, planned: 3, completed: 0 },
+        { day: 'fri', direct: true, planned: 3, completed: 0, skipped: true },
+        { day: 'tue', direct: false, planned: 3, completed: 0 },
+    ] };
+    const text = c.muscleScheduleHtml(row);
+    assert.match(text, /Nog gepland: 3 sets · donderdag 3/);
+    assert.match(text, /3 sets overgeslagen/);
+    assert.doesNotMatch(text, /maandag|dinsdag|vrijdag/);
 });

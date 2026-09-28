@@ -3,6 +3,7 @@
 @section('content')
     <h1 class="mb-1 text-xl font-black">Oefeningen & form-video's</h1>
     <p class="mb-6 text-sm text-slate-400">
+        Gebruik deze pagina om een instructievideo te wijzigen of te bekijken welke spierindeling de weekteller gebruikt.
         {{ $exercises->count() }} oefeningen uit het programma.
         {{ $athleanCount }} met geverifieerde ATHLEAN-X™ / Jeff Cavaliere.
         @if ($missingVideos === 0)
@@ -29,7 +30,7 @@
                         <td class="px-3 py-3 align-top">
                             <div class="font-bold text-slate-100">{{ $exercise->name }}</div>
                             @php($classification = $trainingRules['exerciseMuscles'][mb_strtolower(trim($exercise->name))] ?? null)
-                            <details class="mt-1 text-xs text-slate-400"><summary class="cursor-pointer text-blue-300">Indeling weeksets</summary>
+                            <details class="mt-1 text-xs text-slate-400"><summary class="cursor-pointer text-blue-300">Indeling weeksets · alleen lezen</summary>
                                 @if ($classification)
                                     <p>Direct: {{ $trainingRules['muscles'][$classification['primary']] }}.</p>
                                     <p>Ondersteunend: {{ collect($classification['secondary'])->map(fn ($key) => $trainingRules['muscles'][$key])->join(', ') ?: 'Geen ingedeeld' }}.</p>

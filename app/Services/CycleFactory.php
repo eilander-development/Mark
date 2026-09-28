@@ -57,6 +57,18 @@ class CycleFactory
                 $this->applyWizardSchema($cycle, $this->nextCycle->schema($from));
             }
 
+            $cycle->load('sessions.slots');
+            foreach ($cycle->sessions as $session) {
+                $session->setRelation('cycle', $cycle);
+                foreach ($session->slots as $slot) {
+                    $slot->setRelation('session', $session);
+                    $range = app(TrainingPrescription::class)->rangeForSlot($slot, (int) $this->catalog->slot($slot->slot_key)['targetReps']);
+                    if ($range['minReps'] < 8 && $slot->target_reps > $range['maxReps']) {
+                        $slot->update(['target_reps' => $range['minReps']]);
+                    }
+                }
+            }
+
             $prefs = $this->preferences();
             $prefs->current_week = 1;
             $prefs->current_day = 'mon';

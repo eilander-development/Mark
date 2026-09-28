@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Cycle;
+use App\Models\WorkoutSlot;
 
 class TrainingPrescription
 {
@@ -17,6 +18,31 @@ class TrainingPrescription
         }
 
         return $baseReps >= 12 ? ['minReps' => 12, 'maxReps' => 15] : ['minReps' => 8, 'maxReps' => 12];
+    }
+
+    /** @return array{minReps: int, maxReps: int} */
+    public function rangeForSlot(WorkoutSlot $slot, int $baseReps): array
+    {
+        $cycle = $slot->session->cycle;
+        $goal = $cycle->training_goal ?? 'hypertrophy';
+        $key = $slot->slot_key;
+        $priorities = $goal === 'strength' ? ['slot_a1', 'slot_a2', 'slot_b2'] : ($goal === 'combined' ? ['slot_a1', 'slot_a2'] : []);
+        if ($priorities === []) {
+            return $this->range($goal, $key, $baseReps, app(Periodization::class)->isBodyweight($slot->selected_name));
+        }
+        if (! $cycle->relationLoaded('sessions')) {
+            $cycle->load('sessions.slots');
+        }
+        foreach ($cycle->sessions as $session) {
+            foreach ($session->slots as $candidate) {
+                if (in_array($candidate->slot_key, $priorities, true) && mb_strtolower(trim($candidate->selected_name)) === mb_strtolower(trim($slot->selected_name))) {
+                    $key = $candidate->slot_key;
+                    break 2;
+                }
+            }
+        }
+
+        return $this->range($goal, $key, $baseReps, app(Periodization::class)->isBodyweight($slot->selected_name));
     }
 
     /** @return array<string, array{primary: string, secondary: list<string>}> */
@@ -77,11 +103,12 @@ class TrainingPrescription
                 }
                 $completed = $slot->sets->take($required)->filter(fn ($set): bool => $set->completed && (int) $set->reps > 0 && ($periodization->isBodyweight($slot->selected_name) || (float) $set->weight > 0))->count();
                 foreach ([$classification['primary'], ...$classification['secondary']] as $group) {
-                    $rows[$group] ??= ['planned' => 0, 'completed' => 0, 'indirect' => 0, 'exercises' => []];
+                    $rows[$group] ??= ['planned' => 0, 'completed' => 0, 'indirect' => 0, 'indirectPlanned' => 0, 'exercises' => []];
                     $direct = $group === $classification['primary'];
                     $rows[$group]['planned'] += $direct ? $required : 0;
                     $rows[$group]['completed'] += $direct ? $completed : 0;
                     $rows[$group]['indirect'] += $direct ? 0 : $completed;
+                    $rows[$group]['indirectPlanned'] += $direct ? 0 : $required;
                     $rows[$group]['exercises'][] = ['name' => $slot->selected_name, 'day' => $session->day, 'direct' => $direct, 'completed' => $completed, 'planned' => $required, 'skipped' => (bool) $session->skipped];
                 }
             }

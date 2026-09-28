@@ -23,7 +23,7 @@ class SlotAdvisor
         $weight = $isBw ? 0.0 : (float) ($plan['weight'] ?? $first?->weight ?? $planned?->weight ?? 0);
         $reps = (int) ($plan['reps'] ?? $slot->target_reps ?: ($this->catalog->slot($slot->slot_key)['targetReps'] ?? 8));
 
-        $range = app(TrainingPrescription::class)->range($slot->session->cycle->training_goal ?? 'hypertrophy', $slot->slot_key, (int) ($this->catalog->slot($slot->slot_key)['targetReps'] ?? 8), $isBw);
+        $range = app(TrainingPrescription::class)->rangeForSlot($slot, (int) ($this->catalog->slot($slot->slot_key)['targetReps'] ?? 8));
         $range = ['minReps' => (int) ($plan['minReps'] ?? $range['minReps']), 'maxReps' => (int) ($plan['maxReps'] ?? $range['maxReps'])];
 
         return $this->periodization->progress($slot->sets, $weight, $reps, $this->periodization->requiredSets($week), $isBw) + $range;

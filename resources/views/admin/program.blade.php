@@ -2,7 +2,7 @@
 @section('title', 'Programma')
 @section('content')
     <h1 class="mb-1 text-xl font-black">Upper A / Upper B programma</h1>
-    <p class="mb-6 text-sm text-slate-400">Ma/do = A, di/vr = B. Opslaan wijzigt het schema. Nieuwe periodes gebruiken deze standaardwaarden. Opgeslagen trainingen blijven behouden. Open een oefening om de instellingen te wijzigen.</p>
+    <p class="mb-6 text-sm text-slate-400">Ma/do = A, di/vr = B. Opslaan wijzigt het schema. Dit zijn startwaarden; het periodedoel en opgeslagen prestaties bepalen het uiteindelijke trainingsadvies. Nieuwe periodes gebruiken dit als basis. Opgeslagen trainingen blijven behouden. Open een oefening om de instellingen te wijzigen.</p>
 
     @foreach (collect($splits)->unique(fn ($split) => implode('|', $split['slots'])) as $day => $split)
         <section class="mb-8">
