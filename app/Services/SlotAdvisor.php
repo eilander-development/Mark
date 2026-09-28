@@ -23,7 +23,10 @@ class SlotAdvisor
         $weight = $isBw ? 0.0 : (float) ($plan['weight'] ?? $first?->weight ?? $planned?->weight ?? 0);
         $reps = (int) ($plan['reps'] ?? $slot->target_reps ?: ($this->catalog->slot($slot->slot_key)['targetReps'] ?? 8));
 
-        return $this->periodization->progress($slot->sets, $weight, $reps, $this->periodization->requiredSets($week), $isBw);
+        $range = $this->periodization->repetitionRange((int) ($this->catalog->slot($slot->slot_key)['targetReps'] ?? 8));
+        $range = ['minReps' => (int) ($plan['minReps'] ?? $range['minReps']), 'maxReps' => (int) ($plan['maxReps'] ?? $range['maxReps'])];
+
+        return $this->periodization->progress($slot->sets, $weight, $reps, $this->periodization->requiredSets($week), $isBw) + $range;
     }
 
     /** @return array<string, mixed> */
@@ -56,6 +59,8 @@ class SlotAdvisor
             'requiredReps' => $requiredReps, 'creditedReps' => (int) $progresses->sum('creditedReps'),
             'percent' => $requiredReps ? (int) floor(100 * $progresses->sum('creditedReps') / $requiredReps) : 0,
             'targetReps' => (int) ($progresses->max('targetReps') ?? 0),
+            'minReps' => (int) ($progresses->max('minReps') ?? 8), 'maxReps' => (int) ($progresses->max('maxReps') ?? 12),
+            'achievedReps' => $achieved ? (int) $sets->min(fn ($set): int => (int) $set->reps) : 0,
             'targetWeight' => $isBw ? 0.0 : (float) ($achieved && $sets->isNotEmpty() ? $sets->min(fn ($set): float => (float) $set->weight) : ($progresses->max('targetWeight') ?? 0)),
             'isBodyweight' => $isBw];
     }
@@ -71,6 +76,7 @@ class SlotAdvisor
         $currentDayIndex = array_search($session->day, $days, true);
         $previous = null;
         $reference = null;
+        $referenceSlot = null;
         for ($priorWeek = $week; $priorWeek >= 1; $priorWeek--) {
             $earlierDays = array_reverse(array_slice($days, 0, $priorWeek === $week ? $currentDayIndex : count($days)));
             foreach ($earlierDays as $day) {
@@ -82,6 +88,7 @@ class SlotAdvisor
                     $reference = $priorSlot->sets->take($this->periodization->requiredSets($priorWeek))->first(fn ($set): bool => $set->completed && (int) $set->reps > 0 && ($isBw || (float) $set->weight > 0));
                     if ($reference) {
                         $previous = $candidate;
+                        $referenceSlot = $priorSlot;
                         break 3;
                     }
                 }
@@ -94,15 +101,25 @@ class SlotAdvisor
         $plan = $slot->progression_plan;
         $weight = $isBw ? 0.0 : (float) (($plan['weight'] ?? 0) ?: ($sameWeek ? $reference->weight : ($next['weight'] ?? 0)) ?: $current?->weight ?: $slot->sets->first()?->weight ?: 0);
         $reps = (int) ($slot->target_reps ?: ($this->catalog->slot($slot->slot_key)['targetReps'] ?? 8));
-        $type = $sameWeek ? 'same_week' : ($this->periodization->isDeloadWeek($week) ? 'deload' : (($next['status'] ?? null) === 'Verhogen' ? 'overload' : ($previous ? 'repeat' : ($current ? 'inregel_logged' : 'inregel_baseline'))));
+        $type = $sameWeek ? 'same_week' : ($this->periodization->isDeloadWeek($week) ? 'deload' : (in_array($next['change'] ?? null, ['weight', 'reps'], true) ? 'overload' : ($previous ? 'repeat' : ($current ? 'inregel_logged' : 'inregel_baseline'))));
+
+        $range = $this->slotProgress($slot, $week);
+        $reason = $sameWeek ? 'Herhaal de prestatie van eerder deze week. Opbouw wordt na de week beoordeeld.' : ($next['reason'] ?? 'Leg eerst je startprestatie vast.');
+        if ($plan && $next && ((float) $plan['weight'] !== (float) $next['weight'] || (int) $plan['reps'] !== (int) $next['reps'])) {
+            $reason = 'Je volgt het bij de start vastgelegde doel. Je opgeslagen prestaties bepalen de volgende stap.';
+        }
 
         return ['advisedWeight' => $isBw || $weight > 0 ? $weight : null, 'targetReps' => $reps,
-            'advisedReps' => (int) (($plan['reps'] ?? null) ?: ($sameWeek ? $reps : ($next['reps'] ?? $reps))),
+            'advisedReps' => (int) (($plan['reps'] ?? null) ?: ($sameWeek ? ($referenceSlot?->progression_plan['reps'] ?? $referenceSlot?->target_reps ?? $reps) : ($next['reps'] ?? $reps))),
             'sameWeekReps' => $sameWeek ? (int) $reference->reps : null,
             'prevMax' => $prior['targetWeight'] ?? null, 'prevWeekFound' => $previous ? 'Week '.$previous->week : null,
             'prevOverload' => $prior['achieved'] ?? false, 'adviceType' => $type,
             'sameWeekDay' => $sameWeek ? $this->periodization->dayName($previous->day) : null,
             'currentLoggedWeight' => $current ? (float) $current->weight : null, 'isBodyweight' => $isBw,
+            'minReps' => (int) ($plan['minReps'] ?? $prior['minReps'] ?? $range['minReps']),
+            'maxReps' => (int) ($plan['maxReps'] ?? $prior['maxReps'] ?? $range['maxReps']),
+            'adviceTitle' => $sameWeek ? 'Deze week herhalen' : ($next['status'] ?? 'Startdoel'),
+            'adviceText' => $reason,
             'increment' => $increment, 'targetRpe' => $this->periodization->targetRpe($week)];
     }
 }

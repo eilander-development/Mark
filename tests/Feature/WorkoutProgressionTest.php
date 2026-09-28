@@ -132,4 +132,58 @@ class WorkoutProgressionTest extends TestCase
             ->assertUnprocessable()->assertJsonValidationErrors('selectedName');
         $this->assertSame('Dumbbell Bench Press', $past->fresh()->selected_name);
     }
+
+    public function test_week_report_and_advance_build_reps_then_weight_and_keep_the_range(): void
+    {
+        $this->patchJson('/api/preferences', ['overload_frequency' => 'weekly', 'overload_increment' => 2])->assertOk();
+        for ($week = 1; $week <= 4; $week++) {
+            foreach (['mon', 'thu'] as $day) {
+                $slot = $this->bench($week, $day);
+                $slot->update(['target_reps' => 8, 'progression_plan' => null]);
+                if ($week === 1) {
+                    $this->patchJson('/api/slots/'.$slot->id, ['progressionPlan' => ['weight' => 15, 'reps' => 8, 'minReps' => 8, 'maxReps' => 12]])->assertOk();
+                }
+            }
+        }
+        foreach ([1 => [8, 15, 10, 'reps'], 2 => [10, 15, 12, 'reps'], 3 => [12, 17, 8, 'weight']] as $week => [$performedReps, $nextWeight, $nextReps, $change]) {
+            $cycle = app(CycleFactory::class)->ensureCurrent();
+            foreach ($cycle->sessions()->where('week', $week)->with('slots.sets')->get() as $session) {
+                foreach ($session->slots->where('selected_name', 'Dumbbell Bench Press') as $slot) {
+                    foreach ($slot->sets as $set) {
+                        $this->patchJson('/api/sets/'.$set->id, ['weight' => 15, 'reps' => $performedReps, 'completed' => true, 'exertion' => 'good'])->assertOk();
+                    }
+                }
+            }
+
+            $report = $this->getJson('/api/weeks/'.$week.'/report')->assertOk()->json('exercises');
+            $next = collect($report)->firstWhere('name', 'Dumbbell Bench Press')['next'];
+            $this->assertSame((float) $nextWeight, (float) $next['weight']);
+            $this->assertSame($nextReps, $next['reps']);
+            $this->assertSame($change, $next['change']);
+            $this->assertFalse($next['provisional']);
+            $this->postJson('/api/weeks/advance', ['week' => $week])->assertOk();
+            $plan = $this->getJson('/api/marker-state')->assertOk()->json('appState.weeks.'.($week + 1).'.mon.slot_a1.progressionPlan');
+            $this->assertSame((float) $nextWeight, (float) $plan['weight']);
+            $this->assertSame($nextReps, $plan['reps']);
+            $this->assertSame(8, $plan['minReps']);
+            $this->assertSame(12, $plan['maxReps']);
+        }
+    }
+
+    public function test_rep_range_validation_and_marker_round_trip(): void
+    {
+        $slot = $this->bench(1, 'mon');
+        $this->patchJson('/api/slots/'.$slot->id, ['progressionPlan' => ['weight' => 6, 'reps' => 14, 'minReps' => 12, 'maxReps' => 15]])->assertOk();
+        $payload = $this->getJson('/api/marker-state')->assertOk()->json();
+        $this->putJson('/api/marker-state', $payload)->assertOk();
+        $this->getJson('/api/marker-state')->assertOk()
+            ->assertJsonPath('appState.weeks.1.mon.slot_a1.progressionPlan.minReps', 12)
+            ->assertJsonPath('appState.weeks.1.mon.slot_a1.progressionPlan.maxReps', 15);
+
+        $this->patchJson('/api/slots/'.$slot->id, ['progressionPlan' => ['weight' => 6, 'reps' => 14, 'minReps' => 15, 'maxReps' => 8]])
+            ->assertUnprocessable()->assertJsonValidationErrors('progressionPlan.maxReps');
+        $this->patchJson('/api/slots/'.$slot->id, ['progressionPlan' => ['weight' => 6, 'reps' => 14, 'minReps' => 12]])
+            ->assertUnprocessable()->assertJsonValidationErrors('progressionPlan.maxReps');
+        $this->assertSame(15, $slot->fresh()->progression_plan['maxReps']);
+    }
 }

@@ -192,7 +192,7 @@ test('maximum effort, consolidation and deload take priority over increasing', (
     const progress = { targetWeight: 20, targetReps: 12, achieved: true, completedSets: 6, requiredSets: 6, exertion: 'max', isBodyweight: false };
     assert.equal(c.getNextProgression(progress, 2).weight, 20);
     progress.exertion = 'easy';
-    assert.equal(c.getNextProgression(progress, 2).weight, 24);
+    assert.equal(c.getNextProgression(progress, 2).weight, 22);
     c.appState.overloadFrequency = 'biweekly';
     assert.equal(c.getNextProgression(progress, 2).status, 'Consolideren');
     assert.equal(c.getNextProgression(progress, 7).weight, 14);
@@ -203,6 +203,8 @@ test('maximum effort, consolidation and deload take priority over increasing', (
 test('PHP and frontend calculate identical progress and next-week advice', () => {
     const { context: c } = setup();
     const cases = [
+        { reps: [8, 8, 8], weights: [6, 6, 6], target: 6, goal: 8, bw: false, effort: 'good', nextWeek: 3, frequency: 'weekly' },
+        { reps: [8, 8, 8], weights: [1, 1, 1], target: 1, goal: 8, bw: false, effort: 'max', nextWeek: 7, frequency: 'weekly' },
         { reps: [12, 12, 11], weights: [15, 15, 15], target: 15, bw: false, effort: 'good', nextWeek: 2, frequency: 'weekly' },
         { reps: [12, 12, 12], weights: [20, 15, 15], target: 20, bw: false, effort: 'max', nextWeek: 3, frequency: 'weekly' },
         { reps: [12, 12, 12], weights: [15, 15, 15], target: 15, bw: false, effort: 'easy', nextWeek: 2, frequency: 'biweekly' },
@@ -213,11 +215,11 @@ test('PHP and frontend calculate identical progress and next-week advice', () =>
     ];
     for (const item of cases) {
         const sets = item.reps.map((reps, index) => ({ reps, weight: item.weights[index], completed: true }));
-        const progress = c.calculateSetProgress(sets, item.target, 12, 3, item.bw);
+        const progress = c.calculateSetProgress(sets, item.target, item.goal || 12, 3, item.bw);
         const full = { ...progress, isBodyweight: item.bw, exertion: item.effort };
         c.appState.overloadFrequency = item.frequency;
         const next = c.getNextProgression(full, item.nextWeek);
-        const php = spawnSync('php', ['-r', `require 'vendor/autoload.php'; $v = json_decode(stream_get_contents(STDIN), true); $p = new App\\Services\\Periodization; echo json_encode(['progress' => $p->progress($v['sets'], $v['target'], 12, 3, $v['bw']), 'next' => $p->nextProgression($v['full'], $v['nextWeek'], 2, $v['frequency'])]);`], {
+        const php = spawnSync('php', ['-r', `require 'vendor/autoload.php'; $v = json_decode(stream_get_contents(STDIN), true); $p = new App\\Services\\Periodization; echo json_encode(['progress' => $p->progress($v['sets'], $v['target'], $v['goal'] ?? 12, 3, $v['bw']), 'next' => $p->nextProgression($v['full'], $v['nextWeek'], 2, $v['frequency'])]);`], {
             cwd: new URL('..', import.meta.url), encoding: 'utf8', input: JSON.stringify({ ...item, sets, full }),
         });
         assert.equal(php.status, 0, php.stderr);
@@ -260,7 +262,82 @@ test('live view renders actual save values and the original plan together', () =
     vm.runInContext(html.slice(start, end), c);
     c.renderLiveWorkoutView();
     assert.match(elements.lwContentArea.innerHTML, /OPSLAAN \(15 kg.*12 reps\)/);
-    assert.match(elements.lwContentArea.innerHTML, /Gepland:/);
+    assert.match(elements.lwContentArea.innerHTML, /Gepland doel/);
     assert.match(elements.lwContentArea.innerHTML, /Eigen invoer voor deze set/);
     assert.doesNotMatch(elements.lwContentArea.innerHTML, /Afronden met aangepaste|Confetti & Rapport/);
+});
+
+
+test('reps progress through 8, 10, 12 before one weight step resets to 8', () => {
+    const { context: c } = setup();
+    const base = { targetWeight: 15, minReps: 8, maxReps: 12, achieved: true, completedSets: 6, requiredSets: 6, exertion: 'good', isBodyweight: false };
+    for (const [target, expectedWeight, expectedReps, change] of [[8, 15, 10, 'reps'], [10, 15, 12, 'reps'], [12, 17, 8, 'weight']]) {
+        const next = c.getNextProgression({ ...base, targetReps: target, achievedReps: target }, 3);
+        assert.equal(next.weight, expectedWeight);
+        assert.equal(next.reps, expectedReps);
+        assert.equal(next.change, change);
+        assert.equal(next.minReps, 8);
+        assert.equal(next.maxReps, 12);
+    }
+});
+
+test('higher rep range caps at 15 and credits reps already achieved', () => {
+    const { context: c } = setup();
+    const base = { targetWeight: 6, targetReps: 12, minReps: 12, maxReps: 15, achieved: true, completedSets: 6, requiredSets: 6, exertion: 'easy', isBodyweight: false };
+    assert.equal(c.getNextProgression(base, 3).reps, 14);
+    assert.equal(c.getNextProgression({ ...base, targetReps: 14 }, 3).reps, 15);
+    const next = c.getNextProgression({ ...base, achievedReps: 15 }, 3);
+    assert.equal(next.weight, 8);
+    assert.equal(next.reps, 12);
+});
+
+test('zero new sets shows provisional advice alongside older training history', () => {
+    const { context: c } = setup();
+    c.appState.weeks[1].mon.bench.sets.forEach(set => Object.assign(set, { weight: 6, reps: 12, completed: true }));
+    c.appState.weeks[2] = { mon: { bench: { selectedName: 'Dumbbell Bench Press', progressionPlan: { weight: 6, reps: 12, minReps: 12, maxReps: 15 }, sets: Array.from({ length: 3 }, () => ({ weight: 6, reps: '', completed: false })) } } };
+    const output = c.renderProgressDetails(2, 'mon', 'bench');
+    assert.match(output, /Deze week nog geen sets opgeslagen/);
+    assert.match(output, /Volgende week: nog te beoordelen/);
+    assert.match(output, /eerst reps \(12–15\), daarna gewicht/);
+    assert.match(output, /Vorige training/);
+    assert.match(output, /6 kg × 14 reps \(reps opbouwen\)/);
+});
+
+test('partial sessions show more reps or heavier weight without claiming an overall gain', () => {
+    const { context: c } = setup();
+    c.appState.weeks[1].mon.bench.sets.forEach(set => Object.assign(set, { weight: 6, reps: 10, completed: true }));
+    Object.assign(c.appState.weeks[1].thu.bench.sets[0], { weight: 6, reps: 12, completed: true });
+    Object.assign(c.appState.weeks[1].thu.bench.sets[1], { weight: 8, reps: 8, completed: true });
+    const output = c.renderProgressDetails(1, 'thu', 'bench');
+    assert.match(output, /Set 1: \+2 reps bij hetzelfde gewicht/);
+    assert.match(output, /Set 2: \+2 kg; 10 → 8 reps/);
+});
+
+test('low-weight recovery and reductions never increase weight or produce zero', () => {
+    const { context: c } = setup();
+    for (const weight of [0.1, 1, 2, 2.01]) {
+        const base = { targetWeight: weight, targetReps: 8, minReps: 8, maxReps: 12, achieved: false, completedSets: 3, requiredSets: 3, exertion: 'max', isBodyweight: false };
+        for (const week of [3, 7]) {
+            const next = c.getNextProgression(base, week);
+            assert.ok(next.weight > 0 && next.weight <= weight);
+            assert.ok(next.reps <= 8);
+        }
+    }
+});
+
+
+test('a new week starts with the earned weight and lower rep goal instead of stale prefilled values', () => {
+    const { context: c } = setup();
+    for (const day of ['mon', 'thu']) {
+        c.appState.weeks[1][day].bench.progressionPlan = { weight: 15, reps: 12, minReps: 8, maxReps: 12 };
+        c.appState.weeks[1][day].bench.sets.forEach(set => Object.assign(set, { weight: 15, reps: 12, completed: true }));
+    }
+    c.appState.weeks[2] = { mon: { bench: { selectedName: 'Dumbbell Bench Press', sets: Array.from({ length: 3 }, () => ({ weight: 15, reps: 12, completed: false })) } } };
+    c.liveWorkout.weekNum = 2;
+    c.liveWorkout.dayKey = 'mon';
+    c.prepareCurrentLiveSetValues();
+    assert.equal(c.liveWorkout.tempWeight, 17);
+    assert.equal(c.liveWorkout.tempReps, 8);
+    assert.equal(c.appState.weeks[2].mon.bench.progressionPlan.minReps, 8);
+    assert.equal(c.appState.weeks[2].mon.bench.progressionPlan.maxReps, 12);
 });

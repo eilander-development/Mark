@@ -148,47 +148,77 @@ class Periodization
         return $this->progress($items, $weight, $targetReps, $this->requiredSets($weekNum), $isBodyweight)['achieved'];
     }
 
+    /** @return array{minReps: int, maxReps: int} */
+    public function repetitionRange(int $baseReps): array
+    {
+        return ['minReps' => $baseReps >= 12 ? 12 : 8, 'maxReps' => $baseReps >= 12 ? 15 : 12];
+    }
+
     /**
      * @param  array<string, mixed>  $progress
-     * @return array{weight: float, reps: int, status: string, reason: string, requiredSets: int}
+     * @return array{weight: float, reps: int, minReps: int, maxReps: int, status: string, reason: string, requiredSets: int, provisional: bool, change: string}
      */
     public function nextProgression(array $progress, int $nextWeek, float $increment, string $frequency): array
     {
+        $increment = $increment > 0 ? $increment : 2.0;
         $weight = (float) $progress['targetWeight'];
         $reps = (int) $progress['targetReps'];
+        $minReps = (int) ($progress['minReps'] ?? 8);
+        $maxReps = max($minReps, (int) ($progress['maxReps'] ?? 12));
+        $provisional = $progress['completedSets'] < $progress['requiredSets'];
         $status = 'Herhalen';
-        $reason = 'Doel nog niet volledig gehaald; herhaal het werkgewicht en de herhalingen.';
+        $change = 'repeat';
+        $reason = 'Alle sets uitgevoerd, maar het doel nog niet gehaald. Bouw eerst de ontbrekende herhalingen op.';
         if (! $progress['completedSets']) {
-            $status = 'Nog niet uitgevoerd';
-            $reason = 'Nog geen opgeslagen prestaties om een verhoging te adviseren.';
+            $status = 'Nog te beoordelen';
+            $reason = 'Deze week nog geen sets opgeslagen. Het advies voor volgende week staat nog niet vast.';
         } elseif ($this->isDeloadWeek($nextWeek)) {
             $status = 'Herstelweek';
-            $weight = $progress['isBodyweight'] ? 0.0 : max($increment, $this->roundToIncrement($weight * 0.7, $increment));
+            $change = 'deload';
             if ($progress['isBodyweight']) {
-                $reps = max(6, (int) round($reps * 0.7));
+                $reps = max(1, (int) round($reps * 0.7));
+            } else {
+                $lighter = $this->roundToIncrement($weight * 0.7, $increment);
+                if ($lighter > 0 && $lighter < $weight) {
+                    $weight = $lighter;
+                } else {
+                    $reps = max(1, (int) round($reps * 0.7));
+                }
             }
-            $reason = 'Volgende week 2 herstelsets.';
+            $reason = 'Volgende week 2 herstelsets. Alleen een lager positief gewicht gebruiken; anders minder herhalingen op hetzelfde gewicht.';
+        } elseif ($provisional) {
+            $status = 'Nog te beoordelen';
+            $reason = 'Nog '.($progress['requiredSets'] - $progress['completedSets']).' sets deze week te beoordelen. Nog geen definitief advies voor volgende week.';
         } elseif ($progress['achieved'] && $this->isBiweeklyHoldWeek($nextWeek, $frequency)) {
             $status = 'Consolideren';
-            $reason = 'Doel gehaald; nog een week herhalen volgens je 2-weken schema.';
+            $reason = 'Doel gehaald; nog een week hetzelfde gewicht en dezelfde reps volgens je 2-weken schema.';
         } elseif ($progress['exertion'] === 'max') {
-            $reason = 'Minstens een set was maximaal; eerst herhalen met controle.';
-            if (! $progress['achieved'] && ! $progress['isBodyweight'] && $progress['completedSets'] === $progress['requiredSets']) {
-                $weight = max(0.0, round($weight - $increment, 1));
+            $reason = 'Minstens een set was maximaal; eerst herhalen met controle. Nog geen extra reps of gewicht.';
+            $reduced = round($weight - $increment, 1);
+            if (! $progress['achieved'] && ! $progress['isBodyweight'] && $reduced > 0 && $reduced < $weight) {
+                $weight = $reduced;
                 $status = 'Lichter herhalen';
-                $reason = 'Alle sets uitgevoerd, doel gemist en maximale inspanning: een gewichtsstap terug.';
+                $change = 'reduce';
+                $reason = 'Doel gemist met maximale inspanning: één ingestelde gewichtsstap terug.';
             }
         } elseif ($progress['achieved']) {
-            $status = 'Verhogen';
-            if ($progress['isBodyweight']) {
-                $reps += $progress['exertion'] === 'easy' ? 3 : 2;
+            $achievedReps = max($reps, (int) ($progress['achievedReps'] ?? $reps));
+            if ($progress['isBodyweight'] || $achievedReps < $maxReps) {
+                $reps = $progress['isBodyweight'] ? $achievedReps + 2 : min($maxReps, $achievedReps + 2);
+                $status = 'Reps opbouwen';
+                $change = 'reps';
+                $reason = 'Doel gehaald. Zelfde gewicht, maximaal 2 herhalingen per set erbij'.($progress['isBodyweight'] ? '.' : ' richting '.$maxReps.' reps.');
             } else {
-                $weight = round($weight + $increment * ($progress['exertion'] === 'easy' ? 2 : 1), 1);
+                $weight = round($weight + $increment, 1);
+                $reps = $minReps;
+                $status = 'Gewicht verhogen';
+                $change = 'weight';
+                $reason = 'Alle geplande sets aan de bovengrens van '.$maxReps.' reps gehaald. Eén gewichtsstap erbij; opnieuw opbouwen vanaf '.$minReps.' reps.';
             }
-            $reason = 'Alle geplande sets op het werkgewicht gehaald'.($progress['exertion'] === 'easy' ? ' en vlot uitgevoerd.' : '.');
         }
 
-        return ['weight' => $weight, 'reps' => $reps, 'status' => $status, 'reason' => $reason, 'requiredSets' => $this->requiredSets($nextWeek)];
+        return ['weight' => $weight, 'reps' => $reps, 'minReps' => $minReps, 'maxReps' => $maxReps,
+            'status' => $status, 'reason' => $reason, 'requiredSets' => $this->requiredSets($nextWeek), 'provisional' => $provisional, 'change' => $change];
     }
 
     public function dayName(string $day): string

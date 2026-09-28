@@ -4101,7 +4101,10 @@
       const firstLogged = slot.sets.find(set => set.completed && Number(set.reps) > 0 && (isBW || Number(set.weight) > 0));
       const firstPlanned = slot.sets.find(set => Number(set.weight) > 0);
       const plan = slot.progressionPlan || { weight: isBW ? 0 : Number(firstLogged?.weight || firstPlanned?.weight || 0), reps: getExerciseTargetReps(name, slotKey, weekNum, dayKey) };
-      return calculateSetProgress(slot.sets, Number(plan.weight), Number(plan.reps), isDeloadWeek(weekNum) ? 2 : 3, isBW);
+      const baseReps = Number(EXERCISE_CATALOG[slotKey].targetReps || 8);
+      const minReps = Number(plan.minReps || (baseReps >= 12 ? 12 : 8));
+      const maxReps = Number(plan.maxReps || (baseReps >= 12 ? 15 : 12));
+      return { ...calculateSetProgress(slot.sets, Number(plan.weight), Number(plan.reps), isDeloadWeek(weekNum) ? 2 : 3, isBW), minReps, maxReps };
     }
 
     function getExerciseWeekProgress(weekNum, exerciseName) {
@@ -4128,42 +4131,68 @@
         remainingReps: sum('remainingReps'), requiredReps, creditedReps: sum('creditedReps'),
         percent: requiredReps ? Math.floor(100 * sum('creditedReps') / requiredReps) : 0,
         targetReps: Math.max(0, ...sessions.map(session => session.progress.targetReps)),
+        minReps: sessions.length ? Math.max(...sessions.map(session => session.progress.minReps)) : 8,
+        maxReps: sessions.length ? Math.max(...sessions.map(session => session.progress.maxReps)) : 12,
+        achievedReps: achieved ? Math.min(...sets.map(set => Number(set.reps))) : 0,
         targetWeight: achieved && weights.length ? Math.min(...weights) : Math.max(0, ...plans),
         isBodyweight: isExerciseBodyweight(exerciseName) };
     }
 
     function getNextProgression(progress, nextWeek) {
-      const increment = Number(appState.overloadIncrement) || 2;
+      const increment = Number(appState.overloadIncrement) > 0 ? Number(appState.overloadIncrement) : 2;
       let weight = progress.targetWeight;
       let reps = progress.targetReps;
-      let reason = 'Doel nog niet volledig gehaald; herhaal het werkgewicht en de herhalingen.';
+      const minReps = Number(progress.minReps ?? 8);
+      const maxReps = Math.max(minReps, Number(progress.maxReps ?? 12));
+      const provisional = progress.completedSets < progress.requiredSets;
       let status = 'Herhalen';
+      let change = 'repeat';
+      let reason = 'Alle sets uitgevoerd, maar het doel nog niet gehaald. Bouw eerst de ontbrekende herhalingen op.';
       if (!progress.completedSets) {
-        status = 'Nog niet uitgevoerd';
-        reason = 'Nog geen opgeslagen prestaties om een verhoging te adviseren.';
+        status = 'Nog te beoordelen';
+        reason = 'Deze week nog geen sets opgeslagen. Het advies voor volgende week staat nog niet vast.';
       } else if (isDeloadWeek(nextWeek)) {
         status = 'Herstelweek';
-        weight = progress.isBodyweight ? 0 : Math.max(increment, Math.round(weight * 0.7 / increment) * increment);
-        if (progress.isBodyweight) reps = Math.max(6, Math.round(reps * 0.7));
-        reason = 'Volgende week 2 herstelsets.';
+        change = 'deload';
+        if (progress.isBodyweight) {
+          reps = Math.max(1, Math.round(reps * 0.7));
+        } else {
+          const lighter = Math.round(Math.round(weight * 0.7 / increment) * increment * 10) / 10;
+          if (lighter > 0 && lighter < weight) weight = lighter;
+          else reps = Math.max(1, Math.round(reps * 0.7));
+        }
+        reason = 'Volgende week 2 herstelsets. Alleen een lager positief gewicht gebruiken; anders minder herhalingen op hetzelfde gewicht.';
+      } else if (provisional) {
+        status = 'Nog te beoordelen';
+        reason = `Nog ${progress.requiredSets - progress.completedSets} sets deze week te beoordelen. Nog geen definitief advies voor volgende week.`;
       } else if (progress.achieved && isBiweeklyHoldWeek(nextWeek)) {
         status = 'Consolideren';
-        reason = 'Doel gehaald; nog een week herhalen volgens je 2-weken schema.';
+        reason = 'Doel gehaald; nog een week hetzelfde gewicht en dezelfde reps volgens je 2-weken schema.';
       } else if (progress.exertion === 'max') {
-        status = 'Herhalen';
-        reason = 'Minstens een set was maximaal; eerst herhalen met controle.';
-        if (!progress.achieved && !progress.isBodyweight && progress.completedSets === progress.requiredSets) {
-          weight = Math.max(0, Math.round((weight - increment) * 10) / 10);
+        reason = 'Minstens een set was maximaal; eerst herhalen met controle. Nog geen extra reps of gewicht.';
+        const reduced = Math.round((weight - increment) * 10) / 10;
+        if (!progress.achieved && !progress.isBodyweight && reduced > 0 && reduced < weight) {
+          weight = reduced;
           status = 'Lichter herhalen';
-          reason = 'Alle sets uitgevoerd, doel gemist en maximale inspanning: een gewichtsstap terug.';
+          change = 'reduce';
+          reason = 'Doel gemist met maximale inspanning: één ingestelde gewichtsstap terug.';
         }
       } else if (progress.achieved) {
-        status = 'Verhogen';
-        if (progress.isBodyweight) reps += progress.exertion === 'easy' ? 3 : 2;
-        else weight = Math.round((weight + increment * (progress.exertion === 'easy' ? 2 : 1)) * 10) / 10;
-        reason = 'Alle geplande sets op het werkgewicht gehaald' + (progress.exertion === 'easy' ? ' en vlot uitgevoerd.' : '.');
+        const achievedReps = Math.max(reps, Number(progress.achievedReps || reps));
+        if (progress.isBodyweight || achievedReps < maxReps) {
+          reps = progress.isBodyweight ? achievedReps + 2 : Math.min(maxReps, achievedReps + 2);
+          status = 'Reps opbouwen';
+          change = 'reps';
+          reason = 'Doel gehaald. Zelfde gewicht, maximaal 2 herhalingen per set erbij' + (progress.isBodyweight ? '.' : ` richting ${maxReps} reps.`);
+        } else {
+          weight = Math.round((weight + increment) * 10) / 10;
+          reps = minReps;
+          status = 'Gewicht verhogen';
+          change = 'weight';
+          reason = `Alle geplande sets aan de bovengrens van ${maxReps} reps gehaald. Eén gewichtsstap erbij; opnieuw opbouwen vanaf ${minReps} reps.`;
+        }
       }
-      return { weight, reps, status, reason, requiredSets: isDeloadWeek(nextWeek) ? 2 : 3 };
+      return { weight, reps, minReps, maxReps, status, reason, requiredSets: isDeloadWeek(nextWeek) ? 2 : 3, provisional, change };
     }
 
     function findPreviousExerciseSession(weekNum, dayKey, exerciseName) {
@@ -4184,24 +4213,45 @@
     function renderProgressDetails(weekNum, dayKey, slotKey) {
       const slot = appState.weeks[weekNum][dayKey][slotKey];
       const name = slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
+      const isBW = isExerciseBodyweight(name);
       const progress = getSlotProgress(weekNum, dayKey, slotKey);
       const week = getExerciseWeekProgress(weekNum, name);
       const next = getNextProgression(week, weekNum + 1);
+      const advice = getSlotTargetAdvice(weekNum, dayKey, slotKey);
       const previous = findPreviousExerciseSession(weekNum, dayKey, name);
-      const actual = slot.sets.slice(0, progress.requiredSets).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(name) || Number(set.weight) > 0));
-      const comparable = previous && actual.length === progress.requiredSets && previous.sets.length === progress.requiredSets && actual.every((set, index) => Number(set.weight) === Number(previous.sets[index].weight));
-      const difference = comparable ? actual.reduce((total, set) => total + Number(set.reps), 0) - previous.sets.reduce((total, set) => total + Number(set.reps), 0) : null;
-      const format = sets => sets.map(set => `${isExerciseBodyweight(name) ? 'BW' : Number(set.weight) + ' kg'} &times; ${Number(set.reps)}`).join(' &middot; ');
-      const remaining = progress.details.map((set, index) => set.achieved ? '' : !set.completed ? `Set ${index + 1}: nog uitvoeren` : !set.weightMet ? `Set ${index + 1}: onder ${progress.targetWeight} kg` : `Set ${index + 1}: nog ${set.missingReps} reps`).filter(Boolean).join(' &middot; ');
-      return `<div class="space-y-2 rounded-xl border border-slate-700 bg-slate-950/70 p-3 text-xs">
-        <div class="flex flex-wrap justify-between gap-2"><span class="font-bold text-emerald-300">${progress.achieved ? 'Doel gehaald' : progress.percent >= 80 ? 'Bijna bij je doel' : 'Op weg naar je doel'}: ${progress.achievedSets}/${progress.requiredSets} sets</span><span class="text-slate-300">${progress.percent}%</span></div>
-        <div role="progressbar" aria-label="Voortgang oefening" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress.percent}" class="h-2 overflow-hidden rounded bg-slate-800"><div class="h-full bg-emerald-500" style="width:${progress.percent}%"></div></div>
-        <div class="text-slate-400">Gepland: ${progress.requiredSets} &times; ${isExerciseBodyweight(name) ? 'BW' : progress.targetWeight > 0 ? progress.targetWeight + ' kg' : 'startgewicht kiezen'} &times; ${progress.targetReps} reps</div>
-        <div class="text-slate-200">Uitgevoerd: ${actual.length ? format(actual) : 'nog geen sets opgeslagen'}</div>
+      const valid = set => set?.completed && Number(set.reps) > 0 && (isBW || Number(set.weight) > 0);
+      const actual = slot.sets.slice(0, progress.requiredSets).filter(valid);
+      const comparisons = previous ? slot.sets.slice(0, progress.requiredSets).map((set, index) => {
+        const before = previous.slot.sets[index];
+        if (!valid(set) || !valid(before)) return '';
+        const reps = Number(set.reps) - Number(before.reps);
+        const weight = Number(set.weight) - Number(before.weight);
+        if (weight === 0) return `Set ${index + 1}: ${reps > 0 ? '+' : ''}${reps} reps bij hetzelfde gewicht`;
+        return `Set ${index + 1}: ${weight > 0 ? '+' : ''}${Math.round(weight * 10) / 10} kg; ${Number(before.reps)} → ${Number(set.reps)} reps`;
+      }).filter(Boolean) : [];
+      const format = sets => sets.map(set => `${isBW ? 'BW' : Number(set.weight) + ' kg'} × ${Number(set.reps)}`).join(' · ');
+      const remaining = progress.details.map((set, index) => set.achieved ? '' : !set.completed ? `Set ${index + 1}: nog uitvoeren` : !set.weightMet ? `Set ${index + 1}: onder ${progress.targetWeight} kg` : `Set ${index + 1}: nog ${set.missingReps} reps`).filter(Boolean).join(' · ');
+      const upperSets = week.sessions.reduce((total, session) => {
+        const source = appState.weeks[weekNum][session.dayKey][session.slotKey];
+        return total + calculateSetProgress(source.sets, session.progress.targetWeight, week.maxReps, session.progress.requiredSets, isBW).achievedSets;
+      }, 0);
+      const projected = getNextProgression({ ...week, achieved: true, achievedReps: week.targetReps, completedSets: week.requiredSets, exertion: 'good' }, weekNum + 1);
+      const nextText = next.provisional
+        ? `Volgende week: nog te beoordelen. ${next.reason} Als alle weekdoelen met voldoende controle worden gehaald: ${projected.requiredSets} × ${isBW ? 'BW' : projected.weight > 0 ? projected.weight + ' kg' : 'zelfgekozen startgewicht'} × ${projected.reps} reps (${projected.status.toLowerCase()}).`
+        : `Volgende week: ${next.requiredSets} × ${isBW ? 'BW' : next.weight + ' kg'} × ${next.reps} reps. ${next.status}: ${next.reason}`;
+      const planDiffers = slot.progressionPlan && ((Number(advice.advisedReps) !== progress.targetReps) || Number(advice.advisedWeight || 0) !== progress.targetWeight);
+      const planReason = planDiffers ? 'Je volgt het bij de start vastgelegde doel. Je opgeslagen prestaties bepalen de volgende stap.' : advice.adviceText;
+      return `<div class="space-y-3 rounded-xl border border-slate-700 bg-slate-950/70 p-3 text-xs">
+        <div class="space-y-1"><div class="font-bold text-slate-100">Vandaag: ${progress.requiredSets} × ${isBW ? 'BW' : progress.targetWeight > 0 ? progress.targetWeight + ' kg' : 'startgewicht kiezen'} × ${progress.targetReps} reps</div><div class="text-slate-400">Gepland doel · ${planReason}</div></div>
+        <div class="space-y-1"><div class="font-bold text-blue-300">Progressive overload: ${isBW ? 'herhalingen opbouwen' : `eerst reps (${progress.minReps}–${progress.maxReps}), daarna gewicht`}</div>
+        <div class="text-slate-300">${isBW ? 'Na een behaald weekdoel: maximaal 2 reps per set erbij.' : `Volgende gewichtsstap: eerst alle weeksets op ${week.maxReps} reps halen, met voldoende controle. Nu ${upperSets}/${week.requiredSets} sets aan die bovengrens.`}</div></div>
+        <div class="flex flex-wrap justify-between gap-2"><span class="font-bold text-emerald-300">${progress.achieved ? 'Doel gehaald' : progress.percent >= 80 ? 'Bijna bij je doel' : 'Op weg naar je doel'}: ${progress.achievedSets}/${progress.requiredSets} sets</span><span class="text-slate-300">Vandaag ${progress.percent}%</span></div>
+        <div role="progressbar" aria-label="Doel van vandaag" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress.percent}" class="h-2 overflow-hidden rounded bg-slate-800"><div class="h-full bg-emerald-500" style="width:${progress.percent}%"></div></div>
+        <div class="text-slate-200">Uitgevoerd: ${actual.length ? format(actual) : 'vandaag nog geen sets opgeslagen'}</div>
         ${remaining ? `<div class="text-amber-300">${remaining}</div>` : ''}
-        ${previous ? `<div class="text-slate-400">Vorige training (week ${previous.week}, ${previous.day}): ${format(previous.sets)}</div>` : ''}
-        ${difference !== null ? `<div class="text-emerald-300">${difference > 0 ? '+' : ''}${difference} reps bij hetzelfde gewicht ten opzichte van de vorige training</div>` : ''}
-        <div class="border-t border-slate-800 pt-2 text-slate-300">Weekdoel: ${week.achievedSets}/${week.requiredSets} sets &middot; ${next.status}. ${next.reason} Volgende week: ${next.requiredSets} &times; ${week.isBodyweight ? 'BW' : next.weight + ' kg'} &times; ${next.reps} reps.</div>
+        ${previous ? `<div class="text-slate-400">Vorige training (week ${previous.week}, ${SPLIT_INFO[previous.day].title.split(':')[0]}): ${format(previous.sets)}</div>` : ''}
+        ${comparisons.length ? `<div class="text-emerald-300">Verschil met vorige training: ${comparisons.join(' · ')}</div>` : ''}
+        <div class="border-t border-slate-800 pt-2 text-slate-300">Weekdoel: ${week.achievedSets}/${week.requiredSets} sets. ${nextText}</div>
       </div>`;
     }
 
@@ -4292,11 +4342,15 @@
       const reference = previous?.sets[0];
       const advisedWeight = isBW ? 0 : Number(slot?.progressionPlan?.weight || (sameWeek ? reference?.weight : next?.weight) || current?.weight || slot?.sets[0]?.weight || 0) || null;
       const benchmark = getStrengthBenchmark(name, appState.userProfile);
-      const adviceType = sameWeek ? 'same_week' : isDeloadWeek(weekNum) ? 'deload' : next?.status === 'Verhogen' ? 'overload' : previous ? 'repeat' : current ? 'inregel_logged' : 'inregel_baseline';
+      const adviceType = sameWeek ? 'same_week' : isDeloadWeek(weekNum) ? 'deload' : ['weight', 'reps'].includes(next?.change) ? 'overload' : previous ? 'repeat' : current ? 'inregel_logged' : 'inregel_baseline';
       return { advisedWeight, targetReps, sameWeekReps: sameWeek ? Number(reference.reps) : null,
-        advisedReps: slot?.progressionPlan?.reps || (sameWeek ? targetReps : next?.reps) || targetReps,
+        advisedReps: slot?.progressionPlan?.reps || (sameWeek ? (previous.slot.progressionPlan?.reps || previous.slot.targetReps || targetReps) : next?.reps) || targetReps,
         prevMax: priorProgress?.targetWeight ?? null, prevWeekFound: previous ? `Week ${previous.week}` : null,
-        prevOverload: priorProgress?.achieved || false, adviceType, adviceTitle: next?.status || 'Trainingsdoel', adviceText: next?.reason || 'Gebruik je laatste prestatie als referentie.',
+        prevOverload: priorProgress?.achieved || false, adviceType,
+        minReps: slot?.progressionPlan?.minReps || priorProgress?.minReps || (Number(EXERCISE_CATALOG[slotKey].targetReps) >= 12 ? 12 : 8),
+        maxReps: slot?.progressionPlan?.maxReps || priorProgress?.maxReps || (Number(EXERCISE_CATALOG[slotKey].targetReps) >= 12 ? 15 : 12),
+        adviceTitle: sameWeek ? 'Deze week herhalen' : next?.status || 'Startdoel',
+        adviceText: sameWeek ? 'Herhaal de prestatie van eerder deze week. Opbouw wordt na de week beoordeeld.' : slot?.progressionPlan && next && (Number(slot.progressionPlan.weight) !== Number(next.weight) || Number(slot.progressionPlan.reps) !== Number(next.reps)) ? 'Je volgt het bij de start vastgelegde doel. Je opgeslagen prestaties bepalen de volgende stap.' : next?.reason || 'Leg eerst je startprestatie vast.',
         sameWeekDay: sameWeek ? SPLIT_INFO[previous.day].title.split(':')[0] : null,
         hasPriorData: !!previous || !!current, currentLoggedWeight: current ? Number(current.weight) : null,
         benchmark, cycleGoal: benchmark.cycleGoal, unit: benchmark.unit };
@@ -4452,7 +4506,7 @@
         return { ...ex, progress, dominantExertion: progress.exertion,
           maxWeight: Math.max(0, ...ex.weights), maxReps: Math.max(0, ...ex.repsList),
           nextAdvisedWeight: next.weight, nextAdvisedReps: next.reps,
-          statusTag: next.status, statusClass: progress.achieved ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300',
+          nextProvisional: next.provisional, nextMinReps: next.minReps, nextMaxReps: next.maxReps, statusTag: next.status, statusClass: progress.achieved ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300',
           nextActionText: next.reason };
       });
 
@@ -4577,11 +4631,11 @@
             const slot = nextWeekData[dKey]?.[sKey];
             if (!slot || (slot.selectedName || EXERCISE_CATALOG[sKey].defaultName).trim().toLowerCase() !== ex.name.trim().toLowerCase()) continue;
             if (slot.sets.some(set => set.completed || set.inputFields?.weight || set.inputFields?.reps || (set.reps !== '' && set.reps != null))) continue;
-            slot.progressionPlan = { weight: ex.isBodyweight ? 0 : ex.nextAdvisedWeight, reps: ex.nextAdvisedReps };
+            slot.progressionPlan = { weight: ex.isBodyweight ? 0 : ex.nextAdvisedWeight, reps: ex.nextAdvisedReps, minReps: ex.nextMinReps, maxReps: ex.nextMaxReps };
             slot.targetReps = ex.nextAdvisedReps;
             slot.sets.forEach((set, index) => {
               if (isNextDeload && index >= 2) return;
-              if (set.weight === '') set.weight = ex.isBodyweight ? 0 : ex.nextAdvisedWeight;
+              if (!set.inputFields?.weight) set.weight = ex.isBodyweight ? 0 : ex.nextAdvisedWeight;
             });
           }
         }
@@ -4664,20 +4718,20 @@
 
                 <div class="text-right flex-shrink-0">
                   <div class="text-[10px] uppercase font-mono text-slate-400">Advies Wk ${nextWeekNum}</div>
-                  ${ex.isBodyweight ? `
+                  ${ex.nextProvisional ? `<div class="font-mono text-xs text-slate-400">Nog te beoordelen</div>` : ex.isBodyweight ? `
                     <div class="font-mono font-bold text-sm ${ex.nextAdvisedReps > ex.targetReps ? 'text-emerald-400' : 'text-blue-300'}">
                       ${evalData.isNextDeload ? 2 : 3} × ${ex.nextAdvisedReps} reps
                     </div>
                     <div class="text-[9px] text-slate-500 font-mono">Lichaamsgewicht</div>
                   ` : `
                     <div class="font-mono font-bold text-sm ${ex.nextAdvisedWeight > ex.maxWeight ? 'text-emerald-400' : 'text-blue-300'}">
-                      ${ex.nextAdvisedWeight > 0 ? `${ex.nextAdvisedWeight} kg` : 'Nog te bepalen'}
+                      ${ex.nextAdvisedWeight > 0 ? `${ex.nextAdvisedWeight} kg × ${ex.nextAdvisedReps} reps` : 'Nog te bepalen'}
                     </div>
                   `}
                 </div>
               </div>
 
-              <div class="text-xs font-bold text-emerald-300">Weekdoel: ${ex.progress.achievedSets}/${ex.progress.requiredSets} sets ? ${ex.progress.percent}%</div>
+              <div class="text-xs font-bold text-emerald-300">Weekdoel: ${ex.progress.achievedSets}/${ex.progress.requiredSets} sets · ${ex.progress.percent}%</div>
               <div class="space-y-2">${ex.progress.sessions.map(session => `<div class="text-xs text-slate-400">${SPLIT_INFO[session.dayKey].title.split(':')[0]}</div>${renderProgressDetails(weekNum, session.dayKey, session.slotKey)}`).join('')}</div>
               <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-800/60 text-slate-300">
                 <span class="text-[11px] text-slate-400">${setsSummary}</span>
@@ -4854,8 +4908,8 @@
               <span>⚡</span> Stoplicht Autoregulatie:
             </span>
             <div class="flex items-center gap-3 text-[10px] font-mono flex-wrap">
-              <span class="text-emerald-400">🟢 Vlot = Fast-Track (+${inc} kg)</span>
-              <span class="text-amber-400">🟡 Goed = ${freq === "biweekly" ? "2 Wk Consolidatie" : `+${inc} kg bij doel`}</span>
+              <span class="text-emerald-400">🟢 Vlot = eerst reps, daarna één gewichtsstap</span>
+              <span class="text-amber-400">🟡 Goed = ${freq === "biweekly" ? "2 Wk Consolidatie" : "Eerst reps, daarna gewicht"}</span>
               <span class="text-rose-400">🔴 Max = Gewicht Behouden</span>
             </div>
           </div>
@@ -4875,7 +4929,7 @@
           ` : `
             <button onclick="applyWeekOverloadAndAdvance(${weekNum})" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg active:scale-95 cursor-pointer">
               <span>🚀</span>
-              <span>Pas Overload Toe & Ga naar Week ${nextWeekNum}</span>
+              <span>Neem Advies Over & Ga naar Week ${nextWeekNum}</span>
             </button>
           `}
           <button onclick="closeWeekReportModal()" class="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition border border-slate-700 cursor-pointer">
@@ -8081,7 +8135,7 @@
       const isBW = isExerciseBodyweight(name);
       const advice = getSlotTargetAdvice(liveWorkout.weekNum, liveWorkout.dayKey, slotKey);
       if (!slot.progressionPlan) {
-        slot.progressionPlan = { weight: isBW ? 0 : Number(advice.advisedWeight || slot.sets[0]?.weight || 0), reps: Number(advice.advisedReps || advice.targetReps) };
+        slot.progressionPlan = { weight: isBW ? 0 : Number(advice.advisedWeight || slot.sets[0]?.weight || 0), reps: Number(advice.advisedReps || advice.targetReps), minReps: advice.minReps, maxReps: advice.maxReps };
       }
       const index = liveWorkout.currentSetIndex;
       const set = slot.sets[index] || {};
@@ -8092,7 +8146,6 @@
         if ((set.completed || set.inputFields?.[field]) && set[field] !== '' && set[field] != null) return Number(set[field]);
         if (previous) return Number(previous[field]);
         if (reference) return Number(reference[field]);
-        if (set[field] !== '' && set[field] != null) return Number(set[field]);
         return Number(slot.progressionPlan[field === 'weight' ? 'weight' : 'reps']);
       };
       liveWorkout.tempWeight = isBW ? 0 : value('weight');
@@ -8106,7 +8159,7 @@
       const slot = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey][key];
       if (!slot.progressionPlan) {
         const advice = getSlotTargetAdvice(liveWorkout.weekNum, liveWorkout.dayKey, key);
-        slot.progressionPlan = { weight: Number(advice.advisedWeight || 0), reps: Number(advice.advisedReps || advice.targetReps) };
+        slot.progressionPlan = { weight: Number(advice.advisedWeight || 0), reps: Number(advice.advisedReps || advice.targetReps), minReps: advice.minReps, maxReps: advice.maxReps };
       }
       const set = slot.sets[liveWorkout.currentSetIndex];
       set[field] = value;
@@ -9156,7 +9209,7 @@
                   <div class="text-[10px] text-slate-400 font-mono">Geen halters of schijven nodig</div>
                 </div>
                 <div class="p-2 rounded-lg bg-slate-900/60 text-center text-[10px] font-mono text-emerald-300 border border-emerald-500/20">
-                  Progressive overload via aantal herhalingen (+1 rep)
+                  Progressive overload via herhalingen (+2 reps per behaald doel)
                 </div>
               ` : `
                 <div class="flex items-center justify-center">

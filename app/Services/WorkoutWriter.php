@@ -231,9 +231,9 @@ class WorkoutWriter
                     continue;
                 }
                 $next = $this->periodization->nextProgression($progress, $nextWeek, (float) $prefs->overload_increment, $prefs->overload_frequency);
-                $slot->update(['progression_plan' => ['weight' => $next['weight'], 'reps' => $next['reps']], 'target_reps' => $next['reps']]);
+                $slot->update(['progression_plan' => ['weight' => $next['weight'], 'reps' => $next['reps'], 'minReps' => $next['minReps'], 'maxReps' => $next['maxReps']], 'target_reps' => $next['reps']]);
                 foreach ($slot->sets->take($next['requiredSets']) as $set) {
-                    if ($set->weight === '') {
+                    if (! ($set->input_fields['weight'] ?? false)) {
                         $set->update(['weight' => (string) $next['weight']]);
                     }
                 }

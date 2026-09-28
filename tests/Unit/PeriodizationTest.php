@@ -35,16 +35,16 @@ class PeriodizationTest extends TestCase
         $this->assertSame(80.0, $this->periodization->advisedWeight(80, 1, 2.5, 'weekly'));
     }
 
-    public function test_weekly_overload_adds_increment(): void
+    public function test_low_rep_goal_keeps_weight_for_rep_progression(): void
     {
-        $this->assertSame(82.5, $this->periodization->advisedWeight(80, 3, 2.5, 'weekly'));
+        $this->assertSame(80.0, $this->periodization->advisedWeight(80, 3, 2.5, 'weekly'));
     }
 
-    public function test_easy_hit_adds_double_increment(): void
+    public function test_easy_hit_does_not_skip_rep_progression(): void
     {
-        $this->assertSame(85.0, $this->periodization->advisedWeight(80, 3, 2.5, 'weekly', 'easy', true));
+        $this->assertSame(80.0, $this->periodization->advisedWeight(80, 3, 2.5, 'weekly', 'easy', true));
         $this->assertSame(80.0, $this->periodization->advisedWeight(80, 2, 2.5, 'biweekly', 'easy', true));
-        $this->assertSame(85.0, $this->periodization->advisedWeight(80, 3, 2.5, 'biweekly', 'easy', true));
+        $this->assertSame(80.0, $this->periodization->advisedWeight(80, 3, 2.5, 'biweekly', 'easy', true));
     }
 
     public function test_missed_max_set_drops_one_increment(): void
@@ -76,7 +76,7 @@ class PeriodizationTest extends TestCase
     {
         $this->assertSame(80.0, $this->periodization->advisedWeight(80, 2, 2.5, 'biweekly'));
         $this->assertSame(80.0, $this->periodization->advisedWeight(80, 2, 2.5, 'biweekly', 'good', true));
-        $this->assertSame(82.5, $this->periodization->advisedWeight(80, 3, 2.5, 'biweekly'));
+        $this->assertSame(80.0, $this->periodization->advisedWeight(80, 3, 2.5, 'biweekly'));
     }
 
     public function test_target_achieved_requires_all_working_sets(): void
