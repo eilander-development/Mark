@@ -45,6 +45,7 @@ class ExerciseSettingsTest extends TestCase
                 $set->update(['weight' => '6', 'reps' => '12', 'completed' => true, 'exertion' => 'good']);
             }
         }
+        $cycle->sessions()->where('week', 2)->where('day', 'mon')->firstOrFail()->slots()->where('slot_key', 'slot_a1')->firstOrFail()->update(['selected_name' => 'Dumbbell Bench Press']);
         $this->patchJson('/api/preferences', ['exercise_increments' => ['dumbbell bench press' => 0.5]])->assertOk();
         $report = $this->getJson('/api/weeks/1/report')->assertOk()->json();
         $exercise = collect($report['exercises'])->firstWhere('name', 'Dumbbell Bench Press');

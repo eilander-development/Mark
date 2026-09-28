@@ -877,7 +877,7 @@
               Startgewichten & onderbouwing
             </h3>
             <p class="text-[11px] text-slate-400">
-              Gekalibreerd op leeftijd (~42 jr), lichaamsgewicht en duurzame spieropbouw
+              Schemareferenties bij je opgeslagen profiel; geen gevalideerde krachtnormen
             </p>
           </div>
         </div>
@@ -3661,7 +3661,7 @@
       return Number(currentWeight) > 0 && Number(currentReps) > 0 && (Number(currentWeight) > record.maxWeight || calculate1RM(currentWeight, currentReps) > record.max1RM);
     }
 
-    /* 3B. LICHAAMSGEWICHT & FYSIOLOGISCHE KRACHTBENCHMARKS VOOR THUISGYM (~42 JR / 82 KG) */
+    /* 3B. LICHAAMSGEWICHT & FYSIOLOGISCHE SCHEMAREFERENTIES VOOR THUISGYM */
     function isExerciseBodyweight(exerciseName) {
       const n = (exerciseName || "").toLowerCase();
       return n.includes("push-up") || n.includes("pushup") || n.includes("opdrukken") || 
@@ -6074,7 +6074,7 @@
             <div class="p-2.5 rounded-xl bg-slate-900/90 border border-amber-500/20 space-y-1.5">
               <div class="flex items-center justify-between text-[11px]">
                 <span class="text-amber-300 font-bold flex items-center gap-1">
-                  <span>📊</span> Adviesdoelen (42 jr, 82 kg):
+                  <span>📊</span> Schemareferenties bij jouw profiel:
                 </span>
                 <span class="font-mono text-slate-400 text-[10px]">
                   Norm: <b class="text-slate-200">${bench.intermediate} ${bench.unit}</b>
@@ -8335,7 +8335,7 @@
 
       if (goodBtn) {
         if (current === "good") {
-          goodBtn.className = `${baseClass} bg-amber-950/80 border-amber-500 text-amber-300 shadow-md shadow-amber-950/50 ring-2 ring-amber-500/40`;
+          goodBtn.className = `${baseClass} bg-blue-950/80 border-blue-500 text-blue-300 ring-2 ring-blue-500/40`;
         } else {
           goodBtn.className = `${baseClass} bg-slate-950/60 border-slate-800 text-slate-400 hover:border-amber-500/40 hover:text-slate-200`;
         }
@@ -9148,10 +9148,6 @@
         `;
 
         const inc = getExerciseIncrement(exerciseName);
-
-        // Advies HTML voorbereiden
-        let adviceCardHtml = "";
-        adviceCardHtml = renderProgressDetails(liveWorkout.weekNum, liveWorkout.dayKey, slotKey);
 
         container.innerHTML = `
           <!-- Mini Stepper Navigatie -->
@@ -10723,6 +10719,7 @@
       // ESC toets ondersteuning om de bovenste actieve modal te sluiten
       window.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
+          if (document.getElementById("settingsModal")?.open) return;
           const pwaModal = document.getElementById("pwaGuideModal");
           if (pwaModal && !pwaModal.classList.contains("hidden")) {
             closePwaGuideModal();

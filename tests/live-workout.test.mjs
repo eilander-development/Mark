@@ -260,7 +260,11 @@ test('live view renders actual save values and the original plan together', () =
     const start = html.indexOf('    function renderLiveWorkoutView(');
     const end = html.indexOf('\n    function ', start + 1);
     vm.runInContext(html.slice(start, end), c);
+    c.appState.exerciseIncrements = { 'dumbbell bench press': 0.5 };
     c.renderLiveWorkoutView();
+    assert.match(elements.lwContentArea.innerHTML, /adjustLiveWeight\(0.5\)/);
+    assert.ok(elements.lwContentArea.innerHTML.indexOf('lwSubmitTargetBtn') < elements.lwContentArea.innerHTML.indexOf('Voortgang, vorige trainingen'));
+    assert.match(elements.lwContentArea.innerHTML, /<details[^>]*><summary[^>]*>ⓘ Voortgang/);
     assert.match(elements.lwContentArea.innerHTML, /OPSLAAN \(15 kg.*12 reps\)/);
     assert.match(elements.lwContentArea.innerHTML, /Gepland doel/);
     assert.match(elements.lwContentArea.innerHTML, /Eigen invoer voor deze set/);
@@ -839,7 +843,7 @@ test('exercise increments apply to weekly progression and recovery while other e
     assert.equal(c.getNextProgression(progress, 7).weight, 4);
     assert.equal(c.getExerciseIncrement(' DUMBBELL BENCH PRESS '), 0.5);
     assert.equal(c.getNextProgression({ ...progress, exerciseName: 'Other exercise' }, 2).weight, 8);
-    assert.equal(c.getWeekEvaluation(1).exercises[0].next.weight, 6.5);
+    assert.equal(c.getWeekEvaluation(1).exercises[0].nextAdvisedWeight, 6.5);
 });
 
 test('profile summary uses saved personal details and only selected equipment', () => {
@@ -871,4 +875,22 @@ test('settings save commits only after the server accepts the change and reports
     assert.equal(c.appState.overloadIncrement, 0.5);
     assert.equal(c.saved, true);
     assert.match(status.textContent, /Opgeslagen/);
+});
+
+
+test('settings opens with saved profile and unique exercise overrides and escapes exercise names', () => {
+    const { context: c, elements } = setup();
+    for (const id of ['trainingSettingsContent', 'profileSettingsContent', 'settingsVideoPanel']) elements[id] = {};
+    elements.settingsModal = { open: false, showModal() { this.open = true; } };
+    c.appState.userProfile = { birthYear: 1993, bodyWeightKg: 71, experienceLevel: 'beginner', equipment: { dumbbells: true } };
+    c.appState.exerciseIncrements = { 'dumbbell bench press': 0.5 };
+    c.appState.weeks[1].mon.bench.selectedName = '<script>alert("exercise")</script>';
+    c.openSettingsModal();
+    assert.equal(elements.settingsModal.open, true);
+    assert.match(elements.profileSettingsContent.innerHTML, /value="1993"/);
+    assert.match(elements.profileSettingsContent.innerHTML, /value="71"/);
+    assert.match(elements.trainingSettingsContent.innerHTML, /value="0.5"/);
+    assert.equal((elements.trainingSettingsContent.innerHTML.match(/data-exercise="dumbbell bench press"/g) || []).length, 1);
+    assert.doesNotMatch(elements.trainingSettingsContent.innerHTML, /<script>/);
+    assert.match(elements.trainingSettingsContent.innerHTML, /&lt;script&gt;/);
 });
