@@ -12,11 +12,11 @@ test -f "$app/vendor/autoload.php"
 test -f "$public/index.html" || test -f "$public/index.php"
 test ! -e "$public/hot"
 stage=$(mktemp -d)
-trap 'rm -rf -- "$stage"' EXIT
+trap 'chmod -R u+rwX -- "$stage"; rm -rf -- "$stage"' EXIT
 mkdir -p "$stage/backend" "$stage/public" "$stage/scripts"
 paths=(app bootstrap config database resources routes vendor artisan composer.json composer.lock)
 [ ! -d "$app/lang" ] || paths+=(lang)
-tar --exclude='bootstrap/cache/*.php' --exclude='database/*.sqlite*' -cf - -C "$app" "${paths[@]}" | tar -xf - -C "$stage/backend"
+tar --exclude='bootstrap/cache/*.php' --exclude='database/*.sqlite*' --exclude='.env*' --exclude='node_modules' --exclude='.git' --exclude='qa' -cf - -C "$app" "${paths[@]}" | tar -xf - -C "$stage/backend"
 tar --exclude='./hot' --exclude='./storage' --exclude='./.env*' -cf - -C "$public" . | tar -xf - -C "$stage/public"
 cp scripts/deploy-config.sh scripts/release-backup.php "$stage/scripts/"
 if [ "$app" != backend ]; then
