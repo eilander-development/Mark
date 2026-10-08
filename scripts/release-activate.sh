@@ -45,7 +45,9 @@ for setting in "${DEPLOY_PERSISTENT_ENV_FILES[@]}"; do
     [[ "$setting" =~ ^[A-Z][A-Z0-9_]*$ ]]
     key_path=$(php -r 'require $argv[1]."/vendor/autoload.php"; $values=Dotenv\Dotenv::parse(file_get_contents($argv[2])); echo $values[$argv[3]]??"";' "$stage/backend" "$shared/.env" "$setting")
     [[ "$key_path" =~ ^[A-Za-z0-9_./-]+$ && "$key_path" != /* && "$key_path" != *'..'* && "$key_path" != public/* ]] || { echo "Ongeldig bestaand bestandspad voor $setting." >&2; exit 1; }
-    source_path=$(realpath -- "$parent/$key_path")
+    source_path="$shared/private-files/$key_path"
+    if [ ! -f "$source_path" ]; then source_path="$parent/$key_path"; fi
+    source_path=$(realpath -- "$source_path")
     [[ "$source_path" == "$parent/"* && "$source_path" != "$public/"* ]]
     [ -f "$source_path" ] || { echo "Bestaand bestand voor $setting ontbreekt." >&2; exit 1; }
     if [ ! -e "$stage/backend/$key_path" ]; then

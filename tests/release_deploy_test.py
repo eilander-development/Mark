@@ -32,6 +32,7 @@ class ReleaseDeployTest(unittest.TestCase):
         self.bin = self.home / 'bin'
         self.bin.mkdir()
         self.env = dict(os.environ, HOME=str(self.home), PATH=str(self.bin)+':'+os.environ['PATH'], QA_LOG=str(self.home/'commands'))
+        self.stub('crontab', '#!/usr/bin/env bash\nprintf \'%s\\n\' \"${QA_CRON:-}\"\n')
         self.stub('php', '''#!/usr/bin/env bash
 printf '%s\\n' "$*" >> "$QA_LOG"
 if [[ "$1" == *release-backup.php ]] && [ "${FAIL_BACKUP:-}" = 1 ]; then exit 1; fi
@@ -136,6 +137,71 @@ DEPLOY_CATALOG_MIGRATIONS='''+('true' if catalog else 'false')+'\nDEPLOY_PERSIST
         result = subprocess.run(['bash', str(SCRIPTS/'release-ssh.sh')], env=self.env, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((self.home/'.ssh/known_hosts').read_text(), 'host ssh-ed25519 fixture\n')
+
+    def cleanup(self, url='https://site.test'):
+        return subprocess.run(['bash', str(SCRIPTS/'release-maintenance.sh'), str(self.public), 'testapp', url, 'cleanup'], env=self.env, capture_output=True, text=True)
+
+    def test_cleanup_archives_legacy_code_and_preserves_live_storage(self):
+        self.payload()
+        self.assertEqual(self.activate().returncode, 0)
+        (self.base/'app').mkdir()
+        (self.base/'app/code.php').write_text('previous code')
+        neighbor = self.home/'domains/neighbor.test/public_html'
+        neighbor.mkdir(parents=True)
+        (neighbor/'keep.txt').write_text('other project')
+        result = self.cleanup()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(set(p.name for p in self.base.iterdir()), {'public', 'testapp-backend', 'testapp-shared', 'testapp-releases', '.testapp-deploy.lock'})
+        self.assertFalse((self.base/'testapp-shared/storage').is_symlink())
+        self.assertEqual((self.public/'storage/upload.jpg').read_text(), 'upload')
+        archive = next((self.base/'testapp-shared/backups').glob('legacy-*'))
+        self.assertEqual((archive/'app/code.php').read_text(), 'previous code')
+        self.assertEqual((archive/'.env').read_text(), 'APP_KEY=existing-key\n')
+        self.assertEqual((neighbor/'keep.txt').read_text(), 'other project')
+        self.assertEqual(self.cleanup().returncode, 0)
+
+    def test_cleanup_preserves_private_file_and_updates_release_link(self):
+        (self.base/'bank-key.pem').write_text('test-only-private-file')
+        self.env['QA_KEY_PATH'] = 'bank-key.pem'
+        stage = self.payload(persistent=True)
+        self.assertEqual(self.activate().returncode, 0)
+        result = self.cleanup()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.base/'bank-key.pem').exists())
+        persistent = self.base/'testapp-shared/private-files/bank-key.pem'
+        self.assertEqual((stage/'backend/bank-key.pem').resolve(), persistent)
+        self.assertEqual(persistent.read_text(), 'test-only-private-file')
+
+    def test_next_deployment_uses_shared_private_file_after_legacy_cleanup(self):
+        persistent = self.base/'testapp-shared/private-files/bank-key.pem'
+        persistent.parent.mkdir(parents=True)
+        persistent.write_text('shared-private-file')
+        self.env['QA_KEY_PATH'] = 'bank-key.pem'
+        stage = self.payload(persistent=True)
+        result = self.activate()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((stage/'backend/bank-key.pem').resolve(), persistent)
+
+    def test_cleanup_rejects_domain_mismatch_and_old_cron_references(self):
+        self.payload()
+        self.assertEqual(self.activate().returncode, 0)
+        self.assertNotEqual(self.cleanup(url='https://neighbor.test').returncode, 0)
+        self.env['QA_CRON'] = '* * * * * php '+str(self.base/'artisan')+' schedule:run'
+        self.assertNotEqual(self.cleanup().returncode, 0)
+        self.assertTrue((self.base/'artisan').exists())
+        self.assertTrue((self.base/'testapp-shared/storage').is_symlink())
+        self.assertNotIn('artisan down', (self.home/'commands').read_text())
+
+    def test_failed_cleanup_live_check_restores_archived_files(self):
+        self.payload()
+        self.assertEqual(self.activate().returncode, 0)
+        self.env['FAIL_CURL'] = '1'
+        result = self.cleanup()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue((self.base/'artisan').exists())
+        self.assertTrue((self.base/'.env').exists())
+        self.assertEqual((self.public/'storage/upload.jpg').read_text(), 'upload')
+        self.assertEqual((self.public/'index.php').read_text(), 'new version')
 
     def test_failed_live_check_restores_previous_backend_and_public_files(self):
         previous = self.base/'previous-backend'
