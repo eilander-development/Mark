@@ -44,6 +44,7 @@ jobs:
       - name: App en releasescripts testen
         env:
           APP_ENV: testing
+          APP_URL: http://localhost
           APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
           DB_CONNECTION: sqlite
           DB_DATABASE: ':memory:'
