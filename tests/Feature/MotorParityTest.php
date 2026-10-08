@@ -24,7 +24,9 @@ class MotorParityTest extends TestCase
         $slot1->sets->first()->update(['weight' => '70', 'reps' => '8', 'completed' => true]);
         $slot6->sets->first()->update(['weight' => '86', 'reps' => '8', 'completed' => true]);
 
-        $this->postJson('/api/cycles')->assertOk()->assertJsonPath('currentCycle', 2);
+        $this->patchJson('/api/preferences', ['current_week' => 7])->assertOk();
+        $this->postJson('/api/cycles', ['close_current_period' => true])
+            ->assertOk()->assertJsonPath('currentCycle', 2);
 
         $newWeek1 = WorkoutSession::query()
             ->where('week', 1)
@@ -53,7 +55,9 @@ class MotorParityTest extends TestCase
     {
         $this->getJson('/api/state')->assertOk();
 
+        $this->patchJson('/api/preferences', ['current_week' => 7])->assertOk();
         $this->postJson('/api/cycles', [
+            'close_current_period' => true,
             'schema' => [
                 'mon' => [
                     'slot_a1' => [
