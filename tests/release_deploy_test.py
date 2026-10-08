@@ -142,3 +142,26 @@ DEPLOY_CATALOG_MIGRATIONS='''+('true' if catalog else 'false')+'\n')
         result = subprocess.run(['bash', 'scripts/release-target.sh'], cwd=project, env=env, capture_output=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse((project/'injected').exists())
+
+    def test_bundle_omits_environment_files_sqlite_data_and_stale_caches(self):
+        project = self.home/'package-repo'
+        (project/'scripts').mkdir(parents=True)
+        for name in ['release-package.sh', 'release-index.php', 'release-backup.php']:
+            shutil.copy(SCRIPTS/name, project/'scripts'/name)
+        (project/'scripts/deploy-config.sh').write_text('DEPLOY_APP=testapp\n')
+        for directory in ['app', 'bootstrap/cache', 'config', 'database', 'resources/views', 'routes', 'vendor/tool', 'public/build', 'lang']:
+            (project/directory).mkdir(parents=True, exist_ok=True)
+        for name in ['artisan', 'composer.json', 'composer.lock', 'vendor/autoload.php', 'public/index.php', 'public/build/manifest.json', 'lang/nl.json']:
+            (project/name).write_text('fixture')
+        for name in ['vendor/tool/.envrc', 'vendor/tool/.env', 'vendor/tool/.env.example', 'database/database.sqlite', 'database/database.sqlite-wal', 'bootstrap/cache/config.php']:
+            (project/name).write_text('must not ship')
+        self.stub('git', '#!/usr/bin/env bash\nprintf "%s\\n" '+REVISION+'\n')
+        output = self.home/'release.tgz'
+        result = subprocess.run(['bash', 'scripts/release-package.sh', str(output)], cwd=project, env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        with tarfile.open(output) as archive:
+            names = archive.getnames()
+            self.assertIn('backend/lang/nl.json', names)
+            self.assertIn('public/release.json', names)
+            self.assertNotIn('backend/bootstrap/cache/config.php', names)
+            self.assertFalse(any('.env' in name or '.sqlite' in name for name in names))
