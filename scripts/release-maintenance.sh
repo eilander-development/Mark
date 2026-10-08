@@ -21,6 +21,7 @@ cron=$(crontab -l 2>/dev/null || true)
 if [ "$operation" = inspect ]; then
     printf 'ACTIVE=%s\nSTORAGE=%s\n' "$active" "$(realpath -- "$shared/storage")"
     find "$parent" -mindepth 1 -maxdepth 1 -printf '%f\t%y\n' | sort
+    if [ -d "$parent/storage" ]; then find "$parent/storage" -mindepth 1 -maxdepth 3 -type d -printf 'LEGACY_STORAGE=%P\n'; fi
     printf 'CRON_OWN_REFERENCES=%s\n' "$(printf '%s\n' "$cron" | grep -Fc "${url#https://}" || true)"
     exit 0
 fi
@@ -34,6 +35,14 @@ release=$(cat "$shared/current-release")
 if printf '%s\n' "$cron" | grep -Fq "${url#https://}"; then
     echo 'Controleer eerst de domeinverwijzingen in crontab.' >&2; exit 1
 fi
+refresh_configuration() {
+    # realpath(storage_path(...)) must be recalculated after moving shared data.
+    # Also clear retained releases so a rollback does not recreate legacy storage.
+    for candidate in "$parent/$app-releases/"*/backend; do
+        if [ -f "$candidate/bootstrap/cache/config.php" ]; then rm -- "$candidate/bootstrap/cache/config.php"; fi
+    done
+    (cd "$active" && APP_PUBLIC_PATH="$public" php artisan optimize --no-interaction)
+}
 legacy=()
 shopt -s nullglob dotglob
 for entry in "$parent"/*; do
@@ -41,7 +50,12 @@ for entry in "$parent"/*; do
     case "$name" in public|"$app-releases"|"$app-shared"|"$app-backend"|".$app-deploy.lock"|.well-known|.htaccess|.htpasswd) continue;; esac
     legacy+=("$entry")
 done
-if [ "${#legacy[@]}" = 0 ]; then echo 'Hoofdmap is al opgeruimd.'; exit 0; fi
+if [ "${#legacy[@]}" = 0 ]; then
+    refresh_configuration
+    curl --fail --silent --show-error --location --max-time 30 "$url/" -o /dev/null
+    echo 'Hoofdmap is al opgeruimd; configuratie en livepagina gecontroleerd.'
+    exit 0
+fi
 for cwd in /proc/[0-9]*/cwd; do
     target=$(readlink "$cwd" 2>/dev/null || true)
     for entry in "${legacy[@]}"; do
@@ -98,6 +112,7 @@ for setting in "${DEPLOY_PERSISTENT_ENV_FILES[@]}"; do
     done
     [ "$(realpath -- "$active/$key_path")" = "$persistent" ]
 done
+refresh_configuration
 for entry in "${legacy[@]}"; do
     [ "$(dirname "$entry")" = "$parent" ]
     mv -- "$entry" "$archive/"

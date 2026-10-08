@@ -42,6 +42,7 @@ exit 0
 ''')
         self.stub('curl', '''#!/usr/bin/env bash
 [ "${FAIL_CURL:-}" != 1 ] || exit 22
+if [ -n "${QA_STALE_CONFIG:-}" ] && [ -f "$QA_STALE_CONFIG" ]; then mkdir -p "$QA_LEGACY_STORAGE/framework/views"; fi
 while [ "$#" -gt 0 ]; do
  if [ "$1" = -o ]; then printf '{"revision":"%s"}' 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' > "$2"; exit 0; fi
  shift
@@ -142,8 +143,11 @@ DEPLOY_CATALOG_MIGRATIONS='''+('true' if catalog else 'false')+'\nDEPLOY_PERSIST
         return subprocess.run(['bash', str(SCRIPTS/'release-maintenance.sh'), str(self.public), 'testapp', url, 'cleanup'], env=self.env, capture_output=True, text=True)
 
     def test_cleanup_archives_legacy_code_and_preserves_live_storage(self):
-        self.payload()
+        stage = self.payload()
         self.assertEqual(self.activate().returncode, 0)
+        stale_config = stage/'backend/bootstrap/cache/config.php'
+        stale_config.write_text('compiled views reference original storage')
+        self.env.update(QA_STALE_CONFIG=str(stale_config), QA_LEGACY_STORAGE=str(self.base/'storage'))
         (self.base/'app').mkdir()
         (self.base/'app/code.php').write_text('previous code')
         neighbor = self.home/'domains/neighbor.test/public_html'
