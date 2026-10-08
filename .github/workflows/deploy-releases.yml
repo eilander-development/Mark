@@ -1,20 +1,20 @@
-name: Nieuwe release-deploy controleren
+name: Release bouwen, testen en publiceren
 on:
   push:
-    branches: ['release-deploy/**']
+    branches: [main, 'release-deploy/**', 'repair/**']
   pull_request:
     branches: [main]
     paths: ['scripts/release-*', 'scripts/deploy-config.sh', 'tests/release_deploy_test.py', '.github/workflows/deploy-releases.yml']
   workflow_dispatch:
     inputs:
       deploy:
-        description: 'Nieuwe release activeren op de hostingserver (bestaande deploy blijft apart)'
+        description: 'Release activeren op de hostingserver'
         type: boolean
         default: false
 permissions:
   contents: read
 concurrency:
-  group: release-${{ github.repository }}-${{ github.ref }}
+  group: release-${{ github.repository }}
   cancel-in-progress: false
 jobs:
   validate:
@@ -59,7 +59,7 @@ jobs:
           if node -e 'process.exit(require("./package.json").scripts.test ? 0 : 1)'; then npm test; fi
           mkdir -p "$APP_DIR/storage/framework/testing/views"
           (cd "$APP_DIR" && php artisan test && php artisan optimize)
-          bash -n scripts/release-{package,target,resolve,activate,ssh}.sh scripts/deploy-config.sh
+          bash -n scripts/release-{package,target,resolve,activate,ssh,maintenance}.sh scripts/deploy-config.sh
           python3 -m unittest discover -s tests -p release_deploy_test.py -v
           bash scripts/release-package.sh /tmp/release.tgz
           tar -tzf /tmp/release.tgz > /tmp/release-files.txt
@@ -71,7 +71,7 @@ jobs:
           bash scripts/release-package.sh /tmp/production-release.tgz
   deploy:
     needs: validate
-    if: github.event_name == 'workflow_dispatch' && inputs.deploy
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
