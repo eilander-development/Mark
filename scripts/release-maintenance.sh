@@ -35,11 +35,12 @@ if printf '%s\n' "$cron" | grep -Fq "${url#https://}"; then
     echo 'Controleer eerst de domeinverwijzingen in crontab.' >&2; exit 1
 fi
 legacy=()
-while IFS= read -r -d '' entry; do
+shopt -s nullglob dotglob
+for entry in "$parent"/*; do
     name=${entry##*/}
     case "$name" in public|"$app-releases"|"$app-shared"|"$app-backend"|".$app-deploy.lock"|.well-known|.htaccess|.htpasswd) continue;; esac
     legacy+=("$entry")
-done < <(find "$parent" -mindepth 1 -maxdepth 1 -print0)
+done
 if [ "${#legacy[@]}" = 0 ]; then echo 'Hoofdmap is al opgeruimd.'; exit 0; fi
 for cwd in /proc/[0-9]*/cwd; do
     target=$(readlink "$cwd" 2>/dev/null || true)
@@ -89,12 +90,12 @@ for setting in "${DEPLOY_PERSISTENT_ENV_FILES[@]}"; do
     mkdir -p "$(dirname "$persistent")"
     if [ -f "$persistent" ]; then cmp "$original" "$persistent"; else cp -- "$original" "$persistent"; fi
     chmod 600 "$persistent"
-    while IFS= read -r -d '' candidate; do
+    for candidate in "$parent/$app-releases/"*/backend; do
         if [ -L "$candidate/$key_path" ]; then
             [ "$(realpath -- "$candidate/$key_path")" = "$original" ]
             ln -sfn "$persistent" "$candidate/$key_path"
         fi
-    done < <(find "$parent/$app-releases" -mindepth 2 -maxdepth 2 -type d -name backend -print0)
+    done
     [ "$(realpath -- "$active/$key_path")" = "$persistent" ]
 done
 for entry in "${legacy[@]}"; do
