@@ -35,6 +35,7 @@ class ReleaseDeployTest(unittest.TestCase):
         self.stub('php', '''#!/usr/bin/env bash
 printf '%s\\n' "$*" >> "$QA_LOG"
 if [[ "$1" == *release-backup.php ]] && [ "${FAIL_BACKUP:-}" = 1 ]; then exit 1; fi
+if [ "$1" = -r ] && [[ "$2" == *Dotenv* ]]; then printf '%s' "${QA_KEY_PATH:-}"; fi
 if [[ "$1 $2" == 'artisan migrate' ]] && [ "${FAIL_MIGRATE:-}" = 1 ]; then exit 1; fi
 exit 0
 ''')
@@ -51,7 +52,7 @@ done
         path.write_text(content)
         path.chmod(0o755)
 
-    def payload(self, catalog=False):
+    def payload(self, catalog=False, persistent=False):
         stage = self.base / 'testapp-releases' / RELEASE
         stage.mkdir(parents=True)
         source = self.home / 'payload'
@@ -69,7 +70,7 @@ DEPLOY_TABLE_PREFIX=''
 DEPLOY_EXCLUDE_PREFIX=''
 DEPLOY_EXPECTED_DATABASE=''
 DEPLOY_SESSION_CHECK=false
-DEPLOY_CATALOG_MIGRATIONS='''+('true' if catalog else 'false')+'\n')
+DEPLOY_CATALOG_MIGRATIONS='''+('true' if catalog else 'false')+'\nDEPLOY_PERSISTENT_ENV_FILES=('+('PRIVATE_KEY_PATH' if persistent else '')+')\n')
         with tarfile.open(stage / 'payload.tgz', 'w:gz') as archive:
             for name in ['backend', 'public', 'scripts']:
                 archive.add(source / name, arcname=name)
@@ -86,9 +87,55 @@ DEPLOY_CATALOG_MIGRATIONS='''+('true' if catalog else 'false')+'\n')
         self.assertEqual((self.public/'.htaccess').read_text(), 'hosting rules')
         self.assertEqual((self.public/'.well-known/token').read_text(), 'keep')
         self.assertEqual((self.public/'storage/upload.jpg').read_text(), 'upload')
+        (self.base/'storage/app/public/concurrent.txt').write_text('new upload')
+        self.assertEqual((self.public/'storage/concurrent.txt').read_text(), 'new upload')
         self.assertEqual((stage/'backend/.env').read_text(), 'APP_KEY=existing-key\n')
         self.assertFalse((stage/'backend/bootstrap/cache/config.php').exists())
         self.assertEqual((self.base/'testapp-backend').resolve(), stage/'backend')
+
+    def test_existing_private_file_remains_available_in_new_release(self):
+        (self.base/'bank-key.pem').write_text('test-only-private-file')
+        self.env['QA_KEY_PATH'] = 'bank-key.pem'
+        stage = self.payload(persistent=True)
+        result = self.activate()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((stage/'backend/bank-key.pem').resolve(), self.base/'bank-key.pem')
+        self.assertEqual((stage/'backend/bank-key.pem').read_text(), 'test-only-private-file')
+
+    def test_unsafe_or_missing_private_file_prevents_activation(self):
+        self.payload(persistent=True)
+        for key_path in ['../outside.pem', 'public/exposed.pem', 'missing.pem', '']:
+            with self.subTest(key_path=key_path):
+                self.env['QA_KEY_PATH'] = key_path
+                # Each activation attempt needs a fresh extraction directory.
+                stage = self.base/'testapp-releases'/RELEASE
+                for name in ['backend', 'public', 'scripts']:
+                    if (stage/name).exists():
+                        shutil.rmtree(stage/name)
+                result = self.activate()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual((self.public/'index.php').read_text(), 'old version')
+                self.assertFalse((self.base/'testapp-backend').exists())
+
+    def test_resolver_accepts_static_app_marker_in_public_subdirectory(self):
+        (self.public/'index.php').unlink()
+        (self.public/'index.html').write_text('static app')
+        (self.public/'.testapp-deploy').write_text('testapp')
+        result = subprocess.run(['bash', str(SCRIPTS/'release-resolve.sh'), str(self.base), 'https://site.test', 'testapp'], env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), str(self.public))
+
+    def test_ssh_trust_requires_matching_host_fingerprint(self):
+        self.stub('ssh-keyscan', '#!/usr/bin/env bash\nprintf "host ssh-ed25519 fixture\\n"\n')
+        self.stub('ssh-keygen', '#!/usr/bin/env bash\nprintf "256 SHA256:verified host (ED25519)\\n"\n')
+        self.env.update(SSH_KNOWN_HOSTS='', SSH_HOST_FINGERPRINT='SHA256:other', SSH_TARGET_PORT='26', SSH_TARGET_HOST='host')
+        result = subprocess.run(['bash', str(SCRIPTS/'release-ssh.sh')], env=self.env, capture_output=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.home/'.ssh/known_hosts').exists())
+        self.env['SSH_HOST_FINGERPRINT'] = 'SHA256:verified'
+        result = subprocess.run(['bash', str(SCRIPTS/'release-ssh.sh')], env=self.env, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.home/'.ssh/known_hosts').read_text(), 'host ssh-ed25519 fixture\n')
 
     def test_failed_live_check_restores_previous_backend_and_public_files(self):
         previous = self.base/'previous-backend'

@@ -59,7 +59,7 @@ jobs:
           if node -e 'process.exit(require("./package.json").scripts.test ? 0 : 1)'; then npm test; fi
           mkdir -p "$APP_DIR/storage/framework/testing/views"
           (cd "$APP_DIR" && php artisan test && php artisan optimize)
-          bash -n scripts/release-{package,target,resolve,activate}.sh scripts/deploy-config.sh
+          bash -n scripts/release-{package,target,resolve,activate,ssh}.sh scripts/deploy-config.sh
           python3 -m unittest discover -s tests -p release_deploy_test.py -v
           bash scripts/release-package.sh /tmp/release.tgz
           tar -tzf /tmp/release.tgz > /tmp/release-files.txt
@@ -94,12 +94,8 @@ jobs:
       - name: Vertrouwde hostsleutel instellen
         env:
           SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
-        run: |
-          test -n "$SSH_KNOWN_HOSTS" || { echo 'Secret SSH_KNOWN_HOSTS ontbreekt.'; exit 1; }
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+          SSH_HOST_FINGERPRINT: ${{ vars.SSH_HOST_FINGERPRINT }}
+        run: bash scripts/release-ssh.sh
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
