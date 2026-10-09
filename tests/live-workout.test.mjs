@@ -43,6 +43,63 @@ function setup() {
     return { context, elements };
 }
 
+test('session, week and archived cycle volume apply the execution of each exercise', () => {
+    const { context: c } = setup();
+    const saved = (weight, reps) => ({ weight, reps, completed: true });
+    c.appState.weeks[1].mon = {
+        bench: { selectedName: 'Dumbbell Bench Press', sets: [saved(20, 10), saved(17.5, 8), { weight: 20, reps: 10, completed: false }] },
+        row: { selectedName: 'Dumbbell One-Arm Row', sets: [saved(20, 10)] },
+        pullover: { selectedName: 'Dumbbell Pullover', sets: [saved(20, 10)] },
+        barbell: { selectedName: 'Barbell Bench Press', sets: [saved(40, 10)] },
+        bodyweight: { selectedName: 'Push-up', sets: [saved(20, 10)] },
+    };
+    c.appState.weeks[1].thu.bench.sets = [saved(20, 8)];
+    c.SPLIT_INFO.mon.slots = Object.keys(c.appState.weeks[1].mon);
+    for (const [key, slot] of Object.entries(c.appState.weeks[1].mon)) {
+        c.EXERCISE_CATALOG[key] = { defaultName: slot.selectedName, targetReps: 8 };
+    }
+    const before = JSON.stringify(c.appState.weeks);
+
+    assert.equal(c.calculateSessionVolume(1, 'mon'), 1680);
+    assert.equal(c.calculateWeekVolume(1), 2000);
+    assert.equal(c.getWeekEvaluation(1).totalVolume, 2000);
+    assert.equal(c.getCycleHistoryReport({ number: 1, snapshot: { weeksSnapshot: c.appState.weeks } }).totalVolume, 2000);
+    assert.equal(JSON.stringify(c.appState.weeks), before);
+});
+
+test('volume uses the selected exercise and rejects drafts, invalid values and extra deload sets', () => {
+    const { context: c } = setup();
+    for (const [name, expected] of [
+        ['  DUMBBELL BENCH PRESS  ', 400], ['Dumbbell One-Arm Row', 400],
+        ['Dumbbell Pullover', 200], ['Dumbbell Overhead Tricep Extension', 200],
+        ['Incline Dumbbell Overhead Extension', 400], ['Rear Delt Flyes', 400],
+        ['Concentration Curls', 400], ['Hammer Curls (Dumbbells)', 400],
+        ['Barbell Bench Press', 200], ['Preacher Curls (Dumbbell/EZ)', 200],
+        ['Unknown custom lift', 200], ['Push-up', 0],
+    ]) {
+        assert.equal(c.calculateSetVolume(name, { weight: 20, reps: 10, completed: true }), expected, name);
+    }
+    for (const set of [null, { weight: 20, reps: 10, completed: false }, ...[
+        [0, 10], [-20, 10], [20, 0], [20, -10], ['invalid', 10], [Infinity, 10], [20, Infinity],
+    ].map(([weight, reps]) => ({ weight, reps, completed: true }))]) {
+        assert.equal(c.calculateSetVolume('Dumbbell Bench Press', set), 0);
+    }
+    c.appState.weeks[7] = { mon: { bench: { sets: [1, 2, 3].map(() => ({ weight: 10, reps: 8, completed: true })) } } };
+    assert.equal(c.calculateSessionVolume(7, 'mon'), 320);
+    c.appState.weeks[7].mon.bench.selectedName = 'Dumbbell Pullover';
+    assert.equal(c.calculateSessionVolume(7, 'mon'), 160);
+    assert.equal(c.calculateSessionVolume(7, 'fri'), 0);
+});
+
+test('input explains one dumbbell, two dumbbells and repetitions per arm', () => {
+    const { context: c } = setup();
+    assert.match(c.volumeInputHintHtml('Dumbbell Bench Press'), /Beide dumbbells tellen mee/);
+    assert.match(c.volumeInputHintHtml('Dumbbell One-Arm Row'), /10 links en 10 rechts vul je in als 10/);
+    assert.match(c.volumeInputHintHtml('Dumbbell Pullover'), /gewicht telt één keer/);
+    assert.match(c.volumeInputHintHtml('Preacher Curls (Dumbbell/EZ)'), /totaalgewicht/);
+    assert.equal(c.volumeInputHintHtml('Push-up'), '');
+});
+
 test('Thursday inherits three completed sets of 15 kg and 12 reps without completing them', () => {
     const { context: c } = setup();
     c.appState.weeks[1].mon.bench.sets.forEach(s => Object.assign(s, { weight: 15, reps: 12, completed: true, exertion: 'good' }));
