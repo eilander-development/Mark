@@ -14,6 +14,7 @@ class StateAssembler
         private readonly SlotAdvisor $advisor,
         private readonly Catalog $catalog,
         private readonly NextCycleAdvisor $nextCycle,
+        private readonly ExerciseVolume $exerciseVolume,
     ) {}
 
     public function payload(): array
@@ -51,6 +52,7 @@ class StateAssembler
                     'advice' => $advice,
                     'record' => $record,
                     'isBodyweight' => $isBw,
+                    'volumeMultiplier' => $this->exerciseVolume->multiplier($slot->selected_name),
                     'progress' => $this->advisor->slotProgress($slot, (int) $session->week),
                     'isTargetAchieved' => $this->advisor->slotProgress($slot, (int) $session->week)['achieved'],
                     'sets' => $slot->sets->map(fn (WorkoutSet $set) => [
@@ -141,7 +143,7 @@ class StateAssembler
                     $completedSets++;
                     $w = (float) $set->weight;
                     $r = (int) $set->reps;
-                    $vol = $w * $r;
+                    $vol = $this->exerciseVolume->forSet($ex, $w, $r);
                     $volume += $vol;
                     $exercises[$ex]['sets']++;
                     $exercises[$ex]['volume'] += $vol;

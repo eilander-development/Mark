@@ -54,6 +54,7 @@ export interface Slot {
     record: { max1RM: number; maxWeight: number; maxReps: number }
     isBodyweight: boolean
     isTargetAchieved: boolean
+    volumeMultiplier: number
     sets: WorkoutSet[]
 }
 

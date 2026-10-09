@@ -82,7 +82,7 @@ class TrainingPrescription
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return ['goals' => self::GOALS, 'muscles' => ['chest' => 'Borst', 'back' => 'Rug', 'shoulders' => 'Schouders', 'biceps' => 'Biceps', 'triceps' => 'Triceps', 'traps' => 'Trapezius'], 'exerciseMuscles' => $this->muscleMap()];
+        return ['goals' => self::GOALS, 'muscles' => ['chest' => 'Borst', 'back' => 'Rug', 'shoulders' => 'Schouders', 'biceps' => 'Biceps', 'triceps' => 'Triceps', 'traps' => 'Trapezius'], 'exerciseMuscles' => $this->muscleMap(), 'exerciseVolume' => app(ExerciseVolume::class)->rules()];
     }
 
     /** @return array<string, mixed> */

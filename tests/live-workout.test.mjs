@@ -5,12 +5,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 const html = readFileSync(new URL('../resources/ironforge.html', import.meta.url), 'utf8');
+const volumeRulesResult = spawnSync('php', ['-r', 'require "vendor/autoload.php"; echo json_encode((new App\\Services\\ExerciseVolume(new App\\Services\\Periodization))->rules());'], { encoding: 'utf8' });
+assert.equal(volumeRulesResult.status, 0, volumeRulesResult.stderr);
+const exerciseVolume = JSON.parse(volumeRulesResult.stdout);
 function setup() {
     const blank = () => ({ weight: '', reps: '', completed: false });
     const slot = () => ({ selectedName: 'Dumbbell Bench Press', sets: [blank(), blank(), blank()] });
     const elements = { lwSubmitTargetBtn: { innerHTML: '' } };
     const context = vm.createContext({
-        appState: { weeks: { 1: { mon: { bench: slot() }, thu: { bench: slot() } } }, userProfile: {} },
+        appState: { weeks: { 1: { mon: { bench: slot() }, thu: { bench: slot() } } }, userProfile: {}, trainingRules: { exerciseVolume } },
         liveWorkout: { weekNum: 1, dayKey: 'thu', slots: ['bench'], currentSlotIndex: 0, currentSetIndex: 0, slotAdaptations: {}, newPRs: [], tempExertion: 'good' },
         EXERCISE_CATALOG: { bench: { defaultName: 'Dumbbell Bench Press', targetReps: 8 } },
         SPLIT_INFO: { mon: { slots: ['bench'], title: 'Maandag: training' }, thu: { slots: ['bench'], title: 'Donderdag: training' } },
@@ -28,6 +31,11 @@ function setup() {
         console,
     });
     for (const name of ['applyGoalOrdering', 'goalRepetitionRange', 'trainingGoalLabel', 'weekMuscleSets', 'muscleSetsAction', 'muscleScheduleHtml', 'muscleSetsHtml', 'getExerciseIncrement', 'equipmentLabels', 'profileSummaryHtml', 'equipmentSummaryHtml', 'settingsExerciseNames', 'openSettingsModal', 'saveTrainingSettings', 'saveProfileSettings', 'saveDisplaySettings', 'renderBenchmarkModal', 'trainingEvidenceHtml', 'getRecoveryLoad', 'recoveryCheckHtml', 'earlyRecoveryAdviceHtml', 'performanceChangeHtml', 'comparisonIndicatorHtml', 'updateWorkoutHeroButtons', 'renderLockedRoutineView', 'renderWorkloadChart', 'getPeriodDashboardData', 'periodDashboardHtml', 'updateDayTitleBanner', 'volumeComparisonClass', 'getVolumeComparison', 'calculateSessionVolume', 'calculateWeekVolume', 'canStartNewPeriod', 'executeStartNewMesocycle', 'escapeReportText', 'getExerciseHistory', 'formatHistorySets', 'compareHistoryEntries', 'exerciseHistoryHtml', 'preparationDetailsHtml', 'weekExerciseOutlookHtml', 'getOverloadOutlook', 'completedDayResultsHtml', 'getNextSplitDay', 'getLiveRestStats', 'getTrainingTiming', 'summarizeTrainingTimes', 'getCycleReport', 'getCycleHistoryReport', 'calculate1RM', 'getAllTimeRecord', 'isSetNewAllTimePR', 'lastHeavyWeekNum', 'peakSlotWeight', 'calculateSetProgress', 'getSlotProgress', 'getExerciseWeekProgress', 'getNextProgression', 'findPreviousExerciseSession', 'rememberLiveInput', 'renderProgressDetails', 'getDayCompletionStatus', 'getWeekEvaluation', 'getSameWeekExerciseLogged', 'getSlotTargetAdvice', 'autoApplyOverloadAndDeloadInheritance', 'prepareCurrentLiveSetValues', 'submitLiveSet', 'adjustLiveReps', 'setLiveRepsManual', 'setLiveWeightManual', 'updateLiveSubmitButtonText']) {
+        const start = html.indexOf(`    function ${name}(`);
+        const end = html.indexOf('\n    function ', start + 1);
+        vm.runInContext(html.slice(start, end), context);
+    }
+    for (const name of ['getExerciseVolumeRule', 'volumeInputHintHtml', 'calculateSetVolume']) {
         const start = html.indexOf(`    function ${name}(`);
         const end = html.indexOf('\n    function ', start + 1);
         vm.runInContext(html.slice(start, end), context);
@@ -234,7 +242,7 @@ test('week report totals only saved work and uses the shared exercise progress',
     c.appState.weeks[1].mon.bench.sets = [12, 12, 11].map(reps => ({ weight: 15, reps, completed: true, exertion: 'good' }));
     c.appState.weeks[1].thu.bench.sets.forEach(set => Object.assign(set, { weight: 15, reps: 12 }));
     const report = c.getWeekEvaluation(1);
-    assert.equal(report.totalVolume, 525);
+    assert.equal(report.totalVolume, 1050);
     assert.equal(report.totalCompletedSets, 3);
     assert.equal(report.totalPlannedSets, 6);
     assert.equal(report.daysCompletedCount, 1);
@@ -268,6 +276,8 @@ test('live view renders actual save values and the original plan together', () =
     assert.match(elements.lwContentArea.innerHTML, /OPSLAAN \(15 kg.*12 reps\)/);
     assert.match(elements.lwContentArea.innerHTML, /Gepland doel/);
     assert.match(elements.lwContentArea.innerHTML, /Eigen invoer voor deze set/);
+    assert.match(elements.lwContentArea.innerHTML, /Kg per dumbbell/);
+    assert.match(elements.lwContentArea.innerHTML, /Beide dumbbells tellen mee/);
     assert.doesNotMatch(elements.lwContentArea.innerHTML, /Afronden met aangepaste|Confetti & Rapport/);
     const classes = new Set();
     elements.liveWorkoutCard = { classList: { toggle: (name, enabled) => enabled ? classes.add(name) : classes.delete(name), add: (...names) => names.forEach(n => classes.add(n)), remove: (...names) => names.forEach(n => classes.delete(n)) } };
@@ -370,7 +380,7 @@ test('cycle history includes rep progress, excludes drafts and ignores the deloa
     } } });
     assert.equal(report.cycleNumber, 2);
     assert.equal(report.totalSets, 3);
-    assert.equal(report.totalVolume, 336);
+    assert.equal(report.totalVolume, 672);
     assert.equal(report.totalWorkouts, 0);
     assert.equal(report.progressHighlights[0].startReps, 8);
     assert.equal(report.progressHighlights[0].endReps, 12);
@@ -574,11 +584,11 @@ test('volume compares matching completed days instead of an incomplete week agai
     c.appState.weeks[2] = JSON.parse(JSON.stringify(c.appState.weeks[1]));
     for (const day of ['mon', 'thu']) c.appState.weeks[1][day].bench.sets.forEach(s => Object.assign(s, { weight: 10, reps: 10, completed: true, exertion: 'good' }));
     c.appState.weeks[2].mon.bench.sets.forEach(s => Object.assign(s, { weight: 10, reps: 12, completed: true, exertion: 'good' }));
-    assert.match(c.getVolumeComparison(2), /\+60 kg \(\+20%\)/);
+    assert.match(c.getVolumeComparison(2), /\+120 kg \(\+20%\)/);
     assert.doesNotMatch(c.getVolumeComparison(2), /Volume is geen/);
     assert.match(c.getVolumeComparison(2, 'thu'), /zodra de training is afgerond/);
     c.appState.weeks[2].mon.bench.sets[0].reps = 4;
-    assert.match(c.getVolumeComparison(2, 'mon'), /-20 kg/);
+    assert.match(c.getVolumeComparison(2, 'mon'), /-40 kg/);
     c.appState.weeks[2].mon.bench.selectedName = 'Another exercise';
     assert.match(c.getVolumeComparison(2), /Schema gewijzigd/);
 });
@@ -664,7 +674,7 @@ test('period dashboard counts performed sessions instead of the selected week an
     assert.equal(dashboard.completed, 1);
     assert.equal(dashboard.skipped, 1);
     assert.equal(dashboard.total, 28);
-    assert.equal(dashboard.weeks[0].volume, 640);
+    assert.equal(dashboard.weeks[0].volume, 1280);
     assert.equal(dashboard.attention[0].count, 1);
     assert.equal(dashboard.weeks[6].deload, true);
     assert.match(c.periodDashboardHtml(), /4% voltooid/);
@@ -676,7 +686,7 @@ test('period exercise progress excludes deload but its volume includes only two 
     c.appState.currentCycle = 1;
     c.appState.weeks[7] = { mon: { bench: { selectedName: 'Dumbbell Bench Press', sets: Array.from({ length: 3 }, () => ({ completed: true, weight: 14, reps: 8, exertion: 'good' })) } } };
     const dashboard = c.getPeriodDashboardData();
-    assert.equal(dashboard.weeks[6].volume, 224);
+    assert.equal(dashboard.weeks[6].volume, 448);
     assert.equal(dashboard.weeks[6].sets, 2);
     assert.equal(dashboard.exercises.length, 0);
     assert.equal(dashboard.attention.length, 0);

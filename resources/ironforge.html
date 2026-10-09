@@ -4616,7 +4616,7 @@
             planned += required;
             const sets = slot.sets.slice(0, required).filter(set => set.completed && Number(set.reps) > 0 && (isBW || Number(set.weight) > 0));
             completed += sets.length;
-            sets.forEach(set => { if (!isBW) totalVolume += Number(set.weight) * Number(set.reps); });
+            sets.forEach(set => { totalVolume += calculateSetVolume(name, set); });
             if (sets.length && !isDeloadWeek(Number(week))) {
               const best = [...sets].sort((a, b) => (isBW ? 0 : Number(b.weight) - Number(a.weight)) || Number(b.reps) - Number(a.reps))[0];
               const performance = { weight: isBW ? 0 : Number(best.weight), reps: Number(best.reps) };
@@ -4715,7 +4715,7 @@
 
             if (isValidSetCompleted) {
               totalCompletedSets++;
-              if (!isBW && w > 0) totalVolume += (w * r);
+              totalVolume += calculateSetVolume(exName, s);
               totalReps += r;
               const exertion = s.exertion || "unknown";
               if (exertion === "easy") exercisesMap[exName].easyCount++;
@@ -6965,6 +6965,7 @@
 
           <!-- Sets Tabel -->
           <div class="space-y-2">
+            ${volumeInputHintHtml(selectedName)}
             <div class="grid grid-cols-12 gap-2 text-[10px] font-mono uppercase text-slate-400 px-1 font-semibold">
               <div class="col-span-2">Set / Vorig</div>
               <div class="col-span-4">${isBW ? 'Weerstand' : 'Gewicht (kg) & Sneltoets'}</div>
@@ -9182,7 +9183,7 @@
 
       // Bereken totaal aantal afgeronde sets in deze dag
       let completedSetsCount = 0;
-      let totalVolumeWeight = 0;
+      const totalVolumeWeight = calculateSessionVolume(liveWorkout.weekNum, liveWorkout.dayKey);
       let totalRepsCount = 0;
 
       const currentDayData = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey];
@@ -9194,7 +9195,6 @@
             const isBW = isExerciseBodyweight(sl.selectedName || EXERCISE_CATALOG[sK].defaultName);
             if (st.completed && Number(st.reps) > 0 && (isBW || Number(st.weight) > 0)) {
               completedSetsCount++;
-              if (!isBW) totalVolumeWeight += Number(st.weight) * Number(st.reps);
               totalRepsCount += Number(st.reps);
             }
           });
@@ -9348,6 +9348,7 @@
           </div>
 
           <div id="lwValueSource" class="text-xs text-slate-400">${liveWorkout.valueSource || "Vooraf ingevuld trainingsdoel"}</div>
+          ${volumeInputHintHtml(exerciseName)}
           <!-- INSTELLING: GEWICHT & REPS -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             
@@ -9355,7 +9356,7 @@
             <div class="bg-slate-950/90 p-3 sm:p-4 rounded-2xl border border-slate-800 space-y-2.5">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold uppercase font-mono tracking-wider text-slate-400">
-                  ${isBW ? 'Weerstand' : 'Gewicht (kg)'}
+                  ${isBW ? 'Weerstand' : escapeReportText(getExerciseVolumeRule(exerciseName).weightLabel)}
                 </span>
                 <span class="text-[11px] font-mono ${isBW ? 'text-emerald-400 font-bold' : ((advice.hasPriorData && advice.advisedWeight) ? 'text-emerald-400' : 'text-slate-500')}">
                   ${isBW ? 'Lichaamsgewicht' : ((advice.hasPriorData && advice.advisedWeight) ? `Advies: ${advice.advisedWeight} kg` : 'Kies startgewicht')}
@@ -9400,7 +9401,7 @@
             <div class="bg-slate-950/90 p-3 sm:p-4 rounded-2xl border border-slate-800 space-y-2.5">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold uppercase font-mono tracking-wider text-slate-400">
-                  Herhalingen (Reps)
+                  ${isBW ? 'Herhalingen (Reps)' : escapeReportText(getExerciseVolumeRule(exerciseName).repsLabel)}
                 </span>
                 <span class="text-[11px] ${isBW ? 'text-emerald-400 font-bold' : 'text-slate-500'} font-mono">Doel: ${targetReps} reps</span>
               </div>
@@ -9871,17 +9872,35 @@
     }
 
     /* 11. DASHBOARD & WORKLOAD GRAFIEK MET PERIODISERING */
+    function getExerciseVolumeRule(exerciseName) {
+      return appState.trainingRules?.exerciseVolume?.[String(exerciseName || '').trim().toLowerCase()] || {
+        multiplier: 1, weightLabel: 'Totaalgewicht (kg)', repsLabel: 'Herhalingen',
+        hint: 'Vul het totale verplaatste gewicht in; bij een barbell inclusief de stang. Bij een keuze tussen barbell en dumbbells gebruik je hier het totaalgewicht.',
+      };
+    }
+
+    function volumeInputHintHtml(exerciseName) {
+      if (isExerciseBodyweight(exerciseName)) return '';
+      return `<p class="text-xs text-slate-400">${escapeReportText(getExerciseVolumeRule(exerciseName).hint)}</p>`;
+    }
+
+    function calculateSetVolume(exerciseName, set) {
+      const weight = Number(set?.weight);
+      const reps = Number(set?.reps);
+      if (!set?.completed || isExerciseBodyweight(exerciseName) || !Number.isFinite(weight) || !Number.isFinite(reps) || weight <= 0 || reps <= 0) return 0;
+      return weight * reps * getExerciseVolumeRule(exerciseName).multiplier;
+    }
+
     function calculateSessionVolume(weekNum, dayKey) {
       let total = 0;
       const dayData = appState.weeks[weekNum] ? appState.weeks[weekNum][dayKey] : null;
       if (!dayData) return 0;
       
-      Object.values(dayData).forEach(slot => {
+      Object.entries(dayData).forEach(([slotKey, slot]) => {
         if (!slot || typeof slot !== "object" || !Array.isArray(slot.sets)) return;
+        const exerciseName = slot.selectedName || EXERCISE_CATALOG[slotKey]?.defaultName || '';
         slot.sets.slice(0, isDeloadWeek(weekNum) ? 2 : 3).forEach(set => {
-          if (set && set.completed && Number(set.weight) > 0 && Number(set.reps) > 0) {
-            total += Number(set.weight) * Number(set.reps);
-          }
+          total += calculateSetVolume(exerciseName, set);
         });
       });
       return total;
@@ -10886,4 +10905,3 @@
   <div id="ironforge-vue" hidden></div>
 </body>
 </html>
-

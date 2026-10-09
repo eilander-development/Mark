@@ -57,7 +57,11 @@ export function dayStats(week: number, day: DayKey) {
             total++
             if (set.completed) {
                 completed++
-                volume += (Number(set.weight) || 0) * (Number(set.reps) || 0)
+                const weight = Number(set.weight)
+                const reps = Number(set.reps)
+                if (!slot.isBodyweight && Number.isFinite(weight) && Number.isFinite(reps) && weight > 0 && reps > 0) {
+                    volume += weight * reps * slot.volumeMultiplier
+                }
             }
         }
     }

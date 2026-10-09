@@ -118,7 +118,7 @@ class WorkoutProgressionTest extends TestCase
         $this->getJson('/api/weeks/7/report')->assertOk()
             ->assertJsonPath('totalSets', 48)
             ->assertJsonPath('completedSets', 2)
-            ->assertJsonPath('volume', 360);
+            ->assertJsonPath('volume', 720);
     }
 
     public function test_switching_an_exercise_does_not_relabel_completed_history(): void
