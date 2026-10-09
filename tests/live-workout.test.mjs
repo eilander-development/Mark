@@ -349,6 +349,15 @@ test('live view renders actual save values and the original plan together', () =
     assert.equal(classes.has('deload-training'), false);
     assert.doesNotMatch(elements.lwDayPhaseBadge.textContent, /DELOAD/);
 
+    c.appState.weeks[1].thu.bench.selectedName = 'Dumbbell One-Arm Row';
+    c.renderLiveWorkoutView();
+    assert.match(elements.lwContentArea.innerHTML, /Reps per arm/);
+    assert.match(elements.lwContentArea.innerHTML, /10 links en 10 rechts vul je in als 10/);
+
+    c.liveWorkout.phase = 'summary';
+    c.appState.weeks[1].thu.bench.sets.forEach(set => Object.assign(set, { weight: 20, reps: 10, completed: true }));
+    c.renderLiveWorkoutView();
+    assert.match(elements.lwContentArea.innerHTML, /Totaal Volume[\s\S]*?1[.,]200\s*<span[^>]*>kg/);
 });
 
 

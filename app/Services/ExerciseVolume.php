@@ -36,7 +36,7 @@ class ExerciseVolume
         $definitions = [
             'pair' => [
                 'multiplier' => 2, 'weightLabel' => 'Kg per dumbbell', 'repsLabel' => 'Reps per arm',
-                'hint' => 'Vul het gewicht van één dumbbell in. Beide dumbbells tellen mee in het volume.',
+                'hint' => 'Vul het gewicht van één dumbbell en de reps per arm in. Beide dumbbells tellen mee in het volume.',
             ],
             'per_arm' => [
                 'multiplier' => 2, 'weightLabel' => 'Kg per dumbbell', 'repsLabel' => 'Reps per arm',
