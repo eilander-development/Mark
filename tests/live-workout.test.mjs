@@ -318,7 +318,7 @@ test('week report totals only saved work and uses the shared exercise progress',
 
 test('live view renders actual save values and the original plan together', () => {
     const { context: c, elements } = setup();
-    elements.lwContentArea = { innerHTML: '' };
+    elements.lwContentArea = { innerHTML: '', dataset: {} };
     c.updateLiveWorkoutCardLayout = () => {};
     c.renderLiveVideoCompanion = () => {};
     c.updateLiveExertionButtons = () => {};

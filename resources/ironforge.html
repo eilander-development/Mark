@@ -4441,7 +4441,7 @@
         if (!valid(set) || !valid(before)) return '';
         return `Set ${index + 1}: ${performanceChangeHtml(before, set, isBW, isDeloadWeek(weekNum) || isDeloadWeek(previous.week))}`;
       }).filter(Boolean) : [];
-      const format = sets => sets.map(set => `${isBW ? 'BW' : Number(set.weight) + ' kg'} × ${Number(set.reps)}`).join(' · ');
+      const format = sets => sets.map(set => `${isBW ? 'BW' : Number(set.weight) + ' kg'} × ${Number(set.reps)}${coreExerciseByName(name)?.perSide ? ' per kant' : ''}`).join(' · ');
       const remaining = progress.details.map((set, index) => set.achieved ? '' : !set.completed ? `Set ${index + 1}: ${appState.weeks[weekNum][dayKey].skipped ? 'overgeslagen' : 'nog uitvoeren'}` : !set.weightMet ? `Set ${index + 1}: onder ${progress.targetWeight} kg` : `Set ${index + 1}: nog ${set.missingReps} reps`).filter(Boolean).join(' · ');
       const upperSets = week.sessions.reduce((total, session) => {
         const source = getTrainingDay(weekNum, session.dayKey)[session.slotKey];
@@ -6408,7 +6408,7 @@
             const isBW = isExerciseBodyweight(name);
             const sets = slot.sets.slice(0, isDeloadWeek(weekNum) ? 2 : 3).map((set, index) => ({ ...set, position: index + 1 }))
               .filter(set => set.completed && Number(set.reps) > 0 && (isBW || Number(set.weight) > 0));
-            if (sets.length) entries.push({ cycle: source.cycle, week: weekNum, day, dayIndex, key, sets, isBodyweight: isBW, isDeload: isDeloadWeek(weekNum) });
+            if (sets.length) entries.push({ cycle: source.cycle, week: weekNum, day, dayIndex, key, sets, perSide: !!coreExerciseByName(name)?.perSide, isBodyweight: isBW, isDeload: isDeloadWeek(weekNum) });
           });
         });
       }));
@@ -6416,7 +6416,7 @@
     }
 
     function formatHistorySets(entry) {
-      return entry.sets.map(set => `Set ${set.position}: ${entry.isBodyweight ? 'BW' : Number(set.weight) + ' kg'} × ${Number(set.reps)}`).join(' · ');
+      return entry.sets.map(set => `Set ${set.position}: ${entry.isBodyweight ? 'BW' : Number(set.weight) + ' kg'} × ${Number(set.reps)}${entry.perSide ? ' per kant' : ''}`).join(' · ');
     }
 
     function compareHistoryEntries(before, current) {
@@ -9982,6 +9982,8 @@
               </p>
             </div>
 
+            ${coreInvitationHtml(liveWorkout.weekNum, liveWorkout.dayKey)}
+
             <!-- KPI Statistieken Grid -->
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
               <div class="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 text-center">
@@ -10056,8 +10058,6 @@
                 <span>Alle geplande sets zijn succesvol uitgevoerd en je workload is bijgewerkt in je periodiseringsdashboard!</span>
               </div>
             `}
-
-            ${coreInvitationHtml(liveWorkout.weekNum, liveWorkout.dayKey)}
 
             <!-- OVERZICHT VAN DE VOLTOOIDE OEFENINGEN VANDAAG -->
             <div class="space-y-2">
@@ -10144,6 +10144,9 @@
           </div>
         `;
       }
+
+      if (container.dataset.phase !== liveWorkout.phase) container.scrollTop = 0;
+      container.dataset.phase = liveWorkout.phase;
 
       // Render of ververs Athlean-X video companion paneel (tablet & desktop side-by-side)
       renderLiveVideoCompanion();
