@@ -25,19 +25,19 @@ function setup() {
         getStrengthBenchmark: () => ({}),
         isSetNewAllTimePR: () => false,
         saveState() { context.saved = true; },
-        renderExercises() {}, updateDashboard() {}, updateLive1RMPreview() {},
+        renderExercises() {}, updateDashboard() {}, updateLive1RMPreview() {}, saveCoreWorkout() {},
         startLiveRestTimer() { context.restStarted = true; },
         showLiveWorkoutSummary() { context.finished = true; },
         console,
     });
     for (const name of ['applyGoalOrdering', 'goalRepetitionRange', 'trainingGoalLabel', 'weekMuscleSets', 'muscleSetsAction', 'muscleScheduleHtml', 'muscleSetsHtml', 'getExerciseIncrement', 'equipmentLabels', 'profileSummaryHtml', 'equipmentSummaryHtml', 'settingsExerciseNames', 'openSettingsModal', 'saveTrainingSettings', 'saveProfileSettings', 'saveDisplaySettings', 'renderBenchmarkModal', 'trainingEvidenceHtml', 'getRecoveryLoad', 'recoveryCheckHtml', 'earlyRecoveryAdviceHtml', 'performanceChangeHtml', 'comparisonIndicatorHtml', 'updateWorkoutHeroButtons', 'renderLockedRoutineView', 'renderWorkloadChart', 'getPeriodDashboardData', 'periodDashboardHtml', 'updateDayTitleBanner', 'volumeComparisonClass', 'getVolumeComparison', 'calculateSessionVolume', 'calculateWeekVolume', 'canStartNewPeriod', 'executeStartNewMesocycle', 'escapeReportText', 'getExerciseHistory', 'formatHistorySets', 'compareHistoryEntries', 'exerciseHistoryHtml', 'preparationDetailsHtml', 'weekExerciseOutlookHtml', 'getOverloadOutlook', 'completedDayResultsHtml', 'getNextSplitDay', 'getLiveRestStats', 'getTrainingTiming', 'summarizeTrainingTimes', 'getCycleReport', 'getCycleHistoryReport', 'calculate1RM', 'getAllTimeRecord', 'isSetNewAllTimePR', 'lastHeavyWeekNum', 'peakSlotWeight', 'calculateSetProgress', 'getSlotProgress', 'getExerciseWeekProgress', 'getNextProgression', 'findPreviousExerciseSession', 'rememberLiveInput', 'renderProgressDetails', 'getDayCompletionStatus', 'getWeekEvaluation', 'getSameWeekExerciseLogged', 'getSlotTargetAdvice', 'autoApplyOverloadAndDeloadInheritance', 'prepareCurrentLiveSetValues', 'submitLiveSet', 'adjustLiveReps', 'setLiveRepsManual', 'setLiveWeightManual', 'updateLiveSubmitButtonText']) {
         const start = html.indexOf(`    function ${name}(`);
-        const end = html.indexOf('\n    function ', start + 1);
+        const end = (() => { const rest = html.slice(start + 1); const end = rest.search(/\n    (?:async )?function /); return start + 1 + end; })();
         vm.runInContext(html.slice(start, end), context);
     }
-    for (const name of ['getExerciseVolumeRule', 'volumeInputHintHtml', 'calculateSetVolume']) {
+    for (const name of ['getCoreHistory', 'getCoreAdvice', 'getCoreWorkout', 'isCoreSlot', 'coreExerciseByName', 'trainingDayWithCore', 'getTrainingDay', 'getTrainingSlotKeys', 'getTrainingSetCount', 'coreInvitationHtml', 'coreExerciseSwitchHtml', 'getExerciseVolumeRule', 'volumeInputHintHtml', 'calculateSetVolume']) {
         const start = html.indexOf(`    function ${name}(`);
-        const end = html.indexOf('\n    function ', start + 1);
+        const end = (() => { const rest = html.slice(start + 1); const end = rest.search(/\n    (?:async )?function /); return start + 1 + end; })();
         vm.runInContext(html.slice(start, end), context);
     }
     return { context, elements };
@@ -58,11 +58,16 @@ test('session, week and archived cycle volume apply the execution of each exerci
     for (const [key, slot] of Object.entries(c.appState.weeks[1].mon)) {
         c.EXERCISE_CATALOG[key] = { defaultName: slot.selectedName, targetReps: 8 };
     }
+    c.appState.weeks[1].mon.coreWorkout = [
+        { exercise: 'crunch', sets: [{ reps: 12, completed: true }, { reps: 10, completed: true }] },
+        { exercise: 'dead_bug', sets: [{ reps: 8, completed: false }, { reps: 8, completed: false }] },
+    ];
     const before = JSON.stringify(c.appState.weeks);
 
     assert.equal(c.calculateSessionVolume(1, 'mon'), 1680);
     assert.equal(c.calculateWeekVolume(1), 2000);
     assert.equal(c.getWeekEvaluation(1).totalVolume, 2000);
+    assert.equal(c.getWeekEvaluation(1).coreCompletedSets, 2);
     assert.equal(c.getCycleHistoryReport({ number: 1, snapshot: { weeksSnapshot: c.appState.weeks } }).totalVolume, 2000);
     assert.equal(JSON.stringify(c.appState.weeks), before);
 });
@@ -323,7 +328,7 @@ test('live view renders actual save values and the original plan together', () =
     c.setLiveWeightManual('15');
     c.setLiveRepsManual('12');
     const start = html.indexOf('    function renderLiveWorkoutView(');
-    const end = html.indexOf('\n    function ', start + 1);
+    const end = (() => { const rest = html.slice(start + 1); const end = rest.search(/\n    (?:async )?function /); return start + 1 + end; })();
     vm.runInContext(html.slice(start, end), c);
     c.appState.exerciseIncrements = { 'dumbbell bench press': 0.5 };
     c.renderLiveWorkoutView();
@@ -575,7 +580,7 @@ test('main screen switches to results only when all valid working sets are saved
         elements[id] = { innerHTML: '', classList: { add() {}, remove() {} } };
     }
     const start = html.indexOf('    function renderExercises(');
-    const end = html.indexOf('\n    function ', start + 1);
+    const end = (() => { const rest = html.slice(start + 1); const end = rest.search(/\n    (?:async )?function /); return start + 1 + end; })();
     vm.runInContext(html.slice(start, end), c);
     c.renderExercises();
     assert.equal(c.plannedViewShown, true);
@@ -897,7 +902,7 @@ test('failed recovery save preserves the previous check and goals', async () => 
     c.jsonApi = async () => ({ ok: false });
     c.showToast = () => {};
     const start = html.indexOf('    async function setRecoveryCheck(');
-    const end = html.indexOf('\n    function ', start + 1);
+    const end = (() => { const rest = html.slice(start + 1); const end = rest.search(/\n    (?:async )?function /); return start + 1 + end; })();
     vm.runInContext(html.slice(start, end), c);
     await c.setRecoveryCheck('exhausted');
     assert.equal(c.appState.weeks[1].mon.recovery, 'tired');
@@ -935,7 +940,7 @@ test('profile summary uses saved personal details and only selected equipment', 
 test('settings save commits only after the server accepts the change and reports failures', async () => {
     const { context: c } = setup();
     const start = html.indexOf('    async function persistSettingsForm(');
-    const end = html.indexOf('\n    function ', start + 1);
+    const end = (() => { const rest = html.slice(start + 1); const end = rest.search(/\n    (?:async )?function /); return start + 1 + end; })();
     vm.runInContext(html.slice(start, end), c);
     const status = { textContent: '' }, button = { disabled: false };
     const form = { querySelector: selector => selector.includes('status') ? status : button };

@@ -224,6 +224,9 @@ class ValTownImporter
                 if (array_key_exists('recovery', $slots)) {
                     $session->recovery = in_array($slots['recovery'], ['unknown', 'recovered', 'tired', 'exhausted'], true) ? $slots['recovery'] : 'unknown';
                 }
+                if (array_key_exists('coreWorkout', $slots)) {
+                    $session->core_workout = app(CoreWorkout::class)->validate($slots['coreWorkout']);
+                }
                 if (array_key_exists('skipped', $slots)) {
                     $session->skipped = (bool) $slots['skipped'];
                 }
@@ -284,6 +287,7 @@ class ValTownImporter
             $session->actual_rest_count = null;
             $session->skipped = false;
             $session->recovery = null;
+            $session->core_workout = null;
             $session->save();
         }
 

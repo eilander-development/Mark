@@ -76,6 +76,7 @@ class StateAssembler
                 'restCount' => $session->actual_rest_count,
                 'skipped' => (bool) $session->skipped,
                 'recovery' => $session->recovery ?? 'unknown',
+                'coreWorkout' => $session->core_workout ?? [],
                 'dayName' => $this->periodization->dayName($session->day),
                 'dayShort' => $this->periodization->dayShort($session->day),
                 'slots' => $slots,
@@ -131,10 +132,10 @@ class StateAssembler
         $exercises = [];
 
         foreach ($sessions as $session) {
-            foreach ($session->slots as $slot) {
+            foreach (app(CoreWorkout::class)->reportingSlots($session) as $slot) {
                 $ex = $slot->selected_name;
                 $exercises[$ex] ??= ['name' => $ex, 'sets' => 0, 'volume' => 0.0, 'maxWeight' => 0.0];
-                $requiredSets = $this->periodization->requiredSets($week);
+                $requiredSets = str_starts_with($slot->slot_key, 'slot_core_') ? $slot->sets->count() : $this->periodization->requiredSets($week);
                 $totalSets += $requiredSets;
                 foreach ($slot->sets->take($requiredSets) as $set) {
                     if (! $set->completed || (int) $set->reps <= 0 || (! $this->periodization->isBodyweight($ex) && (float) $set->weight <= 0)) {
@@ -171,6 +172,7 @@ class StateAssembler
             'isDeload' => $this->periodization->isDeloadWeek($week),
             'volume' => round($volume, 1),
             'completedSets' => $completedSets,
+            'coreCompletedSets' => $sessions->sum(fn ($session): int => collect($session->core_workout ?? [])->sum(fn (array $exercise): int => collect($exercise['sets'])->where('completed', true)->count())),
             'totalSets' => $totalSets,
             'skippedDays' => $sessions->where('skipped', true)->count(),
             'exercises' => array_values($exercises),

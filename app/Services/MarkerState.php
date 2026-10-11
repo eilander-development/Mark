@@ -110,6 +110,7 @@ class MarkerState
                 $daySlots['actualRestCount'] = (int) $session->actual_rest_count;
             }
             $daySlots['recovery'] = $session->recovery ?? 'unknown';
+            $daySlots['coreWorkout'] = $session->core_workout ?? [];
             if ($session->skipped) {
                 $daySlots['skipped'] = true;
             }

@@ -1,3 +1,9 @@
+## Afspraak over UI en gebruikersflows
+
+- Als Mark een functie vraagt zonder duidelijk aan te geven waar die in de UI hoort of hoe de gebruikersflow moet werken, vraag dan eerst gericht om verduidelijking of leg een concreet voorstel voor. Bouw die plaatsing of flow pas nadat Mark daarop heeft gereageerd.
+- Sluit aan bij de bestaande bediening en presentatie. Introduceer geen aparte interface voor vergelijkbare oefeningen of functies zonder dit vooraf af te stemmen.
+- Voor buikspieren: vraag na afronding van de hoofdtraining of Mark deze wil doen. Toon de oefeningen en invulvelden vervolgens uitsluitend in de trainer-modal. Gebruik voor voortgang, resultaten en rapportage dezelfde presentatie als voor de andere oefeningen.
+
 <laravel-boost-guidelines>
 === foundation rules ===
 

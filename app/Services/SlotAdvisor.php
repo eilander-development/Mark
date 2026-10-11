@@ -26,7 +26,7 @@ class SlotAdvisor
         $range = app(TrainingPrescription::class)->rangeForSlot($slot, (int) ($this->catalog->slot($slot->slot_key)['targetReps'] ?? 8));
         $range = ['minReps' => (int) ($plan['minReps'] ?? $range['minReps']), 'maxReps' => (int) ($plan['maxReps'] ?? $range['maxReps'])];
 
-        return $this->periodization->progress($slot->sets, $weight, $reps, $this->periodization->requiredSets($week), $isBw) + $range;
+        return $this->periodization->progress($slot->sets, $weight, $reps, str_starts_with($slot->slot_key, 'slot_core_') ? $slot->sets->count() : $this->periodization->requiredSets($week), $isBw) + $range;
     }
 
     /** @return array<string, mixed> */
@@ -40,7 +40,7 @@ class SlotAdvisor
         foreach (config('ironforge.days') as $day) {
             $session = $cycle->sessions->first(fn ($session): bool => (int) $session->week === $week && $session->day === $day);
             $session?->setRelation('cycle', $cycle);
-            foreach ($session?->slots ?? [] as $slot) {
+            foreach ($session ? app(CoreWorkout::class)->reportingSlots($session) : [] as $slot) {
                 $slot->setRelation('session', $session);
                 if (mb_strtolower(trim($slot->selected_name)) !== mb_strtolower(trim($name))) {
                     continue;

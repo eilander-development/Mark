@@ -138,6 +138,7 @@ class WorkoutWriter
         $session->actual_rest_count = null;
         $session->skipped = false;
         $session->recovery = null;
+        $session->core_workout = null;
         $session->save();
 
         return $this->state->payload();
@@ -201,10 +202,17 @@ class WorkoutWriter
     }
 
     /**
+     * @param  list<array{exercise: string, targetReps?: int, sets: list<array{reps: int, completed: bool, exertion?: string}>}>|null  $coreWorkout
      * @return array<string, mixed>
      */
-    public function updateSession(WorkoutSession $session, ?int $duration, ?int $avgRest, ?int $restCount = null, ?bool $skipped = null, ?string $recovery = null): array
+    public function updateSession(WorkoutSession $session, ?int $duration, ?int $avgRest, ?int $restCount = null, ?bool $skipped = null, ?string $recovery = null, ?array $coreWorkout = null): array
     {
+        if ($coreWorkout !== null) {
+            if ($session->skipped) {
+                throw ValidationException::withMessages(['core_workout' => 'Maak overslaan eerst ongedaan voordat je deze training wijzigt.']);
+            }
+            $session->core_workout = app(CoreWorkout::class)->validate($coreWorkout);
+        }
         if ($recovery !== null && $recovery !== ($session->recovery ?? 'unknown')) {
             $session->loadMissing('slots.sets');
             if ($session->slots->contains(fn ($slot): bool => $slot->sets->contains('completed', true))) {
@@ -251,6 +259,7 @@ class WorkoutWriter
                 'actual_rest_count' => $session->actual_rest_count,
                 'skipped' => (bool) $session->skipped,
                 'recovery' => $session->recovery ?? 'unknown',
+                'core_workout' => $session->core_workout ?? [],
             ],
         ];
     }

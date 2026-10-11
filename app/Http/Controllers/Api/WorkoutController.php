@@ -98,6 +98,7 @@ class WorkoutController extends Controller
             'actual_rest_count' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'skipped' => ['sometimes', 'boolean'],
             'recovery' => ['sometimes', 'in:unknown,recovered,tired,exhausted'],
+            'core_workout' => ['sometimes', 'array'],
         ]);
 
         return response()->json($this->writer->updateSession(
@@ -107,6 +108,7 @@ class WorkoutController extends Controller
             $data['actual_rest_count'] ?? null,
             $data['skipped'] ?? null,
             $data['recovery'] ?? null,
+            $data['core_workout'] ?? null,
         ));
     }
 

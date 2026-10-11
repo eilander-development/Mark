@@ -27,7 +27,8 @@ class Periodization
     {
         $n = mb_strtolower($exerciseName);
 
-        return str_contains($n, 'push-up')
+        return in_array(trim($n), ['reverse crunch', 'dead bug', 'crunch', 'bird dog'], true)
+            || str_contains($n, 'push-up')
             || str_contains($n, 'pushup')
             || str_contains($n, 'opdrukken')
             || str_contains($n, 'pull-up')

@@ -1189,6 +1189,8 @@
     };
 
     const EXERCISE_CATALOG = {
+      slot_core_0: { defaultName: 'Buikspieren', targetReps: 10, restTime: 45, restType: 'Buikspieren', equipment: 'Lichaamsgewicht' },
+      slot_core_1: { defaultName: 'Buikspieren', targetReps: 8, restTime: 45, restType: 'Buikspieren', equipment: 'Lichaamsgewicht' },
       // UPPER A
       slot_a1: {
         defaultName: "Barbell Bench Press",
@@ -3030,6 +3032,8 @@
     /* Helper: Bepaalt de beste video gegevens (eigen bewaarde link -> Athlean-X match -> fallback) */
     function getExerciseVideoData(exerciseName, slotKey = null) {
       const name = (exerciseName || "").trim();
+      const core = coreExerciseByName(name);
+      if (core && !appState.customExerciseVideos?.[name]) return { videoId: core.videoId, title: core.name, channel: core.channel, cues: core.tips, isCustom: false, isAthlean: false, url: `https://www.youtube.com/watch?v=${core.videoId}` };
 
       if (appState && appState.exerciseVideos && appState.exerciseVideos[name] && !(appState.customExerciseVideos && appState.customExerciseVideos[name])) {
         const managed = appState.exerciseVideos[name];
@@ -3163,6 +3167,8 @@
 
     /* Helper om oefening details op te halen inclusief fallback */
     function getExerciseDetails(exerciseName, slotKey = null) {
+      const core = coreExerciseByName(exerciseName);
+      if (core) return { primaryMuscles: ['Buikspieren'], secondaryMuscles: [], musclesText: 'Buikspieren', equipment: 'Lichaamsgewicht', targetReps: core.reps, restTime: 45, tips: core.tips };
       const catalogItem = slotKey && EXERCISE_CATALOG[slotKey] ? EXERCISE_CATALOG[slotKey] : null;
       const known = EXERCISE_DETAILS[exerciseName] || null;
       const video = getExerciseVideoData(exerciseName, slotKey);
@@ -3186,6 +3192,7 @@
 
     /* Ingestelde repdoelen per oefening, met opgeslagen progressiedoelen. */
     function getExerciseTargetReps(exerciseName, slotKey = null, weekNum = null, dayKey = null) {
+      if (isCoreSlot(slotKey)) return getTrainingDay(weekNum || appState.currentWeek, dayKey || appState.currentDay)[slotKey]?.targetReps || coreExerciseByName(exerciseName)?.reps || 10;
       const w = weekNum || (typeof appState !== "undefined" ? appState.currentWeek : 1);
       const d = dayKey || (typeof appState !== "undefined" ? appState.currentDay : "mon");
       if (slotKey && typeof appState !== "undefined" && appState.weeks && appState.weeks[w] && appState.weeks[w][d] && appState.weeks[w][d][slotKey]) {
@@ -3641,7 +3648,7 @@
       sources.forEach((weeks, sourceIndex) => {
         Object.entries(weeks || {}).forEach(([week, days]) => {
           ['mon', 'tue', 'thu', 'fri'].forEach(day => {
-            Object.entries(days[day] || {}).forEach(([key, slot]) => {
+            Object.entries(trainingDayWithCore(days[day] || {})).forEach(([key, slot]) => {
               if (!Array.isArray(slot?.sets) || (slot.selectedName || '').trim().toLowerCase() !== exerciseName.trim().toLowerCase()) return;
               slot.sets.forEach((set, index) => {
                 if (sourceIndex === 0 && except && Number(week) === Number(except.week) && day === except.day && key === except.key && index === except.index) return;
@@ -3668,6 +3675,7 @@
     /* 3B. LICHAAMSGEWICHT & FYSIOLOGISCHE SCHEMAREFERENTIES VOOR THUISGYM */
     function isExerciseBodyweight(exerciseName) {
       const n = (exerciseName || "").toLowerCase();
+      if (coreExerciseByName(exerciseName)) return true;
       return n.includes("push-up") || n.includes("pushup") || n.includes("opdrukken") || 
              n.includes("pull-up") || n.includes("chin-up") || n.includes("optrekken") || 
              n.includes("dip") || n.includes("lichaamsgewicht") || n.includes("bodyweight");
@@ -4081,7 +4089,7 @@
     }
 
     function getSlotProgress(weekNum, dayKey, slotKey) {
-      const slot = appState.weeks[weekNum][dayKey][slotKey];
+      const slot = getTrainingDay(weekNum, dayKey)[slotKey];
       const name = slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
       const isBW = isExerciseBodyweight(name);
       const firstLogged = slot.sets.find(set => set.completed && Number(set.reps) > 0 && (isBW || Number(set.weight) > 0));
@@ -4091,7 +4099,7 @@
       const range = goalRepetitionRange(appState.trainingGoal, slotKey, baseReps, isBW, name);
       const minReps = Number(plan.minReps || range.minReps);
       const maxReps = Number(plan.maxReps || range.maxReps);
-      return { ...calculateSetProgress(slot.sets, Number(plan.weight), Number(plan.reps), isDeloadWeek(weekNum) ? 2 : 3, isBW), minReps, maxReps };
+      return { ...calculateSetProgress(slot.sets, Number(plan.weight), Number(plan.reps), getTrainingSetCount(weekNum, dayKey, slotKey), isBW), minReps, maxReps };
     }
 
     function applyGoalOrdering() {
@@ -4119,14 +4127,14 @@
     function weekMuscleSets(weekNum, weeks = appState.weeks) {
       const map = appState.trainingRules?.exerciseMuscles || {};
       const groups = {}, unknown = new Set();
-      const required = isDeloadWeek(weekNum) ? 2 : 3;
-      for (const dayKey of ['mon', 'tue', 'thu', 'fri']) {
-        const day = weeks[weekNum]?.[dayKey];
-        for (const key of SPLIT_INFO[dayKey]?.slots || []) {
+            for (const dayKey of ['mon', 'tue', 'thu', 'fri']) {
+        const day = trainingDayWithCore(weeks[weekNum]?.[dayKey]);
+        for (const key of [...(SPLIT_INFO[dayKey]?.slots || []), ...Object.keys(day).filter(isCoreSlot)]) {
           const slot = day?.[key];
           if (!slot) continue;
           const name = slot.selectedName || EXERCISE_CATALOG[key]?.defaultName || '';
-          const classification = map[name.trim().toLowerCase()];
+          const required = isCoreSlot(key) ? slot.sets.length : isDeloadWeek(weekNum) ? 2 : 3;
+          const classification = coreExerciseByName(name) ? { primary: 'core', secondary: [] } : map[name.trim().toLowerCase()];
           if (!classification) { unknown.add(name); continue; }
           const completed = (slot.sets || []).slice(0, required).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(name) || Number(set.weight) > 0)).length;
           for (const group of [classification.primary, ...classification.secondary]) {
@@ -4207,7 +4215,7 @@
 
     function settingsExerciseNames() {
       const names = new Map();
-      Object.values(EXERCISE_CATALOG).forEach(item => names.set(item.defaultName.trim().toLowerCase(), item.defaultName));
+      Object.entries(EXERCISE_CATALOG).filter(([key]) => !isCoreSlot(key)).forEach(([, item]) => names.set(item.defaultName.trim().toLowerCase(), item.defaultName));
       Object.values(appState.weeks || {}).forEach(week => Object.values(week).forEach(day => Object.values(day || {}).forEach(slot => {
         if (slot?.selectedName) names.set(slot.selectedName.trim().toLowerCase(), slot.selectedName);
       })));
@@ -4288,8 +4296,8 @@
       const sessions = [];
       const sets = [];
       for (const dayKey of ["mon", "tue", "thu", "fri"]) {
-        const day = appState.weeks[weekNum]?.[dayKey];
-        for (const slotKey of SPLIT_INFO[dayKey]?.slots || []) {
+        const day = getTrainingDay(weekNum, dayKey);
+        for (const slotKey of getTrainingSlotKeys(weekNum, dayKey)) {
           const slot = day?.[slotKey];
           if (!slot || (slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName).trim().toLowerCase() !== exerciseName.trim().toLowerCase()) continue;
           const progress = getSlotProgress(weekNum, dayKey, slotKey);
@@ -4406,8 +4414,8 @@
       const days = ["mon", "tue", "thu", "fri"];
       for (let week = weekNum; week >= 1; week--) {
         for (const day of days.slice(0, week === weekNum ? days.indexOf(dayKey) : days.length).reverse()) {
-          for (const key of SPLIT_INFO[day]?.slots || []) {
-            const slot = appState.weeks[week]?.[day]?.[key];
+          for (const key of getTrainingSlotKeys(week, day)) {
+            const slot = getTrainingDay(week, day)[key];
             if (!slot || (slot.selectedName || EXERCISE_CATALOG[key].defaultName).trim().toLowerCase() !== exerciseName.trim().toLowerCase()) continue;
             const sets = slot.sets.slice(0, isDeloadWeek(week) ? 2 : 3).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(exerciseName) || Number(set.weight) > 0));
             if (sets.length) return { week, day, key, slot, sets };
@@ -4418,7 +4426,7 @@
     }
 
     function renderProgressDetails(weekNum, dayKey, slotKey) {
-      const slot = appState.weeks[weekNum][dayKey][slotKey];
+      const slot = getTrainingDay(weekNum, dayKey)[slotKey];
       const name = slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
       const isBW = isExerciseBodyweight(name);
       const progress = getSlotProgress(weekNum, dayKey, slotKey);
@@ -4436,7 +4444,7 @@
       const format = sets => sets.map(set => `${isBW ? 'BW' : Number(set.weight) + ' kg'} × ${Number(set.reps)}`).join(' · ');
       const remaining = progress.details.map((set, index) => set.achieved ? '' : !set.completed ? `Set ${index + 1}: ${appState.weeks[weekNum][dayKey].skipped ? 'overgeslagen' : 'nog uitvoeren'}` : !set.weightMet ? `Set ${index + 1}: onder ${progress.targetWeight} kg` : `Set ${index + 1}: nog ${set.missingReps} reps`).filter(Boolean).join(' · ');
       const upperSets = week.sessions.reduce((total, session) => {
-        const source = appState.weeks[weekNum][session.dayKey][session.slotKey];
+        const source = getTrainingDay(weekNum, session.dayKey)[session.slotKey];
         return total + calculateSetProgress(source.sets, session.progress.targetWeight, week.maxReps, session.progress.requiredSets, isBW).achievedSets;
       }, 0);
 
@@ -4535,6 +4543,11 @@
 
     /* 4C. CENTRAAL ADVIES & PROGRESSIVE OVERLOAD BEREKENING */
     function getSlotTargetAdvice(weekNum, dayKey, slotKey) {
+      if (isCoreSlot(slotKey)) {
+        const slot = getTrainingDay(weekNum, dayKey)[slotKey], advice = getCoreAdvice(weekNum, dayKey, slot.exercise);
+        return { advisedWeight: 0, targetReps: slot.targetReps, advisedReps: slot.targetReps, minReps: 8, maxReps: slot.progressionPlan.maxReps,
+          adviceTitle: advice.status, adviceText: advice.reason, adviceType: advice.previous ? 'repeat' : 'inregel_baseline', hasPriorData: !!advice.previous, benchmark: {} };
+      }
       const slot = appState.weeks[weekNum]?.[dayKey]?.[slotKey];
       const name = slot?.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
       const isBW = isExerciseBodyweight(name);
@@ -4607,15 +4620,16 @@
           const day = weeks[week][dayKey];
           if (!day) return;
           if (day.skipped) skippedDays++;
-          let planned = 0, completed = 0;
-          Object.entries(day).forEach(([key, slot]) => {
+          let planned = 0, completed = 0, mainCompleted = 0;
+          Object.entries(trainingDayWithCore(day)).forEach(([key, slot]) => {
             if (!Array.isArray(slot?.sets)) return;
             const name = slot.selectedName || EXERCISE_CATALOG[key]?.defaultName || key;
             const isBW = isExerciseBodyweight(name);
-            const required = isDeloadWeek(Number(week)) ? 2 : 3;
-            planned += required;
+            const required = isCoreSlot(key) ? slot.sets.length : isDeloadWeek(Number(week)) ? 2 : 3;
+            if (!isCoreSlot(key)) planned += required;
             const sets = slot.sets.slice(0, required).filter(set => set.completed && Number(set.reps) > 0 && (isBW || Number(set.weight) > 0));
             completed += sets.length;
+            if (!isCoreSlot(key)) mainCompleted += sets.length;
             sets.forEach(set => { totalVolume += calculateSetVolume(name, set); });
             if (sets.length && !isDeloadWeek(Number(week))) {
               const best = [...sets].sort((a, b) => (isBW ? 0 : Number(b.weight) - Number(a.weight)) || Number(b.reps) - Number(a.reps))[0];
@@ -4625,7 +4639,7 @@
             }
           });
           totalSets += completed;
-          if (!day.skipped && planned > 0 && completed === planned) totalWorkouts++;
+          if (!day.skipped && planned > 0 && mainCompleted === planned) totalWorkouts++;
           timings.push({ day, completedSets: completed });
         });
       });
@@ -4665,9 +4679,9 @@
 
       const dayKeys = ["mon", "tue", "thu", "fri"];
       dayKeys.forEach(dKey => {
-        const dData = weekData[dKey];
-        if (!dData) return;
-        const slots = SPLIT_INFO[dKey].slots;
+        if (!weekData[dKey]) return;
+        const dData = getTrainingDay(weekNum, dKey);
+        const slots = getTrainingSlotKeys(weekNum, dKey);
         let dayAllCompleted = true;
 
         slots.forEach(sKey => {
@@ -4677,7 +4691,7 @@
           const exName = sData.selectedName || cat.defaultName;
           const isBW = isExerciseBodyweight(exName);
           const targetReps = getExerciseTargetReps(exName, sKey, weekNum, dKey);
-          const reqSets = isDeload ? 2 : 3;
+          const reqSets = getTrainingSetCount(weekNum, dKey, sKey);
           totalPlannedSets += reqSets;
 
           if (!exercisesMap[exName]) {
@@ -4736,7 +4750,7 @@
             }
           });
 
-          if (!slotDone) dayAllCompleted = false;
+          if (!slotDone && !isCoreSlot(sKey)) dayAllCompleted = false;
         });
 
         const dayStatus = getDayCompletionStatus(weekNum, dKey);
@@ -4768,6 +4782,7 @@
         isNextDeload: isNextDeload,
         totalVolume: totalVolume,
         totalCompletedSets: totalCompletedSets,
+        coreCompletedSets: Object.values(weekData).flatMap(day => day.coreWorkout || []).flatMap(exercise => exercise.sets).filter(set => set.completed).length,
         totalPlannedSets: totalPlannedSets,
         totalReps: totalReps,
         daysCompletedCount: daysCompletedCount,
@@ -5005,6 +5020,7 @@
             <div class="text-base sm:text-lg font-black font-mono text-slate-100 mt-0.5">
               ${evalData.totalCompletedSets} <span class="text-xs font-normal text-slate-400">/ ${evalData.totalPlannedSets}</span>
             </div>
+            <div class="text-xs text-emerald-300 mt-1">Waarvan ${evalData.coreCompletedSets} buikspiersets</div>
             <div class="text-[10px] text-slate-500 font-mono mt-0.5">${evalData.totalReps} herhalingen</div>
           </div>
           <div class="p-3 rounded-2xl bg-slate-950/70 border border-slate-800">
@@ -6386,7 +6402,7 @@
         const weekNum = Number(weekKey);
         days.forEach((day, dayIndex) => {
           if (before && source.cycle === currentCycle && (weekNum > before.week || (weekNum === before.week && dayIndex >= days.indexOf(before.day)))) return;
-          Object.entries(week[day] || {}).forEach(([key, slot]) => {
+          Object.entries(trainingDayWithCore(week[day] || {})).forEach(([key, slot]) => {
             if (!Array.isArray(slot?.sets) || (slot.selectedName || EXERCISE_CATALOG[key]?.defaultName || '').trim().toLowerCase() !== name.trim().toLowerCase()) return;
             const isBW = isExerciseBodyweight(name);
             const sets = slot.sets.slice(0, isDeloadWeek(weekNum) ? 2 : 3).map((set, index) => ({ ...set, position: index + 1 }))
@@ -6453,6 +6469,14 @@
     }
 
     function getOverloadOutlook(weekNum, name) {
+      const core = coreExerciseByName(name);
+      if (core) {
+        const key = Object.keys(appState.trainingRules.coreWorkout.catalog).find(key => appState.trainingRules.coreWorkout.catalog[key].name === core.name);
+        const advice = getCoreAdvice(weekNum + 1, 'mon', key), progress = getExerciseWeekProgress(weekNum, name);
+        const remaining = Math.max(0, progress.requiredSets - progress.completedSets);
+        return { title: advice.status, reason: advice.reason, remaining, provisional: remaining > 0,
+          next: weekNum >= Number(appState.totalWeeks || 7) ? null : { weight: 0, reps: advice.reps, requiredSets: advice.count } };
+      }
       const week = getExerciseWeekProgress(weekNum, name);
       const remaining = Math.max(0, week.requiredSets - week.completedSets - (week.skippedSets || 0));
       const next = getNextProgression(week, weekNum + 1);
@@ -6486,12 +6510,242 @@
         remaining, next: projected, provisional: true };
     }
 
+    function getCoreHistory(weekNum, dayKey) {
+      const days = ['mon', 'tue', 'thu', 'fri'], currentCycle = Number(appState.currentCycle || 1);
+      const cycles = (appState.cyclesHistory || []).filter(cycle => Number(cycle.number) < currentCycle)
+        .map(cycle => ({ number: Number(cycle.number), weeks: cycle.snapshot?.weeksSnapshot || {} }));
+      cycles.push({ number: currentCycle, weeks: appState.weeks });
+      const history = [];
+      cycles.forEach(cycle => Object.entries(cycle.weeks).forEach(([week, weekData]) => {
+        if (isDeloadWeek(Number(week))) return;
+        days.forEach(day => {
+          if (cycle.number === currentCycle && (Number(week) > Number(weekNum) || (Number(week) === Number(weekNum) && days.indexOf(day) >= days.indexOf(dayKey)))) return;
+          const data = weekData[day];
+          if (!data || data.skipped) return;
+          (data.coreWorkout || []).forEach((item, index) => {
+            if (item.sets.some(set => set.completed && Number(set.reps) > 0)) history.push({ cycle: cycle.number, week: Number(week), day, index, item });
+          });
+        });
+      }));
+      return history.sort((a, b) => b.cycle - a.cycle || b.week - a.week || days.indexOf(b.day) - days.indexOf(a.day));
+    }
+
+    function getCoreAdvice(weekNum, dayKey, exerciseKey) {
+      const exercise = appState.trainingRules.coreWorkout.catalog[exerciseKey];
+      const maxReps = Number(exercise.maxReps || (exercise.perSide ? 12 : 15));
+      const history = getCoreHistory(weekNum, dayKey).filter(entry => entry.item.exercise === exerciseKey);
+      const previous = history[0], item = previous?.item;
+      const target = Number(item?.targetReps || exercise.reps), sets = item?.sets || [];
+      const weekEntries = previous ? history.filter(entry => entry.cycle === previous.cycle && entry.week === previous.week) : [];
+      const weekSets = weekEntries.flatMap(entry => entry.item.sets.map(set => ({ ...set, target: Number(entry.item.targetReps || exercise.reps) })));
+      const completed = weekSets.filter(set => set.completed && Number(set.reps) > 0);
+      const unknown = completed.filter(set => !['easy', 'good', 'max'].includes(set.exertion)).length;
+      const exertion = completed.some(set => set.exertion === 'max') ? 'max' : unknown ? 'unknown' : 'good';
+      const recovery = appState.weeks[weekNum]?.[dayKey]?.recovery || 'unknown';
+      let reps = target, count = sets.length || 2, status = 'Startadvies';
+      let reason = 'Nog geen eerdere uitvoering. Begin met twee rustige sets en beoordeel hoe zwaar ze voelen.';
+      const progress = { exerciseName: exercise.name, targetWeight: 0, targetReps: target, minReps: 8, maxReps,
+        isBodyweight: true, completedSets: completed.length, requiredSets: weekSets.length || 2,
+        achieved: completed.length === weekSets.length && completed.every(set => Number(set.reps) >= set.target),
+        unknownSets: unknown, maxSets: completed.filter(set => set.exertion === 'max').length, exertion, recovery };
+      if (isDeloadWeek(weekNum) || recovery === 'exhausted') {
+        const load = getRecoveryLoad(progress);
+        reps = Math.max(1, Math.round(target * load.factor)); count = 2; status = 'Rustiger trainen';
+        reason = `${isDeloadWeek(weekNum) ? 'Herstelweek' : 'Veel vermoeidheid gemeld'}: twee rustige sets met minder herhalingen${previous ? ', gebaseerd op je laatste opbouwtraining' : ' om rustig te beginnen'}.`;
+      } else if (recovery === 'tired') {
+        count = 2; status = 'Herhalen'; reason = 'Je meldde vermoeidheid. Houd het bij twee sets op hetzelfde herhalingsdoel.';
+      } else if (previous?.cycle === Number(appState.currentCycle || 1) && previous.week === Number(weekNum)) {
+        status = 'Deze week herhalen'; reason = 'Dezelfde oefening en hetzelfde doel als eerder deze week. Opbouw wordt per week beoordeeld.';
+      } else if (previous && previous.cycle < Number(appState.currentCycle || 1) && Number(weekNum) === 1) {
+        status = 'Basis hervatten'; reason = 'Begin de nieuwe periode met het doel uit je laatste opbouwtraining; herstelsets worden niet als achteruitgang gezien.';
+      } else if (previous) {
+        const next = getNextProgression(progress, weekNum);
+        reps = next.reps; status = next.status; reason = next.reason;
+        if (unknown) reason = 'Niet alle opgeslagen sets hebben een inspanningsbeoordeling. Herhaal het doel totdat duidelijk is hoe zwaar de sets waren.';
+        if (next.change === 'reps') {
+          if (target >= maxReps && count === 2 && completed.every(set => Number(set.reps) >= maxReps)) {
+            count = 3; reps = Math.ceil(2 * maxReps / 3); status = 'Derde set opbouwen';
+            reason = 'Beide sets aan de bovengrens met controle gehaald. Verdeel de herhalingen nu over drie kortere sets.';
+          } else {
+            reps = Math.min(maxReps, target + 2);
+            status = reps > target ? 'Herhalingen opbouwen' : 'Vasthouden';
+            reason = reps > target ? 'Alle opgeslagen uitvoeringen van de vorige opbouwweek met controle gehaald. Maximaal twee herhalingen per set erbij.' : `${count} sets aan de bovengrens: behoud dit korte buikspierwerk en bevestig het doel met rustige uitvoering.`;
+          }
+        } else if (next.provisional) {
+          reason = 'Een eerdere uitvoering uit die opbouwweek is nog niet volledig afgevinkt. Herhaal het doel; nog geen verhoging.';
+        } else if (!progress.achieved && exertion === 'max' && !unknown && history[1]
+          && sets.every(set => set.completed && ['easy', 'good', 'max'].includes(set.exertion))
+          && sets.some(set => set.exertion === 'max') && sets.some(set => Number(set.reps) < target)) {
+          const before = history[1].item;
+          const beforeTarget = Number(before.targetReps || exercise.reps);
+          const repeatedMiss = beforeTarget === target && before.sets.length === count && before.sets.every(set => set.completed && ['easy', 'good', 'max'].includes(set.exertion))
+            && before.sets.some(set => set.exertion === 'max') && before.sets.some(set => Number(set.reps) < beforeTarget);
+          if (repeatedMiss) {
+            reps = Math.max(1, target - 2); status = 'Lichter herhalen';
+            reason = 'Twee volledige uitvoeringen het doel gemist met maximale inspanning. Neem twee herhalingen per set terug.';
+          }
+        }
+      }
+      return { reps, count, status, reason, previous };
+    }
+
+    function getCoreWorkout(weekNum, dayKey) {
+      const rules = appState.trainingRules?.coreWorkout;
+      if (!rules) return [];
+      const saved = appState.weeks[weekNum]?.[dayKey]?.coreWorkout;
+      if (saved?.length === 2) return JSON.parse(JSON.stringify(saved)).map(item => ({ ...item,
+        targetReps: item.targetReps || rules.catalog[item.exercise].reps,
+        sets: item.sets.map(set => ({ ...set, exertion: set.exertion || 'unknown' })) }));
+      const history = getCoreHistory(weekNum, dayKey), sameSplit = ['mon', 'thu'].includes(dayKey) ? ['mon', 'thu'] : ['tue', 'fri'];
+      const chosen = new Set();
+      return (rules.defaults[dayKey] || []).map((defaultExercise, index) => {
+        const previous = history.find(entry => sameSplit.includes(entry.day) && entry.index === index && rules.catalog[entry.item.exercise]);
+        let exercise = previous?.item.exercise || defaultExercise;
+        if (chosen.has(exercise)) exercise = [defaultExercise, ...rules.defaults[dayKey], ...Object.keys(rules.catalog)].find(key => !chosen.has(key));
+        chosen.add(exercise);
+        const advice = getCoreAdvice(weekNum, dayKey, exercise);
+        return { exercise, targetReps: advice.reps,
+          sets: Array.from({ length: advice.count }, () => ({ reps: advice.reps, completed: false, exertion: 'unknown' })) };
+      });
+    }
+
+    function isCoreSlot(key) {
+      return /^slot_core_[01]$/.test(key || '');
+    }
+
+    function coreExerciseByName(name) {
+      return Object.values(appState.trainingRules?.coreWorkout?.catalog || {}).find(exercise => exercise.name.toLowerCase() === String(name || '').trim().toLowerCase());
+    }
+
+    function trainingDayWithCore(day = {}) {
+      const result = { ...day };
+      (day.coreWorkout || []).forEach((item, index) => {
+        const exercise = appState.trainingRules?.coreWorkout?.catalog?.[item.exercise];
+        if (!exercise) return;
+        const reps = Number(item.targetReps || exercise.reps);
+        result[`slot_core_${index}`] = { selectedName: exercise.name, exercise: item.exercise, targetReps: reps,
+          progressionPlan: { weight: 0, reps, minReps: 8, maxReps: exercise.maxReps },
+          sets: item.sets.map(set => ({ ...set, weight: 0, exertion: set.exertion || 'unknown' })) };
+      });
+      return result;
+    }
+
+    function getTrainingDay(week, day) {
+      return trainingDayWithCore(appState.weeks[week]?.[day] || {});
+    }
+
+    function getTrainingSlotKeys(week, day) {
+      return [...(SPLIT_INFO[day]?.slots || []), ...Object.keys(getTrainingDay(week, day)).filter(isCoreSlot)];
+    }
+
+    function getTrainingSetCount(week, day, key) {
+      return isCoreSlot(key) ? (getTrainingDay(week, day)[key]?.sets.length || 2) : isDeloadWeek(week) ? 2 : 3;
+    }
+
+    function coreInvitationHtml(week, day) {
+      if (!appState.trainingRules?.coreWorkout || !getDayCompletionStatus(week, day).isFullyCompleted) return '';
+      const saved = appState.weeks[week]?.[day]?.coreWorkout || [];
+      if (saved.length && saved.every(item => item.sets.every(set => set.completed))) return '';
+      return `<section class="rounded-2xl border border-emerald-500/40 bg-slate-950/70 p-5 space-y-3">
+        <h3 class="font-bold text-slate-100">${saved.length ? 'Buikspieren verder afmaken?' : 'Wil je nog buikspieren doen?'}</h3>
+        <p class="text-sm text-slate-300">Twee oefeningen met 2 of 3 sets, afgestemd op je eerdere resultaten.</p>
+        <div class="flex flex-wrap gap-3"><button onclick="startCoreWorkout()" class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-500">${saved.length ? 'Doorgaan in trainer' : 'Ja, start buikspieren'}</button>
+        <button onclick="closeLiveWorkoutModal()" class="rounded-xl border border-slate-700 px-5 py-3 text-sm text-slate-300">${saved.length ? 'Later verder' : 'Nee, afronden'}</button></div>
+      </section>`;
+    }
+
+    async function saveCoreWorkout(week, dayKey, workout) {
+      if (saveCoreWorkout.pending) return false;
+      const day = appState.weeks[week]?.[dayKey];
+      const sessionId = day?.sessionId || Object.values(day || {}).find(slot => slot?.sessionId)?.sessionId;
+      if (!sessionId || day.skipped) { showToast('Training kan nu niet worden opgeslagen.', 'error'); return false; }
+      try {
+        saveCoreWorkout.pending = true;
+        const response = await jsonApi('/api/sessions/' + sessionId, 'PATCH', { core_workout: workout });
+        if (!response.ok) throw new Error('Opslaan mislukt');
+        day.coreWorkout = workout;
+        saveState();
+        renderExercises();
+        updateDashboard();
+        return true;
+      } catch (error) {
+        showToast('Buikspieroefening niet opgeslagen. Probeer opnieuw.', 'error');
+        return false;
+      } finally {
+        saveCoreWorkout.pending = false;
+      }
+    }
+
+    async function startCoreWorkout() {
+      const week = liveWorkout.weekNum, day = liveWorkout.dayKey;
+      if (liveWorkout.phase !== 'summary' || !getDayCompletionStatus(week, day).isFullyCompleted) return;
+      const workout = getCoreWorkout(week, day);
+      if (!workout.length || !await saveCoreWorkout(week, day, workout)) return;
+      liveWorkout.slots = getTrainingSlotKeys(week, day);
+      const pendingIndex = workout.findIndex(item => item.sets.some(set => !set.completed));
+      const index = pendingIndex < 0 ? 0 : pendingIndex;
+      liveWorkout.currentSlotIndex = liveWorkout.slots.indexOf(`slot_core_${index}`);
+      liveWorkout.currentSetIndex = Math.max(0, workout[index].sets.findIndex(set => !set.completed));
+      liveWorkout.phase = 'set';
+      appState.showLiveVideoPanel = true;
+      prepareCurrentLiveSetValues();
+      resumeLiveWorkoutSession();
+    }
+
+    function coreExerciseSwitchHtml(week, day, key) {
+      if (!isCoreSlot(key)) return '';
+      const index = Number(key.slice(-1)), item = getCoreWorkout(week, day)[index];
+      const logged = item.sets.some(set => set.completed);
+      const catalog = appState.trainingRules.coreWorkout.catalog;
+      return `<details class="rounded-xl border border-slate-700 p-3 text-xs"><summary class="cursor-pointer text-blue-300">Oefening wisselen / sets aanpassen</summary>
+        <div class="pt-3 space-y-3"><label class="block">Andere oefening<select aria-label="Andere buikspieroefening" onchange="changeLiveCoreWorkout('exercise', this.value)" ${logged ? 'disabled' : ''} class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-900 p-2 text-white">${Object.entries(catalog).map(([value, exercise]) => `<option value="${value}" ${value === item.exercise ? 'selected' : ''}>${escapeReportText(exercise.name)}</option>`).join('')}</select></label>
+        ${logged ? '<p class="text-slate-400">Je hebt al sets opgeslagen voor deze oefening. Je kunt ze via de trainer corrigeren.</p>' : ''}
+        <button onclick="changeLiveCoreWorkout('sets', ${item.sets.length === 2 ? 3 : 2})" ${item.sets[2]?.completed ? 'disabled' : ''} class="text-blue-300 underline disabled:opacity-40">${item.sets.length === 2 ? '+ Derde set' : 'Terug naar 2 sets'}</button></div></details>`;
+    }
+
+    async function changeLiveCoreWorkout(action, value) {
+      if (saveCoreWorkout.pending) return;
+      const week = liveWorkout.weekNum, day = liveWorkout.dayKey, key = liveWorkout.slots[liveWorkout.currentSlotIndex];
+      if (!isCoreSlot(key) || liveWorkout.phase !== 'set') return;
+      const workout = getCoreWorkout(week, day), item = workout[Number(key.slice(-1))];
+      if (action === 'exercise') {
+        if (item.sets.some(set => set.completed) || !appState.trainingRules.coreWorkout.catalog[value]) return;
+        const advice = getCoreAdvice(week, day, value);
+        item.exercise = value; item.targetReps = advice.reps;
+        item.sets = Array.from({ length: advice.count }, () => ({ reps: advice.reps, completed: false, exertion: 'unknown' }));
+      } else if (action === 'sets') {
+        if (![2, 3].includes(value) || (value === 2 && item.sets[2]?.completed)) return;
+        item.sets = value === 2 ? item.sets.slice(0, 2) : [...item.sets.slice(0, 2), { reps: item.targetReps, completed: false, exertion: 'unknown' }];
+      } else return;
+      if (!await saveCoreWorkout(week, day, workout)) { renderLiveWorkoutView(); return; }
+      liveWorkout.currentSetIndex = Math.min(liveWorkout.currentSetIndex, item.sets.length - 1);
+      prepareCurrentLiveSetValues();
+      renderLiveWorkoutView();
+    }
+
+    async function submitLiveCoreSet() {
+      if (saveCoreWorkout.pending) return;
+      const week = liveWorkout.weekNum, day = liveWorkout.dayKey, key = liveWorkout.slots[liveWorkout.currentSlotIndex];
+      const index = Number(key.slice(-1)), setIndex = liveWorkout.currentSetIndex;
+      const workout = getCoreWorkout(week, day), item = workout[index];
+      const reps = Number(document.getElementById('lwRepsInput')?.value ?? liveWorkout.tempReps);
+      if (!Number.isInteger(reps) || reps < 1 || reps > 50) { showToast('Vul 1 tot 50 hele herhalingen in.', 'error'); return; }
+      item.sets[setIndex] = { reps, completed: true, exertion: liveWorkout.tempExertion || 'unknown' };
+      const name = appState.trainingRules.coreWorkout.catalog[item.exercise].name;
+      const isPR = isSetNewAllTimePR(name, 0, reps, week, day, key, setIndex);
+      if (!await saveCoreWorkout(week, day, workout)) return;
+      liveWorkout.tempReps = reps;
+      if (isPR) liveWorkout.newPRs.push({ exerciseName: name, weight: 0, reps, est1RM: 0, isBodyweight: true, setNum: setIndex + 1 });
+      if (workout.every(exercise => exercise.sets.every(set => set.completed))) showLiveWorkoutSummary();
+      else startLiveRestTimer();
+    }
+
     function completedDayResultsHtml(weekNum, dayKey) {
       const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
       const status = getDayCompletionStatus(weekNum, dayKey);
       let achieved = 0;
-      const cards = SPLIT_INFO[dayKey].slots.map(key => {
-        const slot = appState.weeks[weekNum][dayKey][key];
+      const cards = getTrainingSlotKeys(weekNum, dayKey).map(key => {
+        const slot = getTrainingDay(weekNum, dayKey)[key];
         const name = slot.selectedName || EXERCISE_CATALOG[key].defaultName;
         const progress = getSlotProgress(weekNum, dayKey, key);
         achieved += progress.achievedSets;
@@ -7234,10 +7488,22 @@
       }
     }
 
-    function clearCurrentDay() {
+    async function clearCurrentDay() {
       if (!confirm(`Sets van Week ${appState.currentWeek} ${appState.currentDay.toUpperCase()} wissen?`)) return;
-      const currentDayData = appState.weeks[appState.currentWeek][appState.currentDay];
-      SPLIT_INFO[appState.currentDay].slots.forEach(slotKey => {
+      const weekNum = appState.currentWeek, dayKey = appState.currentDay;
+      const currentDayData = appState.weeks[weekNum][dayKey];
+      if (currentDayData.coreWorkout?.length) {
+        if (saveCoreWorkout.pending) { showToast('Wacht tot je buikspierset is opgeslagen.', 'error'); return; }
+        const sessionId = currentDayData.sessionId || Object.values(currentDayData).find(slot => slot?.sessionId)?.sessionId;
+        try {
+          saveCoreWorkout.pending = true;
+          const response = await jsonApi('/api/sessions/' + sessionId, 'PATCH', { core_workout: [] });
+          if (!response.ok) throw new Error('Wissen mislukt');
+          currentDayData.coreWorkout = [];
+        } catch (error) { showToast('Buikspiersets konden niet worden gewist. Probeer opnieuw.', 'error'); return; }
+        finally { saveCoreWorkout.pending = false; }
+      }
+      SPLIT_INFO[dayKey].slots.forEach(slotKey => {
         currentDayData[slotKey].progressionPlan = null;
         currentDayData[slotKey].sets = [
           { weight: "", reps: "", completed: false },
@@ -7515,7 +7781,7 @@
     function openGuideModal(slotKey) {
       currentGuideSlot = slotKey;
       const catalogItem = EXERCISE_CATALOG[slotKey];
-      const slotData = appState.weeks[appState.currentWeek][appState.currentDay][slotKey];
+      const slotData = getTrainingDay(liveWorkout.active ? liveWorkout.weekNum : appState.currentWeek, liveWorkout.active ? liveWorkout.dayKey : appState.currentDay)[slotKey];
       guideActiveExercise = slotData.selectedName || catalogItem.defaultName;
       guidePreviewedExercise = guideActiveExercise;
       guideSearchQuery = "";
@@ -7794,7 +8060,7 @@
       if (!altsContainer || !currentGuideSlot) return;
 
       const catalogItem = EXERCISE_CATALOG[currentGuideSlot];
-      const allAlts = catalogItem.alternatives || [catalogItem.defaultName];
+      const allAlts = isCoreSlot(currentGuideSlot) ? [guideActiveExercise] : catalogItem.alternatives || [catalogItem.defaultName];
 
       const filtered = allAlts.filter(alt => {
         if (!guideSearchQuery) return true;
@@ -8238,12 +8504,12 @@
 
       // Zoek de eerste onvoltooide set van deze dag
       const isDeload = isDeloadWeek(liveWorkout.weekNum);
-      const maxSetsPerSlot = isDeload ? 2 : 3;
+      const maxSetsPerSlot = getTrainingSetCount(liveWorkout.weekNum, liveWorkout.dayKey, liveWorkout.slots[liveWorkout.currentSlotIndex]);
       let foundIncomplete = false;
 
       for (let s = 0; s < liveWorkout.slots.length; s++) {
         const slotKey = liveWorkout.slots[s];
-        const slotData = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey][slotKey];
+        const slotData = getTrainingDay(liveWorkout.weekNum, liveWorkout.dayKey)[slotKey];
         if (!slotData || !slotData.sets) continue;
         for (let setIdx = 0; setIdx < maxSetsPerSlot; setIdx++) {
           if (!slotData.sets[setIdx] || !slotData.sets[setIdx].completed) {
@@ -8286,7 +8552,7 @@
 
     function prepareCurrentLiveSetValues() {
       const slotKey = liveWorkout.slots[liveWorkout.currentSlotIndex];
-      const slot = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey][slotKey];
+      const slot = getTrainingDay(liveWorkout.weekNum, liveWorkout.dayKey)[slotKey];
       const name = slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
       const isBW = isExerciseBodyweight(name);
       const advice = getSlotTargetAdvice(liveWorkout.weekNum, liveWorkout.dayKey, slotKey);
@@ -8312,8 +8578,9 @@
     }
 
     function rememberLiveInput(field, value) {
+      if (isCoreSlot(liveWorkout.slots[liveWorkout.currentSlotIndex])) return;
       const key = liveWorkout.slots[liveWorkout.currentSlotIndex];
-      const slot = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey][key];
+      const slot = getTrainingDay(liveWorkout.weekNum, liveWorkout.dayKey)[key];
       if (!slot.progressionPlan) {
         const advice = getSlotTargetAdvice(liveWorkout.weekNum, liveWorkout.dayKey, key);
         slot.progressionPlan = { weight: Number(advice.advisedWeight || 0), reps: Number(advice.advisedReps || advice.targetReps), minReps: advice.minReps, maxReps: advice.maxReps };
@@ -8359,7 +8626,7 @@
       const btn = document.getElementById("lwSubmitTargetBtn");
       if (!btn) return;
       const slotKey = liveWorkout.slots[liveWorkout.currentSlotIndex];
-      const slotData = appState.weeks[liveWorkout.weekNum] ? appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey][slotKey] : null;
+      const slotData = appState.weeks[liveWorkout.weekNum] ? getTrainingDay(liveWorkout.weekNum, liveWorkout.dayKey)[slotKey] : null;
       const catalogItem = EXERCISE_CATALOG[slotKey];
       const exerciseName = (slotData && slotData.selectedName) || (catalogItem ? catalogItem.defaultName : "Oefening");
       const isBW = isExerciseBodyweight(exerciseName);
@@ -8399,7 +8666,7 @@
       if (!previewEl) return;
 
       const slotKey = liveWorkout.slots[liveWorkout.currentSlotIndex];
-      const slotData = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey][slotKey];
+      const slotData = getTrainingDay(liveWorkout.weekNum, liveWorkout.dayKey)[slotKey];
       const exerciseName = slotData.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
       const isBW = isExerciseBodyweight(exerciseName);
 
@@ -8469,8 +8736,10 @@
     }
 
     function submitLiveSet(useTarget = false) {
+      if (saveCoreWorkout.pending) return;
+      if (isCoreSlot(liveWorkout.slots[liveWorkout.currentSlotIndex])) return submitLiveCoreSet();
       const slotKey = liveWorkout.slots[liveWorkout.currentSlotIndex];
-      const slotData = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey][slotKey];
+      const slotData = getTrainingDay(liveWorkout.weekNum, liveWorkout.dayKey)[slotKey];
       const catalogItem = EXERCISE_CATALOG[slotKey];
       const exerciseName = (slotData && slotData.selectedName) || (catalogItem ? catalogItem.defaultName : "Oefening");
       const isBW = isExerciseBodyweight(exerciseName);
@@ -8577,18 +8846,18 @@
 
       // Controleer direct of de hele workout nu voltooid is:
       const isDeload = isDeloadWeek(liveWorkout.weekNum);
-      const maxSetsPerSlot = isDeload ? 2 : 3;
+      const maxSetsPerSlot = getTrainingSetCount(liveWorkout.weekNum, liveWorkout.dayKey, liveWorkout.slots[liveWorkout.currentSlotIndex]);
       const isLastSlot = (liveWorkout.currentSlotIndex >= liveWorkout.slots.length - 1);
       const isLastSetInSlot = (setIdx >= maxSetsPerSlot - 1);
 
       // Controleer of er überhaupt nog onvoltooide sets zijn op deze dag:
       let hasUncompletedRemaining = false;
-      const daySlots = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey];
+      const daySlots = getTrainingDay(liveWorkout.weekNum, liveWorkout.dayKey);
       for (let s = 0; s < liveWorkout.slots.length; s++) {
         const sKey = liveWorkout.slots[s];
         const sData = daySlots[sKey];
         if (!sData || !sData.sets) continue;
-        for (let i = 0; i < maxSetsPerSlot; i++) {
+        for (let i = 0; i < getTrainingSetCount(liveWorkout.weekNum, liveWorkout.dayKey, sKey); i++) {
           if (s === liveWorkout.currentSlotIndex && i === setIdx) continue;
           if (!sData.sets[i] || !sData.sets[i].completed) {
             hasUncompletedRemaining = true;
@@ -8616,7 +8885,7 @@
       liveWorkout.restStartTimestamp = Date.now();
 
       const slotKey = liveWorkout.slots[liveWorkout.currentSlotIndex];
-      const slotData = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey][slotKey];
+      const slotData = getTrainingDay(liveWorkout.weekNum, liveWorkout.dayKey)[slotKey];
       const catalogItem = EXERCISE_CATALOG[slotKey];
       const exerciseName = slotData.selectedName || catalogItem.defaultName;
       const details = getExerciseDetails(exerciseName, slotKey);
@@ -8653,7 +8922,7 @@
 
     function adjustLiveRest(deltaSeconds) {
       const slotKey = liveWorkout.slots[liveWorkout.currentSlotIndex];
-      const slotData = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey][slotKey];
+      const slotData = getTrainingDay(liveWorkout.weekNum, liveWorkout.dayKey)[slotKey];
       const exerciseName = slotData.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
 
       liveWorkout.restRemainingSeconds = Math.max(5, liveWorkout.restRemainingSeconds + deltaSeconds);
@@ -8693,6 +8962,7 @@
     }
 
     function advanceToNextLiveSet() {
+      if (saveCoreWorkout.pending) return;
       stopContinuousWorkoutAlarm();
       clearInterval(liveWorkout.restInterval);
 
@@ -8703,7 +8973,7 @@
       }
 
       const isDeload = isDeloadWeek(liveWorkout.weekNum);
-      const maxSetsPerSlot = isDeload ? 2 : 3;
+      const maxSetsPerSlot = getTrainingSetCount(liveWorkout.weekNum, liveWorkout.dayKey, liveWorkout.slots[liveWorkout.currentSlotIndex]);
 
       if (liveWorkout.currentSetIndex < maxSetsPerSlot - 1) {
         // Volgende set van dezelfde oefening
@@ -8765,6 +9035,7 @@
     }
 
     function finishLiveWorkoutNow() {
+      if (saveCoreWorkout.pending) return;
       showLiveWorkoutSummary();
     }
 
@@ -8819,6 +9090,7 @@
     }
 
     function restartLiveWorkoutSession() {
+      if (saveCoreWorkout.pending) return;
       if (confirm("Weet je zeker dat je deze trainingssessie vanaf 00:00 opnieuw wilt starten?")) {
         stopContinuousWorkoutAlarm();
         clearInterval(liveWorkout.restInterval);
@@ -8842,6 +9114,7 @@
     }
 
     function closeLiveWorkoutModal() {
+      if (saveCoreWorkout.pending) return;
       stopContinuousWorkoutAlarm();
       clearInterval(liveWorkout.restInterval);
       clearInterval(liveWorkout.elapsedInterval);
@@ -8868,6 +9141,7 @@
     }
 
     function jumpToLiveSlot(slotIndex) {
+      if (saveCoreWorkout.pending) return;
       if (slotIndex < 0 || slotIndex >= liveWorkout.slots.length) return;
       stopContinuousWorkoutAlarm();
       clearInterval(liveWorkout.restInterval);
@@ -8964,7 +9238,7 @@
         return;
       }
 
-      const currentDayData = appState.weeks[liveWorkout.weekNum] ? appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey] : null;
+      const currentDayData = getTrainingDay(liveWorkout.weekNum, liveWorkout.dayKey);
       if (!currentDayData) return;
 
       const slotKey = liveWorkout.slots[liveWorkout.currentSlotIndex];
@@ -8974,7 +9248,7 @@
 
       // Bereken ook volgende oefening indien in rustfase
       const isDeload = isDeloadWeek(liveWorkout.weekNum);
-      const maxSetsPerSlot = isDeload ? 2 : 3;
+      const maxSetsPerSlot = getTrainingSetCount(liveWorkout.weekNum, liveWorkout.dayKey, liveWorkout.slots[liveWorkout.currentSlotIndex]);
       let nextExerciseName = currentExerciseName;
       let isNextAvailable = false;
       if (liveWorkout.currentSetIndex + 1 < maxSetsPerSlot) {
@@ -9177,16 +9451,16 @@
 
       const isDeload = isDeloadWeek(liveWorkout.weekNum);
       cardEl?.classList.toggle("deload-training", isDeload);
-      const maxSetsPerSlot = isDeload ? 2 : 3;
+      const maxSetsPerSlot = getTrainingSetCount(liveWorkout.weekNum, liveWorkout.dayKey, liveWorkout.slots[liveWorkout.currentSlotIndex]);
       const totalSlots = liveWorkout.slots.length;
-      const totalSetsInWorkout = totalSlots * maxSetsPerSlot;
+      const totalSetsInWorkout = liveWorkout.slots.reduce((sum, key) => sum + getTrainingSetCount(liveWorkout.weekNum, liveWorkout.dayKey, key), 0);
 
       // Bereken totaal aantal afgeronde sets in deze dag
       let completedSetsCount = 0;
       const totalVolumeWeight = calculateSessionVolume(liveWorkout.weekNum, liveWorkout.dayKey);
       let totalRepsCount = 0;
 
-      const currentDayData = appState.weeks[liveWorkout.weekNum][liveWorkout.dayKey];
+      const currentDayData = getTrainingDay(liveWorkout.weekNum, liveWorkout.dayKey);
       liveWorkout.slots.forEach(sK => {
         const sl = currentDayData[sK];
         if (sl && sl.sets) {
@@ -9269,6 +9543,7 @@
         container.innerHTML = `
           <!-- Mini Stepper Navigatie -->
           ${stepperHtml}
+          ${coreExerciseSwitchHtml(liveWorkout.weekNum, liveWorkout.dayKey, slotKey)}
 
           <!-- Oefening Header Card -->
           <div class="bg-slate-950/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800 space-y-2">
@@ -9401,7 +9676,7 @@
             <div class="bg-slate-950/90 p-3 sm:p-4 rounded-2xl border border-slate-800 space-y-2.5">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold uppercase font-mono tracking-wider text-slate-400">
-                  ${isBW ? 'Herhalingen (Reps)' : escapeReportText(getExerciseVolumeRule(exerciseName).repsLabel)}
+                  ${coreExerciseByName(exerciseName)?.perSide ? 'Herhalingen per kant' : isBW ? 'Herhalingen (Reps)' : escapeReportText(getExerciseVolumeRule(exerciseName).repsLabel)}
                 </span>
                 <span class="text-[11px] ${isBW ? 'text-emerald-400 font-bold' : 'text-slate-500'} font-mono">Doel: ${targetReps} reps</span>
               </div>
@@ -9780,6 +10055,8 @@
               </div>
             `}
 
+            ${coreInvitationHtml(liveWorkout.weekNum, liveWorkout.dayKey)}
+
             <!-- OVERZICHT VAN DE VOLTOOIDE OEFENINGEN VANDAAG -->
             <div class="space-y-2">
               <h4 class="text-xs font-bold text-slate-400 uppercase font-mono tracking-wider">
@@ -10007,7 +10284,8 @@
         totalSets += progress.requiredSets;
         completedSets += progress.completedSets;
       }
-      return { totalSets, completedSets, isSkipped: !!day.skipped, isReviewed: !!day.skipped || (totalSets > 0 && completedSets === totalSets), isFullyCompleted: !day.skipped && totalSets > 0 && completedSets === totalSets, hasStarted: completedSets > 0 };
+      const coreSets = (day.coreWorkout || []).flatMap(item => item.sets);
+      return { totalSets: totalSets + coreSets.length, completedSets: completedSets + coreSets.filter(set => set.completed && Number(set.reps) > 0).length, isSkipped: !!day.skipped, isReviewed: !!day.skipped || (totalSets > 0 && completedSets === totalSets), isFullyCompleted: !day.skipped && totalSets > 0 && completedSets === totalSets, hasStarted: completedSets > 0 };
     }
 
     function getNextSplitDay(currentDayKey) {
@@ -10026,6 +10304,7 @@
     }
 
     function resumeLiveWorkoutFromSummary() {
+      if (saveCoreWorkout.pending) return;
       stopContinuousWorkoutAlarm();
       liveWorkout.phase = "set";
       liveWorkout.currentSlotIndex = 0;
@@ -10039,7 +10318,7 @@
       liveWorkout.isPaused = false;
       liveWorkout.weekNum = appState.currentWeek;
       liveWorkout.dayKey = appState.currentDay;
-      liveWorkout.slots = [...(SPLIT_INFO[appState.currentDay] ? SPLIT_INFO[appState.currentDay].slots : [])];
+      liveWorkout.slots = getTrainingSlotKeys(appState.currentWeek, appState.currentDay);
       liveWorkout.phase = "summary";
       liveWorkout.newPRs = [];
       liveWorkout.slotAdaptations = {};

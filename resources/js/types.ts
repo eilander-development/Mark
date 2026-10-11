@@ -66,6 +66,7 @@ export interface SessionDay {
     dayName: string
     dayShort: string
     slots: Slot[]
+    coreWorkout: Array<{ exercise: string; targetReps?: number; sets: Array<{ reps: number; completed: boolean; exertion?: 'unknown' | 'easy' | 'good' | 'max' }> }>
 }
 
 export interface AppState {

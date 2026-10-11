@@ -76,13 +76,17 @@ class TrainingPrescription
             $map[mb_strtolower($name)] = ['primary' => 'shoulders', 'secondary' => ['traps', 'biceps']];
         }
 
+        foreach (app(CoreWorkout::class)->catalog() as $exercise) {
+            $map[mb_strtolower($exercise['name'])] = ['primary' => 'core', 'secondary' => []];
+        }
+
         return $map;
     }
 
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return ['goals' => self::GOALS, 'muscles' => ['chest' => 'Borst', 'back' => 'Rug', 'shoulders' => 'Schouders', 'biceps' => 'Biceps', 'triceps' => 'Triceps', 'traps' => 'Trapezius'], 'exerciseMuscles' => $this->muscleMap(), 'exerciseVolume' => app(ExerciseVolume::class)->rules()];
+        return ['goals' => self::GOALS, 'muscles' => ['chest' => 'Borst', 'back' => 'Rug', 'shoulders' => 'Schouders', 'biceps' => 'Biceps', 'triceps' => 'Triceps', 'traps' => 'Trapezius', 'core' => 'Buikspieren'], 'exerciseMuscles' => $this->muscleMap(), 'exerciseVolume' => app(ExerciseVolume::class)->rules(), 'coreWorkout' => app(CoreWorkout::class)->rules()];
     }
 
     /** @return array<string, mixed> */
@@ -92,9 +96,9 @@ class TrainingPrescription
         $rows = [];
         $unknown = [];
         $periodization = app(Periodization::class);
-        $required = $periodization->requiredSets($week);
         foreach ($cycle->sessions()->where('week', $week)->with('slots.sets')->get() as $session) {
-            foreach ($session->slots as $slot) {
+            foreach (app(CoreWorkout::class)->reportingSlots($session) as $slot) {
+                $required = str_starts_with($slot->slot_key, 'slot_core_') ? $slot->sets->count() : $periodization->requiredSets($week);
                 $classification = $map[mb_strtolower(trim($slot->selected_name))] ?? null;
                 if (! $classification) {
                     $unknown[] = $slot->selected_name;
