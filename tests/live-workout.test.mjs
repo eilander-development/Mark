@@ -8,14 +8,17 @@ const html = readFileSync(new URL('../resources/ironforge.html', import.meta.url
 const volumeRulesResult = spawnSync('php', ['-r', 'require "vendor/autoload.php"; echo json_encode((new App\\Services\\ExerciseVolume(new App\\Services\\Periodization))->rules());'], { encoding: 'utf8' });
 assert.equal(volumeRulesResult.status, 0, volumeRulesResult.stderr);
 const exerciseVolume = JSON.parse(volumeRulesResult.stdout);
+const coreRulesResult = spawnSync('php', ['-r', 'require "vendor/autoload.php"; echo json_encode((new App\\Services\\CoreWorkout)->rules());'], { encoding: 'utf8' });
+assert.equal(coreRulesResult.status, 0, coreRulesResult.stderr);
+const coreRules = JSON.parse(coreRulesResult.stdout);
 function setup() {
     const blank = () => ({ weight: '', reps: '', completed: false });
     const slot = () => ({ selectedName: 'Dumbbell Bench Press', sets: [blank(), blank(), blank()] });
     const elements = { lwSubmitTargetBtn: { innerHTML: '' } };
     const context = vm.createContext({
-        appState: { weeks: { 1: { mon: { bench: slot() }, thu: { bench: slot() } } }, userProfile: {}, trainingRules: { exerciseVolume } },
+        appState: { weeks: { 1: { mon: { bench: slot() }, thu: { bench: slot() } } }, userProfile: {}, trainingRules: { exerciseVolume, coreWorkout: coreRules } },
         liveWorkout: { weekNum: 1, dayKey: 'thu', slots: ['bench'], currentSlotIndex: 0, currentSetIndex: 0, slotAdaptations: {}, newPRs: [], tempExertion: 'good' },
-        EXERCISE_CATALOG: { bench: { defaultName: 'Dumbbell Bench Press', targetReps: 8 } },
+        EXERCISE_CATALOG: { slot_core_0: { defaultName: 'Buikspieren', targetReps: 10 }, slot_core_1: { defaultName: 'Buikspieren', targetReps: 8 }, bench: { defaultName: 'Dumbbell Bench Press', targetReps: 8 } },
         SPLIT_INFO: { mon: { slots: ['bench'], title: 'Maandag: training' }, thu: { slots: ['bench'], title: 'Donderdag: training' } },
         document: { getElementById: id => elements[id] ?? null },
         isExerciseBodyweight: name => name === 'Push-up',
@@ -35,7 +38,7 @@ function setup() {
         const end = (() => { const rest = html.slice(start + 1); const end = rest.search(/\n    (?:async )?function /); return start + 1 + end; })();
         vm.runInContext(html.slice(start, end), context);
     }
-    for (const name of ['getCoreHistory', 'getCoreAdvice', 'getCoreWorkout', 'isCoreSlot', 'coreExerciseByName', 'trainingDayWithCore', 'getTrainingDay', 'getTrainingSlotKeys', 'getTrainingSetCount', 'coreInvitationHtml', 'coreExerciseSwitchHtml', 'getExerciseVolumeRule', 'volumeInputHintHtml', 'calculateSetVolume']) {
+    for (const name of ['isExerciseBodyweight', 'getCoreHistory', 'getCoreAdvice', 'getCoreWorkout', 'isCoreSlot', 'coreExerciseByName', 'trainingDayWithCore', 'getTrainingDay', 'getTrainingSlotKeys', 'getTrainingSetCount', 'coreInvitationHtml', 'coreExerciseSwitchHtml', 'getExerciseVolumeRule', 'volumeInputHintHtml', 'calculateSetVolume']) {
         const start = html.indexOf(`    function ${name}(`);
         const end = (() => { const rest = html.slice(start + 1); const end = rest.search(/\n    (?:async )?function /); return start + 1 + end; })();
         vm.runInContext(html.slice(start, end), context);
@@ -1081,4 +1084,69 @@ test('muscle schedule names remaining training days and separates skipped sets',
     assert.match(text, /Nog gepland: 3 sets · donderdag 3/);
     assert.match(text, /3 sets overgeslagen/);
     assert.doesNotMatch(text, /maandag|dinsdag|vrijdag/);
+});
+
+
+test('core results share the standard cards, totals, history and records without exercise input fields', () => {
+    const { context: c } = setup();
+    c.appState.currentWeek = 1; c.appState.currentDay = 'mon';
+    const day = c.appState.weeks[1].mon;
+    day.bench.sets.forEach(set => Object.assign(set, { weight: 20, reps: 8, completed: true, exertion: 'good' }));
+    day.coreWorkout = [
+        { exercise: 'reverse_crunch', targetReps: 10, sets: [10, 11].map(reps => ({ reps, completed: true, exertion: 'good' })) },
+        { exercise: 'dead_bug', targetReps: 8, sets: [{ reps: 8, completed: true, exertion: 'good' }, { reps: 8, completed: false }] },
+    ];
+    const before = JSON.stringify(c.appState.weeks);
+    const html = c.completedDayResultsHtml(1, 'mon');
+    assert.match(html, /Reverse crunch/);
+    assert.match(html, /Dead bug/);
+    assert.match(html, /1\/2 setdoelen gehaald/);
+    assert.match(html, /BW × 8 reps per kant/);
+    assert.match(html, /Oefeningshistorie · 1 uitvoeringen/);
+    assert.doesNotMatch(html, /<input|<iframe|changeLiveCoreWorkout|lwRepsInput/);
+    assert.equal(c.getDayCompletionStatus(1, 'mon').isFullyCompleted, true);
+    assert.equal(c.getDayCompletionStatus(1, 'mon').completedSets, 6);
+    assert.equal(c.getDayCompletionStatus(1, 'mon').totalSets, 7);
+    assert.equal(c.getAllTimeRecord('Reverse crunch').maxReps, 11);
+    assert.equal(c.getExerciseHistory('Reverse crunch')[0].sets.length, 2);
+    assert.equal(c.getCycleReport(c.appState.weeks).totalSets, 6);
+    assert.equal(c.getCycleReport(c.appState.weeks).totalWorkouts, 1);
+    assert.equal(JSON.stringify(c.appState.weeks), before);
+});
+
+test('weekly reporting and the muscle overview count accepted core sets and share the capped next advice', () => {
+    const { context: c } = setup();
+    c.appState.weeks[1].mon.coreWorkout = [
+        { exercise: 'reverse_crunch', targetReps: 15, sets: [15, 15].map(reps => ({ reps, completed: true, exertion: 'good' })) },
+        { exercise: 'dead_bug', targetReps: 8, sets: [8, 8].map(reps => ({ reps, completed: true, exertion: 'good' })) },
+    ];
+    const report = c.getWeekEvaluation(1);
+    const core = report.exercises.find(ex => ex.name === 'Reverse crunch');
+    assert.equal(report.totalCompletedSets, 4);
+    assert.equal(report.totalPlannedSets, 10);
+    assert.equal(report.totalVolume, 0);
+    assert.equal(core.nextAdvisedReps, 10);
+    assert.equal(core.progress.requiredSets, 2);
+    const card = c.weekExerciseOutlookHtml(1, core);
+    assert.match(card, /Derde set opbouwen/);
+    assert.match(card, /3 × BW × 10 reps/);
+    assert.doesNotMatch(card, /<input|<select|<iframe/);
+    assert.equal(c.weekMuscleSets(1).groups.core.completed, 4);
+    assert.equal(c.weekMuscleSets(1).groups.core.planned, 4);
+});
+
+test('core history and personal records survive archived cycles without inflating weight volume', () => {
+    const { context: c } = setup();
+    c.appState.currentCycle = 2;
+    c.appState.cyclesHistory = [{ number: 1, snapshot: { weeksSnapshot: { 6: { mon: { coreWorkout: [
+        { exercise: 'dead_bug', targetReps: 10, sets: [{ reps: 10, completed: true }, { reps: 10, completed: false }] },
+    ] } } } } }];
+    const history = c.getExerciseHistory('Dead bug');
+    assert.equal(history.length, 1);
+    assert.equal(history[0].cycle, 1);
+    assert.equal(history[0].sets.length, 1);
+    assert.equal(c.getAllTimeRecord('Dead bug').maxReps, 10);
+    const report = c.getCycleHistoryReport(c.appState.cyclesHistory[0]);
+    assert.equal(report.totalVolume, 0);
+    assert.equal(report.totalSets, 1);
 });

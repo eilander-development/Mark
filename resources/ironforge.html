@@ -4765,7 +4765,8 @@
 
       const exercisesList = Object.values(exercisesMap).map(ex => {
         const progress = getExerciseWeekProgress(weekNum, ex.name);
-        const next = getNextProgression(progress, weekNum + 1);
+        const outlook = coreExerciseByName(ex.name) ? getOverloadOutlook(weekNum, ex.name) : null;
+        const next = { ...getNextProgression(progress, weekNum + 1), ...(outlook?.next || {}), ...(outlook ? { status: outlook.title, reason: outlook.reason, provisional: outlook.provisional } : {}) };
         return { ...ex, progress, dominantExertion: progress.exertion,
           maxWeight: Math.max(0, ...ex.weights), maxReps: Math.max(0, ...ex.repsList),
           nextAdvisedWeight: next.weight, nextAdvisedReps: next.reps,
@@ -6751,7 +6752,7 @@
         achieved += progress.achievedSets;
         const isBW = isExerciseBodyweight(name);
         const sets = slot.sets.slice(0, progress.requiredSets);
-        const format = set => `${isBW ? 'BW' : Number(set.weight) + ' kg'} × ${Number(set.reps)} reps`;
+        const format = set => set.completed ? `${isBW ? 'BW' : Number(set.weight) + ' kg'} × ${Number(set.reps)} reps${coreExerciseByName(name)?.perSide ? ' per kant' : ''}` : 'Nog niet uitgevoerd';
         const previous = findPreviousExerciseSession(weekNum, dayKey, name);
         const differences = previous ? sets.map((set, index) => {
           const before = previous.slot.sets[index];
@@ -7022,6 +7023,7 @@
         document.getElementById("daySetsSubtext").textContent = "6 oefeningen × 3 sets";
       }
 
+      if (currentDayData.coreWorkout?.length) document.getElementById('daySetsSubtext').textContent = `${slotKeys.length} oefeningen + ${currentDayData.coreWorkout.length} buikspieroefeningen`;
       const isDayLocked = isDayLockedOnHoofdscherm(appState.currentWeek, appState.currentDay);
       const isWeekDone = ["mon", "tue", "thu", "fri"].every(d => getDayCompletionStatus(appState.currentWeek, d).isFullyCompleted);
 
@@ -7871,7 +7873,7 @@
       if (equipEl) equipEl.textContent = details.equipment;
       const targetRestEl = document.getElementById("guideTargetRest");
       if (targetRestEl) {
-        targetRestEl.textContent = `3 × ${details.targetReps} reps • ${Math.floor(details.restTime / 60)}:${(details.restTime % 60).toString().padStart(2, '0')}m rust`;
+        targetRestEl.textContent = `${isCoreSlot(slotKey) ? getTrainingSetCount(liveWorkout.weekNum, liveWorkout.dayKey, slotKey) : 3} × ${isCoreSlot(slotKey) ? getExerciseTargetReps(exerciseName, slotKey, liveWorkout.weekNum, liveWorkout.dayKey) : details.targetReps} reps${coreExerciseByName(exerciseName)?.perSide ? ' per kant' : ''} • ${Math.floor(details.restTime / 60)}:${(details.restTime % 60).toString().padStart(2, '0')}m rust`;
       }
 
       // 4. Video & Athlean-X Form Tutorial met directe Player en Bewaarfunctionaliteit
@@ -10449,6 +10451,8 @@
       if (splitTitleEl && SPLIT_INFO[appState.currentDay]) {
         splitTitleEl.textContent = SPLIT_INFO[appState.currentDay].title;
       }
+      const splitTag = document.getElementById('currentSplitTag');
+      if (splitTag) splitTag.textContent = `${getTrainingSlotKeys(appState.currentWeek, appState.currentDay).length} oefeningen`;
       const noticeEl = document.getElementById("currentSplitStatusNotice");
       const badgeIconEl = document.getElementById("dayHeaderStatusIcon");
       const badgeTextEl = document.getElementById("dayHeaderStatusText");
@@ -10461,9 +10465,9 @@
         if (badgeIconEl) badgeIconEl.textContent = '—';
         if (badgeEl) badgeEl.className = 'text-xs text-slate-400';
       } else if (status.isFullyCompleted) {
-        if (noticeEl) noticeEl.textContent = "✓ Training succesvol afgerond • Alle sets geregistreerd";
+        if (noticeEl) noticeEl.textContent = status.completedSets < status.totalSets ? "Hoofdtraining afgerond • Buikspieren nog afmaken" : "✓ Training succesvol afgerond • Alle sets geregistreerd";
         if (badgeIconEl) badgeIconEl.textContent = "✓";
-        if (badgeTextEl) badgeTextEl.textContent = "Alle sets uitgevoerd";
+        if (badgeTextEl) badgeTextEl.textContent = status.completedSets < status.totalSets ? `${status.completedSets}/${status.totalSets} sets uitgevoerd` : "Alle sets uitgevoerd";
         if (badgeEl) {
           badgeEl.className = "text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 flex items-center gap-1.5 shadow-sm";
         }

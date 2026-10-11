@@ -64,6 +64,35 @@ class CoreWorkout
         return $slots;
     }
 
+    /**
+     * @param  array<string, mixed>  $progress
+     * @return array<string, mixed>
+     */
+    public function nextProgression(array $progress, int $nextWeek, float $increment, string $frequency): array
+    {
+        $next = app(Periodization::class)->nextProgression($progress, $nextWeek, $increment, $frequency);
+        $lastSession = collect($progress['sessions'])->last();
+        $count = $lastSession['progress']['requiredSets'] ?? 2;
+        $next['requiredSets'] = $next['change'] === 'deload' ? 2 : $count;
+        if ($next['change'] === 'reps') {
+            if ($count === 2 && $progress['targetReps'] >= $progress['maxReps']) {
+                $next['requiredSets'] = 3;
+                $next['reps'] = (int) ceil(2 * $progress['maxReps'] / 3);
+                $next['status'] = 'Derde set opbouwen';
+                $next['reason'] = 'Beide sets aan de bovengrens met controle gehaald. Verdeel de herhalingen nu over drie kortere sets.';
+            } else {
+                $next['reps'] = min($progress['maxReps'], $progress['targetReps'] + 2);
+                if ($next['reps'] === $progress['targetReps']) {
+                    $next['status'] = 'Vasthouden';
+                    $next['reason'] = 'Drie sets aan de bovengrens: behoud dit korte buikspierwerk met rustige uitvoering.';
+                    $next['change'] = 'repeat';
+                }
+            }
+        }
+
+        return $next;
+    }
+
     /** @return array{catalog: array<string, mixed>, defaults: array<string, list<string>>} */
     public function rules(): array
     {

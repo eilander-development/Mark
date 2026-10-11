@@ -160,7 +160,9 @@ class StateAssembler
             $exercise['progress'] = $this->advisor->exerciseProgress($cycle, $week, $name);
             $exercise['next'] = $week >= (int) $cycle->total_weeks
                 ? null
-                : $this->periodization->nextProgression($exercise['progress'], $week + 1, $prefs->incrementFor($name), $prefs->overload_frequency);
+                : (collect(app(CoreWorkout::class)->catalog())->contains('name', $name)
+                    ? app(CoreWorkout::class)->nextProgression($exercise['progress'], $week + 1, $prefs->incrementFor($name), $prefs->overload_frequency)
+                    : $this->periodization->nextProgression($exercise['progress'], $week + 1, $prefs->incrementFor($name), $prefs->overload_frequency));
             $exercise['nextPeriodRequired'] = $week >= (int) $cycle->total_weeks;
         }
         unset($exercise);

@@ -31,16 +31,35 @@ class CoreWorkoutTest extends TestCase
         $this->getJson('/api/state')->assertOk()->assertJsonPath('weeks.5.mon.coreWorkout', $workout)
             ->assertJsonPath('weeks.5.tue.coreWorkout', []);
         $this->getJson('/api/weeks/5/report')->assertOk()->assertJsonPath('volume', 400)
-            ->assertJsonPath('completedSets', 3)->assertJsonPath('totalSets', 76)->assertJsonPath('coreCompletedSets', 2)
-            ->assertJsonPath('muscleSets.groups.core.completed', 2)->assertJsonPath('muscleSets.groups.core.planned', 4);
+            ->assertJsonPath('completedSets', 3)->assertJsonPath('totalSets', 77)->assertJsonPath('coreCompletedSets', 2)
+            ->assertJsonPath('muscleSets.groups.core.completed', 2)->assertJsonPath('muscleSets.groups.core.planned', 5);
         $report = $this->getJson('/api/weeks/5/report')->assertOk()->json();
         $crunch = collect($report['exercises'])->firstWhere('name', 'Reverse crunch');
         $this->assertNotNull($crunch);
-        $this->assertSame(2, $crunch['sets']);
-        $this->assertSame(2, $crunch['progress']['completedSets']);
-        $this->assertSame(2, $crunch['progress']['requiredSets']);
+        $this->assertSame(1, $crunch['sets']);
+        $this->assertSame(1, $crunch['progress']['completedSets']);
+        $this->assertSame(3, $crunch['progress']['requiredSets']);
         $this->assertTrue($crunch['progress']['isBodyweight']);
         $this->assertSame(0, $crunch['volume']);
+    }
+
+    public function test_report_prescribes_a_third_core_set_only_after_controlled_results_at_the_upper_limit(): void
+    {
+        $session = app(CycleFactory::class)->ensureCurrent()->sessions()->where('week', 1)->where('day', 'mon')->firstOrFail();
+        $workout = [
+            ['exercise' => 'reverse_crunch', 'targetReps' => 15, 'sets' => array_fill(0, 2, ['reps' => 15, 'completed' => true, 'exertion' => 'good'])],
+            ['exercise' => 'dead_bug', 'targetReps' => 8, 'sets' => array_fill(0, 2, ['reps' => 8, 'completed' => true, 'exertion' => 'unknown'])],
+        ];
+        $this->patchJson('/api/sessions/'.$session->id, ['core_workout' => $workout])->assertOk();
+        $exercises = collect($this->getJson('/api/weeks/1/report')->assertOk()->json('exercises'));
+        $crunch = $exercises->firstWhere('name', 'Reverse crunch');
+        $deadBug = $exercises->firstWhere('name', 'Dead bug');
+        $this->assertSame(3, $crunch['next']['requiredSets']);
+        $this->assertSame(10, $crunch['next']['reps']);
+        $this->assertSame(2, $deadBug['next']['requiredSets']);
+        $this->assertSame(8, $deadBug['next']['reps']);
+        $this->assertSame(6, $session->slots()->count());
+        $this->assertSame($workout, $session->fresh()->core_workout);
     }
 
     #[DataProvider('invalidWorkouts')]
