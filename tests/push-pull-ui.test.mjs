@@ -232,34 +232,50 @@ test('video from a proposal uses its exact exercise without opening the routine 
   assert.equal(h.run('JSON.stringify(appState.weeks)'), before);
 });
 
-test('using an alternative in the proposal guide only updates the proposal', async () => {
-  const h = harness(); prepare(h);
-  let request;
-  h.context.fetch = async (url, options) => {
-    request = JSON.parse(options.body);
-    const response = proposal();
-    Object.assign(response.schema.mon.slot_a1, request.schema.mon.slot_a1);
-    Object.assign(response.days[0].slots[0], request.schema.mon.slot_a1);
-    return {ok:true,json:async()=>response};
-  };
-  const before = h.run('JSON.stringify(appState.weeks)');
-  h.run('openProposalGuide("mon","slot_a1"); previewAlternativeInGuide("Incline Dumbbell Press");');
-  await h.run('applyPreviewedExercise()');
-  assert.equal(request.schema.mon.slot_a1.selectedName, 'Incline Dumbbell Press');
-  assert.equal(h.run('nextCycleProposal.schema.mon.slot_a1.selectedName'), 'Incline Dumbbell Press');
-  assert.equal(h.elements.get('exerciseGuideModal').classList.contains('hidden'), true);
-  assert.equal(h.run('JSON.stringify(appState.weeks)'), before);
-});
 
-test('failed alternative in the proposal guide retains the chosen proposal and keeps the guide visible', async () => {
+test('proposal guide shows execution only and cannot replace a variant exercise', async () => {
   const h = harness(); prepare(h);
-  h.context.fetch = async () => ({ok:false,json:async()=>({errors:{schema:['Deze keuze kan niet.']}})});
+  let requests = 0;
+  h.context.fetch = async () => { requests++; throw Error('No exercise request expected'); };
   const before = h.run('JSON.stringify(nextCycleProposal)');
   h.run('openProposalGuide("mon","slot_a1"); previewAlternativeInGuide("Incline Dumbbell Press");');
   await h.run('applyPreviewedExercise()');
+  assert.equal(requests, 0);
+  assert.equal(h.run('guidePreviewedExercise'), 'Dumbbell Bench Press');
   assert.equal(h.run('JSON.stringify(nextCycleProposal)'), before);
-  assert.equal(h.elements.get('exerciseGuideModal').classList.contains('hidden'), false);
-  assert.equal(h.run('applyPreviewedExercise.pending'), false);
+  assert.equal(h.elements.get('guideAlternativesSection').classList.contains('hidden'), true);
+  assert.equal(h.elements.get('applyExerciseBtn').classList.contains('hidden'), true);
+});
+
+test('day variant can be selected but its exercises are read only and weights remain editable', async () => {
+  const h = harness(); prepare(h);
+  h.run('openSetupRoutineModal(true);');
+  const content = h.elements.get('setupRoutineContent').innerHTML;
+  assert.doesNotMatch(content, /<select aria-label="Oefening/);
+  assert.match(content, /Oefening uit dagvariant/);
+  assert.match(content, /Dumbbell Bench Press/);
+  assert.match(content, /A–F beheren via Beheer → Programma/);
+  const before = h.run('JSON.stringify(setupWizardState.schema)');
+  await h.run('onSetupSlotChange("mon","slot_a1","Incline Dumbbell Press")');
+  assert.equal(h.run('JSON.stringify(setupWizardState.schema)'), before);
+  h.run('onSetupWeightChange("mon","slot_a1",17.5)');
+  assert.equal(h.run('setupWizardState.schema.mon.slot_a1.weight'), 17.5);
+});
+
+test('old current-routine editor is removed and menu management uses a matching card', () => {
+  const h = harness(); prepare(h);
+  h.run('openSetupRoutineModal();');
+  assert.equal(h.run('setupWizardState.forNewCycle'), true);
+  assert.equal(h.elements.get('setupRoutineModalTitle').textContent, 'Nieuwe Push/Pull-periode inrichten');
+  const menu = html.match(/<!-- Drawer Content[^]*?<!-- Drawer Footer/)[0];
+  assert.doesNotMatch(menu, /Huidig schema aanpassen|openSetupRoutineModal/);
+  assert.match(menu, /href="\/beheer" class="[^"]*rounded-xl[^"]*flex items-center gap-3/);
+  assert.match(menu, /Dagvarianten A–F, periodevoorstellen en oefeningen/);
+  assert.match(menu, /Startgewichten & uitleg/);
+  const managementStyle = menu.match(/<a href="\/beheer" class="([^"]*)"/)[1];
+  const settingsStyle = menu.match(/<button onclick="closeMenuDrawer\(\); openSettingsModal\(\)" class="([^"]*)"/)[1];
+  assert.equal(settingsStyle, managementStyle);
+  assert.ok(menu.indexOf('id="menuNewPeriodBtn"') < menu.indexOf('openBenchmarkModal()'));
 });
 
 test('schema lock controls are absent from page and setup wizard', () => {

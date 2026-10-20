@@ -278,7 +278,7 @@ class ProgramLibrary
         }
         foreach ($definition['days'] as $day => &$dayDefinition) {
             $selectedNames = $definition['type'] === 'push_pull'
-                ? $this->resolveDayExercises($dayDefinition['exercises'], $schema[$day] ?? [], $equipment, $day) : [];
+                ? $this->resolveDayExercises($dayDefinition['exercises'], $equipment, $day) : [];
             foreach ($dayDefinition['exercises'] as $key => &$item) {
                 $override = $schema[$day][$key] ?? [];
                 $baseName = $item['selectedName'];
@@ -289,6 +289,9 @@ class ProgramLibrary
                 }
                 $originalName = $name;
                 if ($definition['type'] === 'push_pull') {
+                    if (isset($override['selectedName']) && $name !== $selectedNames[$key]) {
+                        throw ValidationException::withMessages(['schema.'.$day.'.'.$key.'.selectedName' => 'Kies een dagvariant. Losse oefeningen aanpassen kan via Beheer → Programma.']);
+                    }
                     $name = $selectedNames[$key];
                 }
                 $missingEquipment = array_values(array_filter($this->requirements($originalName), fn (string $required): bool => ! ($equipment[$required] ?? false)));
@@ -320,49 +323,23 @@ class ProgramLibrary
 
     /**
      * @param  array<string, array<string, mixed>>  $items
-     * @param  array<string, array<string, mixed>>  $overrides
      * @param  array<string, bool>  $equipment
      * @return array<string, string>
      */
-    private function resolveDayExercises(array $items, array $overrides, array $equipment, string $day): array
+    private function resolveDayExercises(array $items, array $equipment, string $day): array
     {
         $preferred = [];
-        $explicit = [];
         foreach ($items as $key => $item) {
-            $name = trim((string) ($overrides[$key]['selectedName'] ?? $item['selectedName']));
+            $name = $item['selectedName'];
             if (! in_array($name, config('push_pull.roles.'.$key.'.exercises', []), true)) {
                 throw ValidationException::withMessages(['schema.'.$day.'.'.$key.'.selectedName' => 'Deze oefening past niet bij deze positie.']);
-            }
-            if (isset($overrides[$key]['selectedName'])) {
-                if (! $this->compatible($name, $equipment)) {
-                    throw ValidationException::withMessages(['schema.'.$day.'.'.$key.'.selectedName' => 'Controleer het benodigde materiaal voor '.$name.'.']);
-                }
-                if (in_array($name, $explicit, true)) {
-                    throw ValidationException::withMessages(['schema.'.$day.'.'.$key.'.selectedName' => 'Deze oefening staat al op deze trainingsdag. Kies een andere oefening.']);
-                }
-                $explicit[] = $name;
             }
             if ($this->compatible($name, $equipment)) {
                 $preferred[$key] = $name;
             }
         }
-        foreach ($overrides as $key => $override) {
-            if (! isset($override['selectedName'])) {
-                continue;
-            }
-            foreach ($preferred as $otherKey => $name) {
-                if ($otherKey !== $key && $name === trim((string) $override['selectedName'])) {
-                    throw ValidationException::withMessages(['schema.'.$day.'.'.$key.'.selectedName' => 'Deze oefening staat al op deze trainingsdag. Kies een andere oefening.']);
-                }
-            }
-        }
         $choices = [];
         foreach ($items as $key => $item) {
-            if (isset($overrides[$key]['selectedName'])) {
-                $choices[$key] = [trim((string) $overrides[$key]['selectedName'])];
-
-                continue;
-            }
             $compatible = array_values(array_filter(config('push_pull.roles.'.$key.'.exercises', []),
                 fn (string $name): bool => $this->compatible($name, $equipment)));
             $unreserved = array_values(array_filter($compatible, fn (string $name): bool => ! in_array($name, $preferred, true)));

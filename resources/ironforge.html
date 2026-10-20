@@ -380,7 +380,7 @@
             Barbell Bench Press
           </h3>
           <div id="guideActiveNotice" class="text-[11px] font-mono text-slate-400 flex items-center gap-1.5 mt-0.5">
-            <span id="guideActiveLabel">Actueel in schema:</span> 
+            <span id="guideActiveLabel">Actueel in schema:</span>
             <span id="guideActiveName" class="text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.2 rounded border border-emerald-500/20">Barbell Bench Press</span>
           </div>
         </div>
@@ -630,7 +630,7 @@
         </div>
 
         <!-- OEFENING SELECTIE (ALTERNATIEVEN) -->
-        <div class="pt-2 border-t border-slate-800/80">
+        <div id="guideAlternativesSection" class="hidden pt-2 border-t border-slate-800/80">
           <div class="flex items-center justify-between mb-2">
             <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
               <span>🔄</span> Oefeningen Catalogus (Klik om te bekijken):
@@ -662,7 +662,7 @@
           Sluiten
         </button>
 
-        <button id="applyExerciseBtn" onclick="applyPreviewedExercise()" class="w-full sm:flex-1 py-2.5 px-4 rounded-xl font-black text-xs transition flex items-center justify-center gap-2 shadow-lg">
+        <button id="applyExerciseBtn" onclick="applyPreviewedExercise()" class="hidden w-full sm:flex-1 py-2.5 px-4 rounded-xl font-black text-xs transition flex items-center justify-center gap-2 shadow-lg">
           <span>⚡</span> <span id="applyExerciseBtnText">Gebruik deze oefening</span>
         </button>
       </div>
@@ -844,10 +844,10 @@
           </div>
           <div>
             <h3 id="setupRoutineModalTitle" class="font-black text-sm uppercase tracking-wider text-slate-100">
-              Huidig schema aanpassen
+              Nieuwe periode inrichten
             </h3>
             <p id="setupRoutineModalSubtitle" class="text-[11px] text-slate-400">
-              Pas oefeningen en startgewichten aan in je lopende periode
+              Kies dagvarianten en stel je startgewichten in
             </p>
           </div>
         </div>
@@ -889,7 +889,7 @@
   <!-- NIEUWE PERIODE STARTEN BEVESTIGING MODAL -->
   <div id="startCycleModal" class="hidden fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md" style="z-index: 80;" onclick="if(event.target === this) closeStartCycleModal()">
     <div class="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 text-slate-200 max-h-[92vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+      <div class="flex shrink-0 items-center justify-between border-b border-slate-800 pb-3">
         <div class="flex items-center gap-2.5">
           <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xl flex-shrink-0">
             🏁
@@ -1114,13 +1114,15 @@
       <div>
         <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Training</div>
         <div class="space-y-1.5">
-          <button onclick="closeMenuDrawer(); openSetupRoutineModal();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
-            <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-base flex-shrink-0">
-              🎯
+
+
+          <button id="menuNewPeriodBtn" onclick="closeMenuDrawer(); startNewMesocyclePrompt();" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
+            <div class="w-8 h-8 rounded-lg bg-slate-700/40 text-slate-400 flex items-center justify-center text-base flex-shrink-0">
+              🏁
             </div>
             <div class="flex-1">
-              <div class="text-xs font-bold text-slate-200">Huidig schema aanpassen</div>
-              <div class="text-[10px] text-slate-400">Oefeningen en gewichten in je lopende periode</div>
+              <div id="menuNewPeriodTitle" class="text-xs font-bold text-slate-200">Nieuwe periode</div>
+              <div id="menuNewPeriodHint" class="text-[10px] text-slate-400">Beschikbaar aan het einde van deze periode</div>
             </div>
           </button>
 
@@ -1129,8 +1131,8 @@
               📊
             </div>
             <div class="flex-1">
-              <div class="text-xs font-bold text-slate-200">Krachtnormen</div>
-              <div class="text-[10px] text-slate-400">Richtgewichten bij jouw profiel</div>
+              <div class="text-xs font-bold text-slate-200">Startgewichten & uitleg</div>
+              <div class="text-[10px] text-slate-400">Hoe startgewichten en opbouw werken</div>
             </div>
           </button>
 
@@ -1144,20 +1146,15 @@
             </div>
           </button>
 
-          <button id="menuNewPeriodBtn" onclick="closeMenuDrawer(); startNewMesocyclePrompt();" class="w-full p-2.5 rounded-xl bg-slate-800/40 text-left border border-slate-800 transition flex items-center gap-3 cursor-pointer">
-            <div class="w-8 h-8 rounded-lg bg-slate-700/40 text-slate-400 flex items-center justify-center text-base flex-shrink-0">
-              🏁
-            </div>
-            <div class="flex-1">
-              <div id="menuNewPeriodTitle" class="text-xs font-bold text-slate-400">Nieuwe periode</div>
-              <div id="menuNewPeriodHint" class="text-[10px] text-slate-500">Beschikbaar aan het einde van deze periode</div>
-            </div>
-          </button>
+
         </div>
       </div>
 
-      <button onclick="closeMenuDrawer(); openSettingsModal()" class="w-full rounded-xl border border-slate-700 bg-slate-800 p-3 text-left text-sm font-bold text-blue-300">⚙ Instellingen <span class="block text-xs font-normal text-slate-400">Training, profiel, weergave en data</span></button>
-      <a href="/beheer" class="block p-3 text-sm text-blue-300">Beheer</a>
+      <button onclick="closeMenuDrawer(); openSettingsModal()" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer"><span class="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center text-base flex-shrink-0">⚙</span><span class="flex-1"><span class="block text-xs font-bold text-slate-200">Instellingen</span><span class="block text-[10px] text-slate-400">Training, profiel, weergave en data</span></span></button>
+      <a href="/beheer" class="w-full p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-left border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 cursor-pointer">
+        <div class="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center text-base flex-shrink-0">⚙</div>
+        <div class="flex-1"><div class="text-xs font-bold text-slate-200">Beheer</div><div class="text-[10px] text-slate-400">Dagvarianten A–F, periodevoorstellen en oefeningen</div></div>
+      </a>
     </div>
 
     <!-- Drawer Footer -->
@@ -5339,7 +5336,6 @@
       const result = {};
       Object.entries(schema || {}).forEach(([day, slots]) => Object.entries(slots).forEach(([key, slot]) => {
         const item = {};
-        if (slot.nameEdited) item.selectedName = slot.selectedName;
         if (slot.weightEdited) { item.weight = slot.weight === '' ? null : slot.weight; item.weightEdited = true; }
         if (Object.keys(item).length) { result[day] ||= {}; result[day][key] = item; }
       }));
@@ -5770,40 +5766,23 @@
     }
 
     /* 5b. SCHEMA KIEZEN MET BEHEERDE DAGVARIANTEN */
-    let setupWizardState = { forNewCycle: false, activeDay: 'mon', schema: {}, daySlots: {}, dayTitles: {}, programTemplate: null, busy: false };
+    let setupWizardState = { forNewCycle: true, activeDay: 'mon', schema: {}, daySlots: {}, dayTitles: {}, programTemplate: null, busy: false };
 
     function setupOptions(key) {
       return setupWizardState.programTemplate?.type === 'push_pull' || !setupWizardState.forNewCycle && appState.programDefinition?.type === 'push_pull'
         ? (appState.programLibrary?.roles?.[key]?.exercises || []) : (EXERCISE_CATALOG[key]?.alternatives || []);
     }
 
-    function openSetupRoutineModal(forNewCycle = false, carryForwardWeights = true) {
+    function openSetupRoutineModal(forNewCycle = true, carryForwardWeights = true) {
       if (setupWizardState.busy) return;
-      if (forNewCycle) {
-        if (!nextCycleProposal?.schema) { showToast('Kies eerst een periodevoorstel.', 'info'); return; }
-        setupWizardState = { forNewCycle: true, activeDay: 'mon', schema: clonePersistedState(nextCycleProposal.schema),
-          daySlots: Object.fromEntries(nextCycleProposal.days.map(day => [day.day, day.slots.map(slot => slot.slotKey)])),
-          dayTitles: Object.fromEntries(nextCycleProposal.days.map(day => [day.day, day.title])),
-          programTemplate: clonePersistedState(nextCycleProposal.programTemplate), busy: false };
-      } else {
-        const schema = {};
-        ['mon','tue','thu','fri'].forEach(day => {
-          schema[day] = {};
-          SPLIT_INFO[day].slots.forEach(key => {
-            const slot = getTrainingDay(appState.currentWeek, day)[key];
-            const last = getExerciseHistory(slot.selectedName).slice(-1)[0];
-            schema[day][key] = { selectedName: slot.selectedName, weight: slot.sets.find(set => Number(set.weight) > 0)?.weight || null,
-              targetReps: slot.targetReps, ...(slot.prescription || {}),
-              sets: slot.prescription?.sets || 3, minReps: slot.prescription?.minReps || slot.targetReps || 8,
-              maxReps: slot.prescription?.maxReps || slot.targetReps || 12, rest: slot.prescription?.rest || EXERCISE_CATALOG[key].restTime,
-              weightLabel: getExerciseVolumeRule(slot.selectedName).weightLabel, lastPerformed: last || null };
-          });
-        });
-        setupWizardState = { forNewCycle: false, activeDay: appState.currentDay || 'mon', schema,
-          daySlots: Object.fromEntries(Object.entries(SPLIT_INFO).map(([day, item]) => [day, [...item.slots]])),
-          dayTitles: Object.fromEntries(Object.entries(SPLIT_INFO).map(([day, item]) => [day, item.title])),
-          programTemplate: appState.programDefinition, busy: false };
+      if (!nextCycleProposal?.schema || !nextCycleProposal?.days?.length) {
+        startNewMesocyclePrompt();
+        return;
       }
+      setupWizardState = { forNewCycle: true, activeDay: 'mon', schema: clonePersistedState(nextCycleProposal.schema),
+        daySlots: Object.fromEntries(nextCycleProposal.days.map(day => [day.day, day.slots.map(slot => slot.slotKey)])),
+        dayTitles: Object.fromEntries(nextCycleProposal.days.map(day => [day.day, day.title])),
+        programTemplate: clonePersistedState(nextCycleProposal.programTemplate), busy: false };
       renderSetupRoutineModal();
       document.getElementById('setupRoutineModal')?.classList.remove('hidden');
     }
@@ -5851,21 +5830,7 @@
     }
 
     async function onSetupSlotChange(day, key, name) {
-      if (setupWizardState.schema[day][key].selectedName === name) return;
-      const rollback = clonePersistedState(setupWizardState.schema);
-      const prior = clonePersistedState(setupWizardState.schema[day][key]);
-      const item = setupWizardState.schema[day][key];
-      item.selectedName = name;
-      item.nameEdited = true;
-      item.weight = null;
-      item.weightEdited = false;
-      if (setupWizardState.forNewCycle) {
-        await refreshSetupProposal(proposalDayVariants(setupWizardState.programTemplate), setupWizardState.schema, rollback);
-      } else {
-        item.weightReason = 'Andere oefening gekozen. Controleer de historie en regel het startgewicht in.';
-        if (prior.selectedName === name) setupWizardState.schema[day][key] = prior;
-        renderSetupRoutineModal();
-      }
+      showToast('Kies een dagvariant. Losse oefeningen aanpassen kan via Beheer → Programma.', 'info');
     }
 
     function onSetupWeightChange(day, key, value) {
@@ -5885,39 +5850,10 @@
       renderExercises();
     }
 
-    async function saveAndLockRoutine(forNewCycle = false) {
+    async function saveAndLockRoutine() {
       if (setupWizardState.busy || periodStarting) return;
       rememberSetupProposal();
-      if (forNewCycle || setupWizardState.forNewCycle) {
-        await executeStartNewMesocycle(true, setupWizardState.schema, setupWizardState.programTemplate);
-        return;
-      }
-      try {
-        await ensureTrainingSaved();
-        for (const [day, items] of Object.entries(setupWizardState.schema)) {
-          for (const [key, item] of Object.entries(items)) {
-            for (let week = appState.currentWeek; week <= appState.totalWeeks; week++) {
-              const target = appState.weeks[week]?.[day]?.[key];
-              if (!target || target.sets.some(set => set.completed || set.inputFields?.weight || set.inputFields?.reps)) continue;
-              if (target.selectedName !== item.selectedName) {
-                const response = await jsonApi('/api/slots/' + target.id, 'PATCH', { context: 'setup', selectedName: item.selectedName });
-                const result = await response.json();
-                if (!response.ok) throw new Error(Object.values(result.errors || {}).flat().join(' ') || 'Oefening kon niet worden aangepast.');
-              }
-              if (item.weightEdited) {
-                for (const set of target.sets) {
-                  const response = await jsonApi('/api/sets/' + set.id, 'PATCH', { weight: item.weight ?? '', inputFields: {weight: true}, context: 'live' });
-                  if (!response.ok) throw new Error('Startgewicht kon niet worden opgeslagen.');
-                }
-              }
-              break;
-            }
-          }
-        }
-        await reloadTrainingState();
-        closeSetupRoutineModal();
-        showToast('Schema opgeslagen. Uitgevoerde sets en eigen invoer zijn behouden.', 'success');
-      } catch (error) { showToast(error.message, 'error'); }
+      await executeStartNewMesocycle(true, setupWizardState.schema, setupWizardState.programTemplate);
     }
 
     function renderSetupRoutineModal() {
@@ -5925,8 +5861,8 @@
       if (!content) return;
       const state = setupWizardState, day = state.activeDay, isNew = state.forNewCycle;
       const title = document.getElementById('setupRoutineModalTitle'), subtitle = document.getElementById('setupRoutineModalSubtitle');
-      if (title) title.textContent = isNew ? 'Nieuwe Push/Pull-periode inrichten' : 'Huidig schema · periode ' + appState.currentCycle;
-      if (subtitle) subtitle.textContent = isNew ? 'Bekijk dagvarianten A–F en pas het voorstel aan voordat je start' : 'Je bekijkt de oefeningen van je lopende periode';
+      if (title) title.textContent = 'Nieuwe Push/Pull-periode inrichten';
+      if (subtitle) subtitle.textContent = 'Kies dagvarianten A–F en stel je startgewichten in';
       const control = 'w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-slate-100';
       const disabled = state.busy ? ' disabled' : '';
       const variants = (appState.programLibrary?.variants || []).filter(variant => variant.family === (['mon','thu'].includes(day) ? 'push' : 'pull'));
@@ -5935,20 +5871,18 @@
       const slots = (state.daySlots[day] || []).map((key, index) => {
         const item = state.schema[day][key], name = item.selectedName, bodyweight = isExerciseBodyweight(name);
         const unit = item.weightLabel || getExerciseVolumeRule(name).weightLabel;
-        const options = setupOptions(key).map(alt => '<option value="' + escapeReportText(alt) + '"' +
-          (alt === name ? ' selected' : '') + (!isExerciseCompatibleWithEquipment(alt, appState.userProfile?.equipment) ? ' disabled' : '') + '>' + escapeReportText(alt) +
-          (!isExerciseCompatibleWithEquipment(alt, appState.userProfile?.equipment) ? ' · materiaal ontbreekt' : '') + '</option>').join('');
         return '<div class="space-y-3 rounded-2xl border border-slate-800 bg-slate-950 p-4"><p class="text-xs text-slate-400">' + (index + 1) + ' · ' +
           item.sets + ' × ' + item.minReps + '–' + item.maxReps + ' reps · ' + item.rest + 's rust</p>' +
-          '<label class="block text-xs text-slate-400">Oefening<select aria-label="Oefening ' + (index + 1) + '" onchange="onSetupSlotChange(\'' + day + '\',\'' + key + '\',this.value)" class="' + control + '"' + disabled + '>' + options + '</select></label>' +
+          '<div><p class="text-xs text-slate-400">Oefening uit dagvariant</p><p class="mt-1 text-sm font-bold text-slate-100">' + escapeReportText(name) + '</p></div>' +
           '<button type="button" onclick="openSetupGuide(\'' + day + '\',\'' + key + '\')"' + disabled + ' class="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-sm font-bold text-blue-300">▶ Video & uitleg</button>' +
           proposalHistoryHtml(item.lastPerformed, unit) +
           (bodyweight ? '<p class="text-sm text-emerald-300">Lichaamsgewicht</p>' :
             '<label class="block text-xs text-slate-400">Startgewicht · ' + escapeReportText(unit) + '<input aria-label="Startgewicht ' + (index + 1) + '" type="number" min="0" step="0.5" value="' + escapeReportText(item.weight ?? '') + '" placeholder="Inregelen" onchange="onSetupWeightChange(\'' + day + '\',\'' + key + '\',this.value)" class="' + control + '"' + disabled + '></label>') +
           '<p class="text-xs text-slate-400">' + escapeReportText(item.weightReason || 'Bevestig het gewicht tijdens je eerste werksets.') + '</p></div>';
       }).join('');
-      content.innerHTML = '<div class="space-y-4"><h2 class="text-lg font-black">' + (isNew ? 'Nieuwe Push/Pull-periode inrichten' : 'Huidig schema aanpassen') + '</h2>' +
-        '<p class="text-xs text-slate-400">' + (isNew ? 'Kies per dag een variant. Pas oefeningen aan waar nodig. Je startgewicht volgt je eigen historie.' : 'Wijzigingen gelden alleen voor nog niet uitgevoerde trainingen vanaf deze week. Opgeslagen sets blijven behouden. De Push/Pull-varianten voor een volgende periode vind je via Menu → Nieuwe periode · Push/Pull-varianten, daarna Schema zelf kiezen.') + '</p>' +
+      content.innerHTML = '<div class="space-y-4"><h2 class="text-lg font-black">Nieuwe periode · dagvarianten kiezen</h2>' +
+        '<p class="text-xs text-slate-400">' + 'Kies per dag een vaste variant. De bijbehorende oefeningen staan vast; startgewichten kun je instellen.' + '</p>' +
+        '<p class="text-xs text-slate-400">Oefeningen in A–F aanpassen? <a href="/beheer/programma#dagvarianten" target="_blank" rel="noopener" class="text-blue-300 underline">A–F beheren via Beheer → Programma</a>.</p>' +
         '<p class="text-xs text-slate-400">' + equipmentSummaryHtml() + ' <button onclick="openSettingsModal()" class="text-blue-300 underline">Profiel aanpassen</button></p>' +
         '<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">' + ['mon','tue','thu','fri'].map(key => '<button onclick="setSetupWizardDay(\'' + key + '\')"' + disabled + ' class="rounded-xl border p-2 text-xs ' +
           (key === day ? 'border-blue-500 bg-blue-950 text-blue-200' : 'border-slate-700 bg-slate-900 text-slate-300') + '">' + escapeReportText(state.dayTitles[key]) + '</button>').join('') + '</div>' +
@@ -5956,7 +5890,7 @@
         '<div class="space-y-3">' + slots + '</div>' +
         '<div class="flex flex-wrap gap-2 border-t border-slate-800 pt-4"><button onclick="closeSetupRoutineModal()' + (isNew ? ';startNewMesocyclePrompt()' : '') + '"' + disabled + ' class="rounded-xl bg-slate-800 px-4 py-3 text-sm">' +
           (isNew ? 'Terug naar voorstellen' : 'Annuleren') + '</button><button onclick="saveAndLockRoutine(' + isNew + ')" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold"' +
-          (state.busy || periodStarting ? ' disabled' : '') + '>' + (isNew ? 'Periode afsluiten & nieuwe periode starten' : 'Schema opslaan') + '</button></div></div>';
+          (state.busy || periodStarting ? ' disabled' : '') + '>' + 'Periode afsluiten & nieuwe periode starten' + '</button></div></div>';
     }
 
     /* 5c. FYSIOLOGISCHE BENCHMARKS MODAL */
@@ -5974,7 +5908,7 @@
     function renderBenchmarkModal() {
       const content = document.getElementById("strengthBenchmarkContent") || document.getElementById("strengthBenchmarkModalContent");
       if (!content) return;
-      content.innerHTML = `<section class="space-y-4 text-sm text-slate-300"><h3 class="font-bold text-amber-300">Startgewichten & onderbouwing</h3><p>De start- en richtgewichten in dit schema zijn hulpmiddelen bij het kiezen van je eerste belasting. Ze zijn geen wetenschappelijk gevalideerde normen voor jouw leeftijd, lichaamsgewicht of ervaring, en geen verplicht einddoel.</p><p>Gebruik je opgeslagen gewicht, reps en inspanning om verder op te bouwen. Dumbbell- en barbellprestaties hebben geen vaste persoonlijke omrekenfactor; volg ze als afzonderlijke oefeningen.</p>${trainingEvidenceHtml()}<div class="flex gap-3"><button onclick="closeBenchmarkModal(); openSetupRoutineModal();" class="rounded-xl bg-blue-600 px-4 py-2 text-white">Schema inrichten</button><button onclick="closeBenchmarkModal()" class="rounded-xl bg-slate-800 px-4 py-2">Sluiten</button></div></section>`;
+      content.innerHTML = `<section class="space-y-4 text-sm text-slate-300"><h3 class="font-bold text-amber-300">Startgewichten & onderbouwing</h3><p>De start- en richtgewichten in dit schema zijn hulpmiddelen bij het kiezen van je eerste belasting. Ze zijn geen wetenschappelijk gevalideerde normen voor jouw leeftijd, lichaamsgewicht of ervaring, en geen verplicht einddoel.</p><p>Gebruik je opgeslagen gewicht, reps en inspanning om verder op te bouwen. Dumbbell- en barbellprestaties hebben geen vaste persoonlijke omrekenfactor; volg ze als afzonderlijke oefeningen.</p>${trainingEvidenceHtml()}<div class="flex gap-3"><button onclick="closeBenchmarkModal(); startNewMesocyclePrompt();" class="rounded-xl bg-blue-600 px-4 py-2 text-white">Schema inrichten</button><button onclick="closeBenchmarkModal()" class="rounded-xl bg-slate-800 px-4 py-2">Sluiten</button></div></section>`;
     }
 
     function switchWeek(weekNum) {
@@ -6614,10 +6548,7 @@
         <button onclick="setTrainingSkipped(true)" class="text-xs text-slate-400 hover:text-white underline">${isDayStarted ? 'Resterende training overslaan' : 'Training overslaan'}</button>
         <!-- Footer Acties: Schema Openen of Uitgebreide Sets Inzien -->
         <div class="pt-3.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5">
-          <button onclick="openSetupRoutineModal()" class="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 font-mono font-bold text-[11px] border border-slate-700 transition flex items-center gap-1.5 cursor-pointer">
-            <span>🔓</span>
-            <span>Huidig schema aanpassen</span>
-          </button>
+
           <button onclick="toggleDetailedSetsView()" class="px-3 py-1.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 font-mono text-[11px] border border-slate-700/70 transition flex items-center gap-1.5 cursor-pointer">
             <span>👁️</span>
             <span>Toon Sets Details (Alleen-Lezen)</span>
@@ -6721,10 +6652,7 @@
               </div>
             </div>
           </div>
-          <button onclick="openSetupRoutineModal()" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 transition shadow-md shadow-emerald-600/30 cursor-pointer active:scale-95 whitespace-nowrap">
-            <span>🔒</span>
-            <span>Schema aanpassen</span>
-          </button>
+
         `;
         container.appendChild(openBanner);
       } else if (isDayLocked) {
@@ -7096,22 +7024,8 @@
     }
 
     async function onExerciseSwap(slotKey, newName) {
-      const week = liveWorkout.active ? liveWorkout.weekNum : appState.currentWeek;
-      const day = liveWorkout.active ? liveWorkout.dayKey : appState.currentDay;
-      const slot = appState.weeks[week]?.[day]?.[slotKey];
-      if (!slot || slot.sets.some(set => set.completed || set.inputFields?.weight || set.inputFields?.reps)) {
-        showToast('Deze oefening bevat opgeslagen prestaties of eigen invoer. Wissel in een nog niet uitgevoerde training.', 'error');
-        return false;
-      }
-      try {
-        await ensureTrainingSaved();
-        const response = await jsonApi('/api/slots/' + slot.id, 'PATCH', { context: 'setup', selectedName: newName });
-        const result = await response.json();
-        if (!response.ok) throw new Error(Object.values(result.errors || {}).flat().join(' ') || 'Oefening kon niet worden gewisseld.');
-        await reloadTrainingState();
-        if (liveWorkout.active) { prepareCurrentLiveSetValues(); renderLiveWorkoutView(); }
-        return true;
-      } catch (error) { showToast(error.message, 'error'); return false; }
+      showToast('Losse oefeningen aanpassen kan via Beheer → Programma.', 'info');
+      return false;
     }
 
     async function clearCurrentDay() {
@@ -7442,7 +7356,8 @@
     }
 
     function previewAlternativeInGuide(exerciseName) {
-      guidePreviewedExercise = exerciseName;
+      if (exerciseName !== guideActiveExercise) return;
+      guidePreviewedExercise = guideActiveExercise;
       renderGuideModalContent();
     }
 
@@ -7706,133 +7621,22 @@
     }
 
     function renderGuideAlternativesList() {
-      const altsContainer = document.getElementById("guideAltsList");
-      if (!altsContainer || !currentGuideSlot) return;
-
-      const catalogItem = EXERCISE_CATALOG[currentGuideSlot];
-      const allAlts = guideSetupContext?.proposal
-        ? (nextCycleProposal.programTemplate?.type === 'push_pull' ? (appState.programLibrary?.roles?.[currentGuideSlot]?.exercises || []) : catalogItem.alternatives)
-        : guideSetupContext ? setupOptions(currentGuideSlot) : isCoreSlot(currentGuideSlot) ? [guideActiveExercise] : catalogItem.alternatives || [catalogItem.defaultName];
-
-      const filtered = allAlts.filter(alt => {
-        if (!guideSearchQuery) return true;
-        const details = getExerciseDetails(alt, currentGuideSlot);
-        const nameMatch = alt.toLowerCase().includes(guideSearchQuery);
-        const muscleMatch = (details.musclesText || "").toLowerCase().includes(guideSearchQuery);
-        return nameMatch || muscleMatch;
-      });
-
-      if (filtered.length === 0) {
-        altsContainer.innerHTML = `
-          <div class="col-span-1 sm:col-span-2 p-4 text-center text-xs font-mono text-slate-500 bg-slate-950/60 rounded-xl border border-dashed border-slate-800">
-            Geen oefeningen gevonden voor "${guideSearchQuery}".
-          </div>
-        `;
-        return;
-      }
-
-      altsContainer.innerHTML = filtered.map(alt => {
-        const isPreviewed = (alt === guidePreviewedExercise);
-        const isActive = (alt === guideActiveExercise);
-
-        let badgeHtml = "";
-        if (isActive) {
-          badgeHtml += `<span class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">Actief in Schema</span>`;
-        }
-        if (isPreviewed && !isActive) {
-          badgeHtml += `<span class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold">Nu Bekeken</span>`;
-        }
-
-        let containerClass = "p-2.5 text-left rounded-xl border transition flex items-center justify-between gap-2 ";
-        if (isPreviewed) {
-          containerClass += "bg-emerald-950/40 border-emerald-500 text-emerald-200 shadow-md shadow-emerald-950/40 font-bold ring-1 ring-emerald-500/50";
-        } else if (isActive) {
-          containerClass += "bg-slate-900 border-slate-700 text-slate-200 font-semibold hover:border-slate-600";
-        } else {
-          containerClass += "bg-slate-950/80 hover:bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200";
-        }
-
-        return `
-          <button 
-            type="button"
-            onclick="previewAlternativeInGuide('${alt.replace(/'/g, "\\'")}')" 
-            class="${containerClass}"
-          >
-            <span class="text-xs truncate">${alt}</span>
-            <div class="flex items-center gap-1 flex-shrink-0">
-              ${badgeHtml}
-            </div>
-          </button>
-        `;
-      }).join("");
+      const section = document.getElementById('guideAlternativesSection');
+      if (section) section.classList.add('hidden');
+      const list = document.getElementById('guideAltsList');
+      if (list) list.innerHTML = '';
     }
 
     function updateApplyButtonState() {
-      const btn = document.getElementById("applyExerciseBtn");
-      const btnText = document.getElementById("applyExerciseBtnText");
-      if (!btn || !btnText) return;
-
-      const isCurrentActive = (guidePreviewedExercise === guideActiveExercise);
-
-      if (isCurrentActive) {
-        btn.disabled = true;
-        btn.className = "w-full sm:flex-1 py-2.5 px-4 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-75";
-        btnText.textContent = "✓ Reeds actief in dit trainingsslot";
-      } else {
-        btn.disabled = false;
-        btn.className = "w-full sm:flex-1 py-2.5 px-4 rounded-xl font-black text-xs transition flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-950/50 cursor-pointer animate-pulse";
-        btnText.textContent = `⚡ Gebruik "${guidePreviewedExercise}" in schema`;
+      const button = document.getElementById('applyExerciseBtn');
+      if (button) {
+        button.disabled = true;
+        button.classList.add('hidden');
       }
     }
 
     async function applyPreviewedExercise() {
-      if (!currentGuideSlot || !guidePreviewedExercise || applyPreviewedExercise.pending) return;
-      if (guidePreviewedExercise === guideActiveExercise) {
-        closeGuideModal();
-        return;
-      }
-
-      if (guideSetupContext?.proposal) {
-        const context = guideSetupContext, slotKey = currentGuideSlot;
-        const schema = clonePersistedState(nextCycleProposal.schema);
-        Object.assign(schema[context.day][slotKey], { selectedName: guidePreviewedExercise, nameEdited: true, weight: null, weightEdited: false });
-        applyPreviewedExercise.pending = true;
-        document.getElementById('applyExerciseBtn').disabled = true;
-        try {
-          const proposal = await fetchPeriodProposal(nextCycleProposal.programTemplate.key, proposalDayVariants(nextCycleProposal.programTemplate), schema);
-          nextCycleProposal = proposal;
-          periodDrafts.set(proposal.programTemplate.key, clonePersistedState(proposal));
-          startNewMesocyclePrompt();
-          closeGuideModal();
-        } catch (error) { showToast(error.message, 'error'); updateApplyButtonState(); }
-        finally { applyPreviewedExercise.pending = false; }
-        return;
-      }
-      if (guideSetupContext) {
-        const context = guideSetupContext;
-        await onSetupSlotChange(context.day, currentGuideSlot, guidePreviewedExercise);
-        closeGuideModal();
-        return;
-      }
-
-      // Nu pas oefening daadwerkelijk wijzigen in appState en schema
-      if (!await onExerciseSwap(currentGuideSlot, guidePreviewedExercise)) return;
-      guideActiveExercise = guidePreviewedExercise;
-      
-      // Update modal en toon successtatus
-      renderGuideModalContent();
-      
-      const btn = document.getElementById("applyExerciseBtn");
-      const btnText = document.getElementById("applyExerciseBtnText");
-      if (btn && btnText) {
-        btn.disabled = true;
-        btn.className = "w-full sm:flex-1 py-2.5 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-2 bg-emerald-400 text-slate-950";
-        btnText.textContent = "✓ Oefening succesvol gewijzigd!";
-      }
-
-      setTimeout(() => {
-        closeGuideModal();
-      }, 700);
+      showToast('De oefening hoort bij je dagvariant. Aanpassen kan via Beheer → Programma.', 'info');
     }
 
     function closeGuideModal() {

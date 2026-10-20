@@ -23,7 +23,7 @@ Nieuwe Push/Pull-periode: zes trainingsweken. In het bestaande weekrapport daarn
 
 1. Doel kiezen (spiergroei/kracht/combinatie).
 2. Periodevoorstel kiezen of huidige indeling herhalen; vier dagen en weekbelasting bekijken.
-3. Via bestaande knop ‘Schema zelf kiezen’ per dag een variant kiezen en eventueel oefeningen/gewichten aanpassen.
+3. Via bestaande knop ‘Schema zelf kiezen’ per dag een vaste A–F-variant kiezen en eigen startgewichten instellen. Er is geen losse oefeningskeuze. De inhoud van A–F is uitsluitend aanpasbaar via Beheer → Programma.
 4. Onder de oefeningskeuze ‘▶ Video & uitleg’: bestaande gids toont de conceptkeuze vóór opslaan, opstelling/spieren/cues en eigen laatste sets. Vergelijkbare video expliciet markeren; geen video is geen verzonnen exacte match.
 5. Concept blijft intact bij teruggaan, video openen en doel wijzigen. Gewichten uit eigen invoer behouden.
 6. Alleen ‘Periode starten’ sluit de oude periode en maakt de nieuwe aan. Beschermen tegen dubbel starten en verouderde concepten.
@@ -44,14 +44,15 @@ Nieuwe Push/Pull-periode: zes trainingsweken. In het bestaande weekrapport daarn
 
 - Genormaliseerde beheerrecords voor dagvarianten en periodevoorstellen; trainingssessies/slots/sets blijven de primaire trainingsopslag.
 - Eigen periodedefinitie en voorschrift per slot: aantal sets, range, rust, functie en variantidentiteit.
-- Slotwijzigingen alleen op dezelfde dag in toekomstige ongestarte trainingen; maandag mag donderdagvariant niet overschrijven.
+- Losse oefeningswijzigingen in nieuwe Push/Pull-periodes worden ook door de API geweigerd. De geselecteerde variant bepaalt de oefeningen. Legacy-opslag blijft leesbaar en compatibel; historie blijft behouden.
 - Backend bepaalt bibliotheek, doelvoorschriften, historie/startadvies en opbouw. UI gebruikt API-uitkomsten.
 - Alle tellers/trainermodals/rapporten ondersteunen sets per oefening, inclusief herstelweek.
 - Huidige en historische periodes blijven inhoudelijk intact; oude indeling niet achteraf Push/Pull noemen. Nieuwe periode expliciet Push/Pull.
 - Back-up/herstel bewaart periodedefinities, voorschriften en variantbibliotheek. Legacy-back-ups blijven bruikbaar.
 - Buikspieren blijven optioneel na de hoofdtraining, uitsluitend in bestaande trainer-modal.
-- ‘Schema vast/open’ vervalt volledig uit de bediening. Aanpassen loopt via ‘Schema zelf kiezen’; opgeslagen sets blijven beschermd.
+- ‘Schema vast/open’ vervalt volledig uit de bediening. Dagvarianten kiezen loopt via ‘Schema zelf kiezen’; de oude flow ‘Huidig schema aanpassen’ vervalt. Video en uitleg tonen de gekozen oefening en bieden geen vervangknop. Opgeslagen sets blijven beschermd.
 - Bij API-laadfouten geen leeg schema tonen of opslaan; duidelijke foutmelding met opnieuw proberen. De lokale MySQL-driver herstellen.
+- Het menu biedt de nieuwe periode bovenaan en toont Instellingen en Beheer als gelijkvormige knoppen. De oude ingang voor ‘Huidig schema aanpassen’ is verwijderd. In het instelscherm staat een directe link naar A–F beheren.
 - Geen nieuwe dependencies, geen brede frontendherschrijving en geen automatische uitrol.
 
 ## Bouw en validatie
@@ -70,4 +71,4 @@ De bovenstaande aanpassingen zijn gebouwd. De variantbibliotheek staat onder Beh
 
 De drie toevoegende migraties zijn toegepast. De lokale databaseverbinding werkt weer. De API bevestigt periode 1, week 7 en 448 voltooide sets; er is geen nieuwe echte trainingsperiode gestart of trainingshistorie gewist.
 
-Gecontroleerd met de PHP-regressiesuite, gerichte featuretests voor programma/beheer en trainingsvoorschriften, elf JavaScript-tests voor schermlogica, Pint, frontendbuild en lokale HTTP-verzoeken. De laatste gerichte PHP-runs slagen (30 programma-/beheertests en 6 voorschrifttests). De lokale voorstellen bevatten geen dubbele oefeningen. Visuele browsercontrole kon niet worden uitgevoerd omdat de browserkoppeling niet beschikbaar is.
+Gecontroleerd met de PHP-regressiesuite, gerichte featuretests voor programma/beheer en trainingsvoorschriften, zeventien JavaScript-tests voor schermlogica, Pint, frontendbuild en lokale HTTP-verzoeken. De gerichte PHP-tests voor vaste dagvarianten, beheer en voorschriften slagen. De lokale voorstellen bevatten geen dubbele oefeningen. Visuele browsercontrole kon niet worden uitgevoerd omdat de browserkoppeling niet beschikbaar is.

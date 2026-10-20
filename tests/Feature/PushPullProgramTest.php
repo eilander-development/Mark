@@ -86,17 +86,20 @@ class PushPullProgramTest extends TestCase
         $this->assertFalse($old->fresh()->is_current);
     }
 
-    public function test_changing_monday_does_not_change_thursday_or_logged_history(): void
+    public function test_fixed_variant_blocks_loose_changes_without_modifying_training(): void
     {
         $cycle = $this->start();
         $monday = $cycle->sessions()->where('week', 1)->where('day', 'mon')->first()->slots()->where('slot_key', 'slot_a1')->first();
         $thursday = $cycle->sessions()->where('week', 1)->where('day', 'thu')->first()->slots()->where('slot_key', 'slot_a1')->first();
         $futureMonday = $cycle->sessions()->where('week', 2)->where('day', 'mon')->first()->slots()->where('slot_key', 'slot_a1')->first();
-        $this->patchJson('/api/slots/'.$monday->id, ['context' => 'setup', 'selectedName' => 'Dumbbell Floor Press'])->assertOk();
-        $this->assertSame('Dumbbell Floor Press', $futureMonday->fresh()->selected_name);
+        $this->patchJson('/api/slots/'.$monday->id, ['context' => 'setup', 'selectedName' => 'Dumbbell Floor Press'])
+            ->assertUnprocessable()->assertJsonValidationErrors('selectedName');
+        $this->assertSame('Barbell Bench Press', $monday->fresh()->selected_name);
+        $this->assertSame('Barbell Bench Press', $futureMonday->fresh()->selected_name);
         $this->assertSame('Dumbbell Bench Press', $thursday->fresh()->selected_name);
         $monday->sets()->first()->update(['weight' => '15', 'reps' => '10', 'completed' => true]);
-        $this->patchJson('/api/slots/'.$monday->id, ['context' => 'setup', 'selectedName' => 'Dumbbell Bench Press'])->assertUnprocessable();
+        $this->patchJson('/api/slots/'.$monday->id, ['context' => 'live', 'selectedName' => 'Dumbbell Bench Press'])->assertUnprocessable();
+        $this->assertSame('15', $monday->sets()->first()->weight);
     }
 
     public function test_work_sets_and_deload_counts_follow_each_exercise(): void
@@ -188,6 +191,34 @@ class PushPullProgramTest extends TestCase
         $this->assertSame('Dumbbell One-Arm Row', $slot->fresh()->selected_name);
     }
 
+    public function test_preview_and_start_only_accept_exercises_from_the_selected_variant(): void
+    {
+        $old = $this->ready();
+        $request = ['templateKey' => 'balanced', 'training_goal' => 'hypertrophy', 'close_current_period' => true,
+            'schema' => ['mon' => ['slot_a1' => ['selectedName' => 'Dumbbell Floor Press']]]];
+        $this->postJson('/api/cycles/preview', $request)->assertUnprocessable()
+            ->assertJsonValidationErrors('schema.mon.slot_a1.selectedName');
+        $this->postJson('/api/cycles', $request)->assertUnprocessable()
+            ->assertJsonValidationErrors('schema.mon.slot_a1.selectedName');
+        $this->assertTrue($old->fresh()->is_current);
+        $this->assertDatabaseCount('cycles', 1);
+    }
+
+    public function test_library_changes_define_exercises_and_start_weight_remains_editable(): void
+    {
+        $this->ready();
+        app(ProgramLibrary::class)->ensureDefaults();
+        $variant = ProgramVariant::query()->where('key', 'push_a')->firstOrFail();
+        $exercises = $variant->exercises;
+        $exercises['slot_a1']['selectedName'] = 'Dumbbell Floor Press';
+        $variant->update(['exercises' => $exercises]);
+        $this->postJson('/api/cycles/preview', ['templateKey' => 'balanced', 'training_goal' => 'hypertrophy',
+            'schema' => ['mon' => ['slot_a1' => ['weight' => 17.5, 'weightEdited' => true]]]])
+            ->assertOk()->assertJsonPath('schema.mon.slot_a1.selectedName', 'Dumbbell Floor Press')
+            ->assertJsonPath('schema.mon.slot_a1.weight', 17.5);
+        $this->assertDatabaseCount('cycles', 1);
+    }
+
     public function test_stale_or_duplicate_start_does_not_create_an_extra_period(): void
     {
         $old = $this->ready();
@@ -236,7 +267,7 @@ class PushPullProgramTest extends TestCase
     {
         $this->ready();
         $this->postJson('/api/cycles/preview', ['templateKey' => 'balanced', 'training_goal' => 'strength',
-            'schema' => ['mon' => ['slot_a1' => ['selectedName' => 'Dumbbell Bench Press', 'weight' => 17.5, 'weightEdited' => true]]]])
+            'schema' => ['mon' => ['slot_a1' => ['selectedName' => 'Barbell Bench Press', 'weight' => 17.5, 'weightEdited' => true]]]])
             ->assertOk()->assertJsonPath('schema.mon.slot_a1.weight', 17.5)
             ->assertJsonPath('schema.mon.slot_a1.weightSource', 'eigen_invoer')
             ->assertJsonPath('schema.mon.slot_a1.minReps', 4);
@@ -295,8 +326,7 @@ class PushPullProgramTest extends TestCase
     public function test_same_exercise_with_another_rep_range_does_not_inherit_its_weight(): void
     {
         $this->ready();
-        $schema = ['tue' => ['slot_a2' => ['selectedName' => 'Chest-Supported Dumbbell Row']], 'fri' => ['slot_a2' => ['selectedName' => 'Barbell Row'], 'slot_b4' => ['selectedName' => 'Chest-Supported Dumbbell Row']]];
-        $this->postJson('/api/cycles', ['close_current_period' => true, 'training_goal' => 'strength', 'schema' => $schema])->assertOk();
+        $this->postJson('/api/cycles', ['close_current_period' => true, 'training_goal' => 'strength', 'dayVariants' => ['tue' => 'pull_b', 'fri' => 'pull_f']])->assertOk();
         $cycle = Cycle::query()->where('is_current', true)->firstOrFail();
         $slot = $cycle->sessions()->where('week', 1)->where('day', 'tue')->first()->slots()->where('slot_key', 'slot_a2')->with('sets')->first();
         foreach ($slot->sets as $set) {
@@ -353,9 +383,9 @@ class PushPullProgramTest extends TestCase
         $this->assertContains('rack', $library->requirements('Barbell Bench Press'));
     }
 
-    public function test_exercise_swap_clears_automatic_weights_but_protects_own_input(): void
+    public function test_legacy_exercise_swap_clears_automatic_weights_but_protects_own_input(): void
     {
-        $cycle = $this->start();
+        $cycle = $this->ready();
         $monday = $cycle->sessions()->where('week', 1)->where('day', 'mon')->first()->slots()->where('slot_key', 'slot_a1')->with('sets')->first();
         $future = $cycle->sessions()->where('week', 2)->where('day', 'mon')->first()->slots()->where('slot_key', 'slot_a1')->with('sets')->first();
         foreach ([$monday, $future] as $slot) {

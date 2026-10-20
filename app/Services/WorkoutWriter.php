@@ -97,17 +97,8 @@ class WorkoutWriter
                     'selectedName' => 'Pas oefeningen aan via Schema zelf kiezen.',
                 ]);
             }
-            if ($slot->prescription) {
-                if ($slot->session->slots()->where('id', '!=', $slot->id)->where('selected_name', $data['selectedName'])->exists()) {
-                    throw ValidationException::withMessages(['selectedName' => 'Deze oefening staat al op deze trainingsdag. Kies een andere oefening.']);
-                }
-                $allowed = config('push_pull.roles.'.$slot->slot_key.'.exercises', []);
-                if (! in_array($data['selectedName'], $allowed, true)) {
-                    throw ValidationException::withMessages(['selectedName' => 'Deze oefening past niet bij deze Push/Pull-positie.']);
-                }
-                if (! app(ProgramLibrary::class)->compatible($data['selectedName'], $this->factory->profile()->equipment ?? [])) {
-                    throw ValidationException::withMessages(['selectedName' => 'Het benodigde materiaal staat niet in je profiel.']);
-                }
+            if ($slot->prescription && $slot->selected_name !== $data['selectedName']) {
+                throw ValidationException::withMessages(['selectedName' => 'De oefeningen horen bij je vaste dagvariant. Pas de variant aan via Beheer → Programma voor een volgende periode.']);
             }
             if ($slot->selected_name !== $data['selectedName']) {
                 if ($slot->sets()->where(fn ($query) => $query->where('completed', true)->orWhere('input_fields->weight', true)->orWhere('input_fields->reps', true)->orWhere('reps', '!=', ''))->exists()) {

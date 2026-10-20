@@ -129,8 +129,7 @@ class TrainingPrescriptionTest extends TestCase
         $factory->ensureCurrent();
         $factory->preferences()->update(['current_week' => 7]);
         $factory->profile()->update(['equipment' => ['dumbbells' => true, 'barbell' => true, 'bench' => true, 'adjustable_bench' => true, 'rack' => true]]);
-        $schema = ['tue' => ['slot_a2' => ['selectedName' => 'Chest-Supported Dumbbell Row']], 'fri' => ['slot_a2' => ['selectedName' => 'Barbell Row'], 'slot_b4' => ['selectedName' => 'Chest-Supported Dumbbell Row']]];
-        $state = $this->postJson('/api/cycles', ['close_current_period' => true, 'training_goal' => 'strength', 'schema' => $schema])->assertOk()->json();
+        $state = $this->postJson('/api/cycles', ['close_current_period' => true, 'training_goal' => 'strength', 'dayVariants' => ['tue' => 'pull_b', 'fri' => 'pull_f']])->assertOk()->json();
         $row = collect($state['weeks'][1]['fri']['slots'])->firstWhere('slotKey', 'slot_b4');
         $this->assertSame(8, $row['targetReps']);
         $this->assertSame(8, $row['advice']['minReps']);
