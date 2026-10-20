@@ -2,7 +2,7 @@
 <html lang="nl" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IRONFORGE Periodized Workout Tracker</title>
   <meta name="description" content="Periodized workout tracker met automatische deload-programmering, interactieve workload-grafiek, screen wake lock en all-time PR detectie." />
   <meta property="og:title" content="IRONFORGE Periodized Workout Tracker" />
@@ -95,6 +95,76 @@
     }
     .animate-gold { animation: gold-shine 1.8s infinite ease-in-out; }
 
+    .app-shell { width: 100%; max-width: none; }
+    .app-modal-panel {
+      width: 100%;
+      max-width: calc(100vw - 2rem);
+      min-width: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      max-height: calc(100dvh - 2rem);
+      overflow-wrap: anywhere;
+    }
+    .app-modal-panel.app-modal-flex { overflow: hidden; }
+    .app-modal-flex > :first-child { flex-shrink: 0; }
+    .app-modal-panel input:not([type="checkbox"]):not([type="radio"]),
+    .app-modal-panel select,
+    .app-modal-panel button { min-height: 2.75rem; }
+    .app-modal-panel :is(input, select, textarea) { max-width: 100%; }
+    .app-modal-panel :is(input[type="checkbox"], input[type="radio"]) { flex-shrink: 0; }
+    .app-modal-sheet { width: calc(100% - 1rem); max-width: none; }
+    .period-days-grid, .setup-exercise-grid, .settings-columns, .week-exercise-grid, .exercise-guide-layout {
+      display: grid;
+      gap: 1rem;
+      align-items: start;
+      min-width: 0;
+    }
+    .period-days-grid > *, .setup-exercise-grid > *, .settings-columns > *, .week-exercise-grid > *,
+    .exercise-guide-layout > * { min-width: 0; margin-top: 0; }
+    .period-day-card { height: 100%; }
+    .proposal-exercise {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: .75rem;
+      align-items: start;
+    }
+    .proposal-exercise button { white-space: nowrap; justify-self: start; }
+    .setup-exercise-card { height: 100%; display: flex; flex-direction: column; gap: .75rem; }
+    .setup-exercise-header { display: flex; flex-direction: column; align-items: start; justify-content: space-between; gap: 1rem; }
+    .setup-exercise-card > * { margin-top: 0; }
+    .setup-exercise-card > label { margin-top: auto; }
+    .setup-exercise-card > :last-child { min-height: 3em; }
+    .setup-tools-row { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.5rem; }
+    #startCycleModalActions, .modal-actions-grid { display: grid; gap: .75rem; }
+    #startCycleModalActions > *, .modal-actions-grid > * { margin-top: 0; }
+    .app-modal-panel :focus-visible, #menuDrawer :focus-visible {
+      outline: 2px solid #60a5fa;
+      outline-offset: 3px;
+    }
+    @media (min-width: 640px) {
+      .proposal-exercise { grid-template-columns: minmax(0, 1fr) auto; }
+      .setup-exercise-header { flex-direction: row; }
+    }
+    @media (min-width: 768px) {
+      .period-days-grid, .setup-exercise-grid, .settings-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #startCycleModalActions, .modal-actions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #startCycleModalActions > :last-child:nth-child(3), #startCycleModalActions > :only-child { grid-column: 1 / -1; }
+    }
+    @media (min-width: 1024px) {
+      .app-shell { max-width: 80vw; }
+      .app-modal-panel, .app-modal-sheet { width: 80vw; min-width: 80vw; max-width: calc(100vw - 2rem); }
+      .week-exercise-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .exercise-guide-layout {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas: "anatomy video" "info tips" "alternatives alternatives";
+      }
+      .guide-anatomy { grid-area: anatomy; }
+      .guide-info { grid-area: info; }
+      #guideVideoContainer { grid-area: video; }
+      .guide-tips { grid-area: tips; }
+      #guideAlternativesSection { grid-area: alternatives; }
+    }
+
     .muscle-node {
       transition: fill 0.35s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.35s ease, opacity 0.35s ease, filter 0.35s ease;
     }
@@ -110,7 +180,7 @@
   <div class="text-[11px] text-slate-500">Data komt uit de database</div>
 </div>
 <div id="backupModal" class="hidden fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onclick="if(event.target === this) closeBackupModal()">
-  <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4" onclick="event.stopPropagation()">
+  <div class="app-modal-panel bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4" onclick="event.stopPropagation()">
     <div class="flex items-center justify-between border-b border-slate-800 pb-3">
       <h3 class="font-black text-sm uppercase tracking-wider text-slate-100">Backup importeren</h3>
       <button type="button" onclick="closeBackupModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
@@ -134,7 +204,7 @@
   <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shadow-lg">
     <!-- Rij 1: Horizontale actieknoppen direct boven de header (Weekrapport, Start Training, Reset) -->
     <div class="border-b border-slate-800/80 bg-slate-950/80 px-3 py-2">
-      <div class="max-w-4xl w-full min-w-0 mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar flex-nowrap whitespace-nowrap">
+      <div class="app-shell w-full min-w-0 mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar flex-nowrap whitespace-nowrap">
         <button id="weekReportHeaderBtn" onclick="openWeekReportModal(appState.currentWeek)" class="flex-shrink-0 px-2.5 py-1.5 text-xs font-mono font-bold bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap" title="Bekijk week voortgang en overload advies">
           <span>📊</span>
           <span>Weekrapport</span>
@@ -153,7 +223,7 @@
     </div>
 
     <!-- Rij 2: Brand Header & Drawer Menu Knop -->
-    <div class="max-w-4xl w-full min-w-0 mx-auto px-4 py-2 flex items-center justify-between">
+    <div class="app-shell w-full min-w-0 mx-auto px-4 py-2 flex items-center justify-between">
       <div class="flex items-center gap-2.5">
         <div class="h-8 w-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-black text-slate-950 shadow-md shadow-emerald-900/30 text-xs flex-shrink-0">
           IF
@@ -178,11 +248,11 @@
 
   <!-- WEKEN TIJDLIJN MET LEAF ICON BIJ DELOAD -->
   <nav class="bg-slate-950/85 border-b border-slate-800/80 py-2 px-3 sticky top-[84px] z-30 backdrop-blur">
-    <div class="max-w-4xl w-full min-w-0 mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth" id="weekPillsContainer"></div>
+    <div class="app-shell w-full min-w-0 mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth" id="weekPillsContainer"></div>
   </nav>
 
   <!-- MAIN DASHBOARD -->
-  <main class="max-w-4xl w-full min-w-0 mx-auto px-4 pt-4 space-y-4">
+  <main class="app-shell w-full min-w-0 mx-auto px-4 pt-4 space-y-4">
 
     <!-- PWA INSTALL BANNER (Alleen zichtbaar in gewone browser-modus op tablet/mobiel) -->
     <div id="pwaBanner" class="hidden bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border border-emerald-500/40 rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative">
@@ -358,7 +428,7 @@
 
   <!-- WEEK AFRONDINGSRAPPORT & OVERLOAD ANALYSE MODAL -->
   <div id="weekReportModal" class="hidden fixed inset-0 z-[75] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md" style="z-index: 75;" onclick="if(event.target === this) closeWeekReportModal()">
-    <div id="weekReportScrollArea" role="dialog" aria-modal="true" aria-label="Weekrapport" tabindex="0" class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl p-4 sm:p-6 shadow-2xl space-y-4 max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain text-slate-200" onclick="event.stopPropagation()">
+    <div id="weekReportScrollArea" role="dialog" aria-modal="true" aria-label="Weekrapport" tabindex="0" class="app-modal-panel bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl p-4 sm:p-6 shadow-2xl space-y-4 max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain text-slate-200" onclick="event.stopPropagation()">
       <div id="weekReportModalContent" class="space-y-4">
         <!-- Wordt dynamisch gerenderd door renderWeekReportModal() -->
       </div>
@@ -367,7 +437,7 @@
 
   <!-- OEFENING DETAILS & ANATOMIE GIDS MODAL -->
   <div id="exerciseGuideModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md" style="z-index: 100;" onclick="if(event.target === this) closeGuideModal()">
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+    <div class="app-modal-panel app-modal-flex bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
       
       <!-- Modal Header -->
       <div class="flex items-start justify-between border-b border-slate-800 pb-3 flex-shrink-0">
@@ -388,10 +458,10 @@
       </div>
 
       <!-- Scrollable Content -->
-      <div class="overflow-y-auto pr-1 space-y-4 flex-1 no-scrollbar">
+      <div class="exercise-guide-layout overflow-y-auto pr-1 flex-1 min-h-0 no-scrollbar">
 
         <!-- ANATOMISCHE SPIEREN AFBEELDING / DIAGRAM -->
-        <div class="bg-slate-950/95 p-3.5 rounded-2xl border border-slate-800/90 shadow-inner space-y-2">
+        <div class="guide-anatomy bg-slate-950/95 p-3.5 rounded-2xl border border-slate-800/90 shadow-inner space-y-2">
           <div class="flex items-center justify-between text-[11px] font-mono border-b border-slate-800/70 pb-2 px-1">
             <span class="text-slate-200 font-bold flex items-center gap-1.5">
               <span>🧬</span> GETRAINDE SPIEREN (ANATOMISCHE KAART)
@@ -599,7 +669,7 @@
         </div>
 
         <!-- INFO BLOKJES: MATERIAAL & RICHTLIJN -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+        <div class="guide-info grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 text-xs font-mono">
           <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center gap-2.5">
             <span class="text-lg">🏋️</span>
             <div>
@@ -622,7 +692,7 @@
         </div>
 
         <!-- TECHNIEK TIPS -->
-        <div>
+        <div class="guide-tips">
           <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono mb-2 flex items-center gap-1.5">
             <span>📋</span> Techniek & Uitvoeringstips:
           </h4>
@@ -677,7 +747,7 @@
     <!-- Confetti Canvas overlay inside modal for victory screen -->
     <canvas id="workoutConfettiCanvas" class="pointer-events-none absolute inset-0 z-50 w-full h-full"></canvas>
 
-    <div id="liveWorkoutCard" class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl max-h-[96vh] flex flex-col overflow-hidden relative transition-all duration-300" onclick="event.stopPropagation()">
+    <div id="liveWorkoutCard" class="app-modal-panel app-modal-flex bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl max-h-[96vh] flex flex-col overflow-hidden relative transition-all duration-300" onclick="event.stopPropagation()">
       
       <!-- Live Top Status & Header -->
       <div class="w-full bg-slate-950 border-b border-slate-800/80 px-4 py-3 flex items-center justify-between flex-shrink-0">
@@ -731,7 +801,7 @@
 
     </div>
   </div>
-  <div id="restTimerModal" class="hidden fixed inset-x-0 bottom-0 z-[65] p-4 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 max-w-lg mx-auto rounded-t-2xl shadow-2xl" style="z-index: 65;">
+  <div id="restTimerModal" class="app-modal-sheet hidden fixed inset-x-0 bottom-0 z-[65] p-4 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 max-w-lg mx-auto rounded-t-2xl shadow-2xl" style="z-index: 65;">
     <div class="flex items-center justify-between pb-3 border-b border-slate-800">
       <div class="flex items-center gap-2">
         <span class="text-xl">⏱️</span>
@@ -764,7 +834,7 @@
 
   <!-- BACKUP & EXPORT MODAL -->
   <div id="dataModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" style="z-index: 70;" onclick="if(event.target === this) closeDataModal()">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4" onclick="event.stopPropagation()">
+    <div class="app-modal-panel bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4" onclick="event.stopPropagation()">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h3 class="font-black text-sm uppercase tracking-wider text-slate-100 flex items-center gap-2">
           <span>💾</span> Gegevensbeheer & Back-up
@@ -812,7 +882,7 @@
 
   <!-- TRAININGS HISTORIE & MESOCYCLES DASHBOARD MODAL -->
   <div id="cycleHistoryModal" class="hidden fixed inset-0 z-[75] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md" style="z-index: 75;" onclick="if(event.target === this) closeCycleHistoryModal()">
-    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-2xl p-5 sm:p-6 shadow-2xl space-y-4 text-slate-200 max-h-[92vh] overflow-y-auto no-scrollbar" onclick="event.stopPropagation()">
+    <div class="app-modal-panel bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-2xl p-5 sm:p-6 shadow-2xl space-y-4 text-slate-200 max-h-[92vh] overflow-y-auto no-scrollbar" onclick="event.stopPropagation()">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div class="flex items-center gap-2.5">
           <div class="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-xl flex-shrink-0">
@@ -836,7 +906,7 @@
 
   <!-- SCHEMA INRICHTEN & VASTZETTEN MODAL (THUISGYM SPECIFIEK) -->
   <div id="setupRoutineModal" class="hidden fixed inset-0 z-[80] flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md" style="z-index: 80;" onclick="if(event.target === this) closeSetupRoutineModal()">
-    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-2xl p-4 sm:p-6 shadow-2xl space-y-4 text-slate-200 max-h-[94vh] overflow-y-auto no-scrollbar" onclick="event.stopPropagation()">
+    <div class="app-modal-panel app-modal-flex bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-2xl p-4 sm:p-6 shadow-2xl space-y-4 text-slate-200 max-h-[94vh] overflow-hidden no-scrollbar flex flex-col" onclick="event.stopPropagation()">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div class="flex items-center gap-2.5">
           <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-xl flex-shrink-0">
@@ -854,15 +924,16 @@
         <button onclick="closeSetupRoutineModal()" class="text-slate-400 hover:text-white text-lg p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer">✕</button>
       </div>
 
-      <div id="setupRoutineContent" class="space-y-4">
+      <div id="setupRoutineContent" class="min-h-0 flex-1 overflow-y-auto no-scrollbar">
         <!-- Dynamisch gevuld via renderSetupRoutineModal() -->
       </div>
+      <div id="setupRoutineActions" class="modal-actions-grid shrink-0 border-t border-slate-800 pt-3"></div>
     </div>
   </div>
 
   <!-- KRACHT & DOELEN BENCHMARK MODAL (LEEFTIJD & LICHAAMSGEWICHT) -->
   <div id="strengthBenchmarkModal" class="hidden fixed inset-0 z-[80] flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md" style="z-index: 80;" onclick="if(event.target === this) closeBenchmarkModal()">
-    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-2xl p-4 sm:p-6 shadow-2xl space-y-4 text-slate-200 max-h-[94vh] overflow-y-auto no-scrollbar" onclick="event.stopPropagation()">
+    <div class="app-modal-panel bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-2xl p-4 sm:p-6 shadow-2xl space-y-4 text-slate-200 max-h-[94vh] overflow-y-auto no-scrollbar" onclick="event.stopPropagation()">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div class="flex items-center gap-2.5">
           <div class="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-xl flex-shrink-0">
@@ -888,7 +959,7 @@
 
   <!-- NIEUWE PERIODE STARTEN BEVESTIGING MODAL -->
   <div id="startCycleModal" class="hidden fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md" style="z-index: 80;" onclick="if(event.target === this) closeStartCycleModal()">
-    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 text-slate-200 max-h-[92vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+    <div class="app-modal-panel app-modal-flex bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 text-slate-200 max-h-[92vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
       <div class="flex shrink-0 items-center justify-between border-b border-slate-800 pb-3">
         <div class="flex items-center gap-2.5">
           <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xl flex-shrink-0">
@@ -913,7 +984,7 @@
 
   <!-- PWA INSTALLATIE & FULLSCREEN GIDS MODAL -->
   <div id="pwaGuideModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md" style="z-index: 90;" onclick="if(event.target === this) closePwaGuideModal()">
-    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 text-slate-200 max-h-[92vh] overflow-y-auto no-scrollbar" onclick="event.stopPropagation()">
+    <div class="app-modal-panel bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 text-slate-200 max-h-[92vh] overflow-y-auto no-scrollbar" onclick="event.stopPropagation()">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div class="flex items-center gap-2.5">
           <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-xl flex-shrink-0">
@@ -994,9 +1065,9 @@
   </div>
 
   <!-- ========================================================== -->
-  <dialog id="settingsModal" aria-labelledby="settingsTitle" class="m-auto max-h-[90dvh] w-[min(95vw,48rem)] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 text-slate-100 backdrop:bg-black/80 sm:p-6">
+  <dialog id="settingsModal" aria-labelledby="settingsTitle" class="app-modal-panel m-auto max-h-[90dvh] w-[min(95vw,48rem)] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 text-slate-100 backdrop:bg-black/80 sm:p-6">
     <header class="mb-5 flex items-center justify-between gap-3"><h2 id="settingsTitle" class="text-xl font-bold">Instellingen</h2><button type="button" onclick="closeSettingsModal()" autofocus class="rounded-lg bg-slate-800 px-3 py-2 text-sm">Sluiten ✕</button></header>
-    <div class="space-y-5"><div id="trainingSettingsContent"></div><div id="profileSettingsContent"></div>
+    <div class="settings-columns"><div id="trainingSettingsContent"></div><div id="profileSettingsContent"></div>
       <!-- Sectie 2: Thuisgym Voorkeuren -->
       <div>
         <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold mb-2">Weergave & geluid</div>
@@ -5105,7 +5176,7 @@
             </div>
           </div>
 
-          <div class="space-y-2">
+          <div class="week-exercise-grid">
             ${exercisesHtml}
           </div>
         </div>
@@ -5290,6 +5361,7 @@
       return slot.sets.slice(0, isDeloadWeek(peakWeek) ? 2 : 3).reduce((max, set) => set?.completed && Number(set.reps) > 0 ? Math.max(max, Number(set.weight) || 0) : max, 0);
     }
 
+    const NEW_PERIOD_GOAL = 'hypertrophy';
     const periodDrafts = new Map();
     let periodRequestNumber = 0;
     let periodStarting = false;
@@ -5348,7 +5420,7 @@
 
     async function fetchPeriodProposal(key, dayVariants = {}, schema = {}) {
       const response = await jsonApi('/api/cycles/preview', 'POST', { templateKey: key,
-        training_goal: appState.nextTrainingGoal || appState.trainingGoal || 'hypertrophy', dayVariants, schema: proposalOverrides(schema) });
+        training_goal: NEW_PERIOD_GOAL, dayVariants, schema: proposalOverrides(schema) });
       const payload = await response.json();
       if (!response.ok) throw new Error(Object.values(payload.errors || {}).flat().join(' ') || 'Voorstel kon niet worden geladen.');
       Object.entries(schema).forEach(([day, slots]) => Object.entries(slots).forEach(([slotKey, prior]) => {
@@ -5383,16 +5455,16 @@
     }
 
     function renderNextCycleAdviceSlots(advice) {
-      return (advice.days || []).map(day => '<div class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">' +
+      return (advice.days || []).map(day => '<div class="period-day-card rounded-xl border border-slate-800 bg-slate-900/70 p-3">' +
         '<div class="mb-2 text-xs font-bold text-blue-300">' + escapeReportText(day.title) + '</div>' +
-        day.slots.map(slot => '<div class="space-y-1 border-b border-slate-800 py-2 last:border-0">' +
+        day.slots.map(slot => '<div class="proposal-exercise border-b border-slate-800 py-3 last:border-0"><div class="space-y-1 min-w-0">' +
           '<div class="text-sm font-bold">' + escapeReportText(slot.selectedName) + '</div>' +
           (slot.rotated && slot.fromName ? '<p class="text-xs text-slate-500">Vervangt: ' + escapeReportText(slot.fromName) + '</p>' : '') +
           '<p class="text-xs text-emerald-300">' + slot.sets + ' × ' + slot.minReps + '–' + slot.maxReps + ' reps · ' +
           (slot.isBodyweight ? 'Lichaamsgewicht' : slot.weight > 0 ? slot.weight + ' ' + escapeReportText(slot.weightLabel) : 'Startgewicht bepalen') + ' · ' + slot.rest + 's rust</p>' +
           '<p class="text-xs text-slate-400">' + escapeReportText(slot.weightReason || '') + '</p>' +
           (slot.materialAlternative ? '<p class="text-xs text-amber-300">Materiaalalternatief voor ' + escapeReportText(slot.materialAlternative) + '. ' + (slot.missingEquipment?.length ? 'Niet aangevinkt in je materiaalprofiel: ' + escapeReportText(slot.missingEquipment.map(key => equipmentLabels()[key] || key).join(', ')) + '.' : 'Aangepast om met je beschikbare materiaal verschillende oefeningen te behouden.') + '</p>' : '') +
-          proposalHistoryHtml(slot.lastPerformed, slot.weightLabel) +
+          proposalHistoryHtml(slot.lastPerformed, slot.weightLabel) + '</div>' +
           '<button type="button" onclick="openProposalGuide(\'' + day.day + '\',\'' + slot.slotKey + '\')" class="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-300">▶ Video & uitleg</button>' + '</div>').join('') + '</div>').join('');
     }
 
@@ -5403,10 +5475,12 @@
     function startNewMesocyclePrompt() {
       const modal = document.getElementById('startCycleModal'), content = document.getElementById('startCycleModalContent');
       if (!modal || !content) return;
-      appState.nextTrainingGoal ||= appState.trainingGoal || 'hypertrophy';
       nextCycleProposal ||= buildLocalNextCycleAdvice();
       const advice = nextCycleProposal;
       if (!advice) { showToast('Laad je trainingsgegevens opnieuw.', 'error'); return; }
+      if (advice.trainingGoal && advice.trainingGoal !== NEW_PERIOD_GOAL) {
+        return selectPeriodTemplate(advice.programTemplate.key);
+      }
       const library = advice.library || appState.programLibrary || {};
       const options = [...(library.templates || []), { key: 'repeat', name: 'Huidige indeling herhalen' }];
       const selected = advice.programTemplate?.key;
@@ -5414,9 +5488,6 @@
         escapeReportText(appState.trainingRules?.muscles?.[group] || group) + ': ' + count.direct + ' direct / ' + count.supporting + ' ondersteunend').join(' · ');
       content.innerHTML = '<div class="space-y-4">' +
         '<p class="text-sm text-slate-300">Push: borst, schouders en triceps · Pull: rug, achterste schouders, biceps en trapezius. Zes trainingsweken, daarna een lichte week of nieuwe periode. Houd doorgaans 1–3 herhalingen over; bij inregelen 2–3.</p>' +
-        '<label class="block text-sm font-bold">Doel voor deze periode<select onchange="appState.nextTrainingGoal=this.value; selectPeriodTemplate(nextCycleProposal.programTemplate.key)" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3">' +
-        ['hypertrophy','strength','combined'].map(goal => '<option value="' + goal + '"' + (appState.nextTrainingGoal === goal ? ' selected' : '') + '>' + trainingGoalLabel(goal) + '</option>').join('') + '</select></label>' +
-        '<p class="text-xs text-slate-400">Spiergroei: oefeningsspecifieke repbereiken. Kracht: geschikte hoofdoefeningen 4–6. Combinatie: eerste borstpress en row 6–8. Eigen invoer blijft behouden.</p>' +
         '<label class="block text-sm font-bold">Periodevoorstel<select onchange="selectPeriodTemplate(this.value)" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3">' +
         options.map(item => '<option value="' + escapeReportText(item.key) + '"' + (selected === item.key ? ' selected' : '') + '>' + escapeReportText(item.name) +
         (item.key === advice.recommendedTemplateKey ? ' · aanbevolen' : '') + '</option>').join('') + '</select></label>' +
@@ -5424,7 +5495,7 @@
         '<p class="text-xs text-slate-400">' + escapeReportText(advice.reason || '') + '</p>' +
         (advice.unavailableReason ? '<p class="text-sm text-amber-300">' + escapeReportText(advice.unavailableReason) + '</p>' : '') +
         '<p class="text-xs text-slate-400">' + volumes + '. Directe en ondersteunende sets zijn aparte tellingen.</p>' +
-        '<div class="space-y-3">' + renderNextCycleAdviceSlots(advice) + '</div>' +
+        '<div class="period-days-grid">' + renderNextCycleAdviceSlots(advice) + '</div>' +
         '</div>';
       const actions = document.getElementById('startCycleModalActions');
       if (actions) actions.innerHTML =
@@ -5444,7 +5515,7 @@
         await ensureTrainingSaved();
         const program = programTemplate || nextCycleProposal?.programTemplate;
         const response = await jsonApi('/api/cycles', 'POST', { close_current_period: true, cycleId: appState.cycleId,
-          training_goal: appState.nextTrainingGoal || appState.trainingGoal || 'hypertrophy',
+          training_goal: NEW_PERIOD_GOAL,
           templateKey: program.key, dayVariants: proposalDayVariants(program),
           programVersions: Object.fromEntries(Object.entries(program.days || {}).map(([day, item]) => [day, item.version || null])),
           schema: customSchema || nextCycleProposal.schema });
@@ -5871,10 +5942,10 @@
       const slots = (state.daySlots[day] || []).map((key, index) => {
         const item = state.schema[day][key], name = item.selectedName, bodyweight = isExerciseBodyweight(name);
         const unit = item.weightLabel || getExerciseVolumeRule(name).weightLabel;
-        return '<div class="space-y-3 rounded-2xl border border-slate-800 bg-slate-950 p-4"><p class="text-xs text-slate-400">' + (index + 1) + ' · ' +
-          item.sets + ' × ' + item.minReps + '–' + item.maxReps + ' reps · ' + item.rest + 's rust</p>' +
-          '<div><p class="text-xs text-slate-400">Oefening uit dagvariant</p><p class="mt-1 text-sm font-bold text-slate-100">' + escapeReportText(name) + '</p></div>' +
-          '<button type="button" onclick="openSetupGuide(\'' + day + '\',\'' + key + '\')"' + disabled + ' class="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-sm font-bold text-blue-300">▶ Video & uitleg</button>' +
+        return '<div class="setup-exercise-card rounded-2xl border border-slate-800 bg-slate-950 p-4">' +
+          '<div class="setup-exercise-header"><div class="min-w-0"><p class="text-xs text-slate-400">Oefening ' + (index + 1) + ' uit dagvariant</p><p class="mt-1 text-sm font-bold text-slate-100">' + escapeReportText(name) + '</p></div>' +
+          '<button type="button" onclick="openSetupGuide(\'' + day + '\',\'' + key + '\')"' + disabled + ' class="shrink-0 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-300">▶ Video & uitleg</button></div>' +
+          '<p class="text-xs text-emerald-300">' + item.sets + ' × ' + item.minReps + '–' + item.maxReps + ' reps · ' + item.rest + 's rust</p>' +
           proposalHistoryHtml(item.lastPerformed, unit) +
           (bodyweight ? '<p class="text-sm text-emerald-300">Lichaamsgewicht</p>' :
             '<label class="block text-xs text-slate-400">Startgewicht · ' + escapeReportText(unit) + '<input aria-label="Startgewicht ' + (index + 1) + '" type="number" min="0" step="0.5" value="' + escapeReportText(item.weight ?? '') + '" placeholder="Inregelen" onchange="onSetupWeightChange(\'' + day + '\',\'' + key + '\',this.value)" class="' + control + '"' + disabled + '></label>') +
@@ -5882,15 +5953,17 @@
       }).join('');
       content.innerHTML = '<div class="space-y-4"><h2 class="text-lg font-black">Nieuwe periode · dagvarianten kiezen</h2>' +
         '<p class="text-xs text-slate-400">' + 'Kies per dag een vaste variant. De bijbehorende oefeningen staan vast; startgewichten kun je instellen.' + '</p>' +
-        '<p class="text-xs text-slate-400">Oefeningen in A–F aanpassen? <a href="/beheer/programma#dagvarianten" target="_blank" rel="noopener" class="text-blue-300 underline">A–F beheren via Beheer → Programma</a>.</p>' +
-        '<p class="text-xs text-slate-400">' + equipmentSummaryHtml() + ' <button onclick="openSettingsModal()" class="text-blue-300 underline">Profiel aanpassen</button></p>' +
+        '<div class="setup-tools-row"><p class="text-xs text-slate-400">Oefeningen in A–F aanpassen? <a href="/beheer/programma#dagvarianten" target="_blank" rel="noopener" class="text-blue-300 underline">A–F beheren via Beheer → Programma</a>.</p>' +
+        '<p class="text-xs text-slate-400">' + equipmentSummaryHtml() + ' <button onclick="openSettingsModal()" class="text-blue-300 underline">Profiel aanpassen</button></p></div>' +
         '<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">' + ['mon','tue','thu','fri'].map(key => '<button onclick="setSetupWizardDay(\'' + key + '\')"' + disabled + ' class="rounded-xl border p-2 text-xs ' +
           (key === day ? 'border-blue-500 bg-blue-950 text-blue-200' : 'border-slate-700 bg-slate-900 text-slate-300') + '">' + escapeReportText(state.dayTitles[key]) + '</button>').join('') + '</div>' +
         variantSelector + (state.busy ? '<p role="status" class="text-sm text-blue-300">Voorstel en startgewichten bijwerken…</p>' : '') +
-        '<div class="space-y-3">' + slots + '</div>' +
-        '<div class="flex flex-wrap gap-2 border-t border-slate-800 pt-4"><button onclick="closeSetupRoutineModal()' + (isNew ? ';startNewMesocyclePrompt()' : '') + '"' + disabled + ' class="rounded-xl bg-slate-800 px-4 py-3 text-sm">' +
+        '<div class="setup-exercise-grid">' + slots + '</div>' +
+        '</div>';
+      const actions = document.getElementById('setupRoutineActions');
+      if (actions) actions.innerHTML = '<button onclick="closeSetupRoutineModal()' + (isNew ? ';startNewMesocyclePrompt()' : '') + '"' + disabled + ' class="rounded-xl bg-slate-800 px-4 py-3 text-sm">' +
           (isNew ? 'Terug naar voorstellen' : 'Annuleren') + '</button><button onclick="saveAndLockRoutine(' + isNew + ')" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold"' +
-          (state.busy || periodStarting ? ' disabled' : '') + '>' + 'Periode afsluiten & nieuwe periode starten' + '</button></div></div>';
+          (state.busy || periodStarting ? ' disabled' : '') + '>' + 'Periode afsluiten & nieuwe periode starten' + '</button>';
     }
 
     /* 5c. FYSIOLOGISCHE BENCHMARKS MODAL */

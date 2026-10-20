@@ -7,12 +7,14 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         body { background: #0f172a; color: #f8fafc; font-family: system-ui, sans-serif; }
+        .admin-shell { width: 100%; max-width: none; }
+        @media (min-width: 1024px) { .admin-shell { max-width: 80vw; } }
         nav a[aria-current="page"] { background: #1e3a5f; border-color: #3b82f6; color: #bfdbfe; }
     </style>
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100">
     <header class="border-b border-slate-800 bg-slate-950/90">
-        <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div class="admin-shell mx-auto flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20 text-xs font-black text-emerald-300">IF</span>
                 <span>
@@ -37,7 +39,7 @@
         </div>
     </header>
 
-    <main class="mx-auto max-w-6xl px-4 py-6">
+    <main class="admin-shell mx-auto px-4 py-6">
         @if (session('status'))
             <p class="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">{{ session('status') }}</p>
         @endif

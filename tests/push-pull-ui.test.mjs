@@ -79,7 +79,7 @@ test('wizard displays guide before save and preserves candidate, weight and acti
   for (const [, handler] of handlers) new vm.Script(handler.replaceAll('&quot;', '"').replaceAll('&#39;', "'"));
 });
 
-test('switching goal and proposal retains manually entered weight', async () => {
+test('switching proposal retains manual weight and always uses muscle growth', async () => {
   const h = harness(); prepare(h);
   const requests = [];
   h.context.fetch = async (url, options) => {
@@ -92,7 +92,8 @@ test('switching goal and proposal retains manually entered weight', async () => 
   h.run('openSetupRoutineModal(true); onSetupWeightChange("mon","slot_a1",17.5); closeSetupRoutineModal(); appState.nextTrainingGoal = "strength";');
   await h.run('selectPeriodTemplate("balanced")');
   assert.equal(requests[0].schema.mon.slot_a1.weight, 17.5);
-  assert.equal(h.run('nextCycleProposal.schema.mon.slot_a1.targetReps'), 4);
+  assert.equal(requests[0].training_goal, 'hypertrophy');
+  assert.equal(h.run('nextCycleProposal.schema.mon.slot_a1.targetReps'), 8);
   await h.run('selectPeriodTemplate("dumbbells")');
   await h.run('selectPeriodTemplate("balanced")');
   assert.equal(h.run('nextCycleProposal.schema.mon.slot_a1.weight'), 17.5);
@@ -123,9 +124,10 @@ test('planned sets support two to five sets and deload caps', () => {
 test('failed period start preserves live state and double click issues only one request', async () => {
   const h = harness(); prepare(h);
   h.run('ensureTrainingSaved = async () => {};');
-  let release, count = 0;
-  h.context.fetch = async () => {
+  let release, count = 0, requestBody;
+  h.context.fetch = async (url, options) => {
     count++;
+    requestBody = JSON.parse(options.body);
     return new Promise(resolve => { release = () => resolve({ ok: false, json: async () => ({errors:{cycle:['Stale proposal']}}) }); });
   };
   const before = h.run('JSON.stringify(appState)');
@@ -135,6 +137,7 @@ test('failed period start preserves live state and double click issues only one 
   release();
   assert.equal(await first, false);
   assert.equal(count, 1);
+  assert.equal(requestBody.training_goal, 'hypertrophy');
   assert.equal(h.run('JSON.stringify(appState)'), before);
 });
 
@@ -252,7 +255,7 @@ test('day variant can be selected but its exercises are read only and weights re
   h.run('openSetupRoutineModal(true);');
   const content = h.elements.get('setupRoutineContent').innerHTML;
   assert.doesNotMatch(content, /<select aria-label="Oefening/);
-  assert.match(content, /Oefening uit dagvariant/);
+  assert.match(content, /Oefening 1 uit dagvariant/);
   assert.match(content, /Dumbbell Bench Press/);
   assert.match(content, /A–F beheren via Beheer → Programma/);
   const before = h.run('JSON.stringify(setupWizardState.schema)');
@@ -276,6 +279,48 @@ test('old current-routine editor is removed and menu management uses a matching 
   const settingsStyle = menu.match(/<button onclick="closeMenuDrawer\(\); openSettingsModal\(\)" class="([^"]*)"/)[1];
   assert.equal(settingsStyle, managementStyle);
   assert.ok(menu.indexOf('id="menuNewPeriodBtn"') < menu.indexOf('openBenchmarkModal()'));
+});
+
+
+test('period selection has no goal chooser and normalizes an older strength proposal without changing history', async () => {
+  const h = harness();
+  const old = proposal();
+  old.trainingGoal = 'strength';
+  old.schema.mon.slot_a1.minReps = 4;
+  prepare(h, old);
+  h.run('appState.trainingGoal = "strength"; appState.nextTrainingGoal = "strength";');
+  const before = h.run('JSON.stringify(appState.weeks)');
+  let body;
+  h.context.fetch = async (url, options) => {
+    body = JSON.parse(options.body);
+    const response = proposal(body.templateKey);
+    response.trainingGoal = 'hypertrophy';
+    return {ok:true,json:async()=>response};
+  };
+  await h.run('startNewMesocyclePrompt()');
+  assert.equal(body.training_goal, 'hypertrophy');
+  assert.equal(h.run('nextCycleProposal.schema.mon.slot_a1.minReps'), 8);
+  const content = h.elements.get('startCycleModalContent').innerHTML;
+  assert.doesNotMatch(content, /Doel voor deze periode|nextTrainingGoal|Kracht: geschikte/);
+  assert.match(content, /Periodevoorstel/);
+  assert.match(content, /period-days-grid/);
+  assert.equal(h.run('appState.trainingGoal'), 'strength');
+  assert.equal(h.run('JSON.stringify(appState.weeks)'), before);
+});
+
+test('setup actions remain outside scrolling fields and return preserves start weights', () => {
+  const h = harness(); prepare(h);
+  h.run('openSetupRoutineModal(true); onSetupWeightChange("mon","slot_a1",17.5);');
+  const content = h.elements.get('setupRoutineContent').innerHTML;
+  const footer = h.elements.get('setupRoutineActions').innerHTML;
+  assert.doesNotMatch(content, /saveAndLockRoutine/);
+  assert.match(footer, /Terug naar voorstellen/);
+  assert.match(footer, /Periode afsluiten & nieuwe periode starten/);
+  const back = footer.match(/onclick="([^"]*startNewMesocyclePrompt[^"]*)"/)[1];
+  h.run(back);
+  assert.equal(h.run('nextCycleProposal.schema.mon.slot_a1.weight'), 17.5);
+  assert.equal(h.elements.get('setupRoutineModal').classList.contains('hidden'), true);
+  assert.equal(h.elements.get('startCycleModal').classList.contains('hidden'), false);
 });
 
 test('schema lock controls are absent from page and setup wizard', () => {

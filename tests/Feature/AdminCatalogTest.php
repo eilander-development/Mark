@@ -26,6 +26,8 @@ class AdminCatalogTest extends TestCase
         $dashboard
             ->assertOk()
             ->assertSee('IRONFORGE BEHEER')
+            ->assertSee('admin-shell')
+            ->assertSee('max-width: 80vw')
             ->assertSee('Wanneer gebruik je welke pagina?')
             ->assertDontSee('Elke oefening heeft een Athlean-video')
             ->assertDontSee('muscleAnatomySvg', false)
