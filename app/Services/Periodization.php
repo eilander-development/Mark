@@ -235,8 +235,12 @@ class Periodization
             }
         } elseif ($progress['achieved']) {
             $achievedReps = max($reps, (int) ($progress['achievedReps'] ?? $reps));
-            $repStep = $minReps < 8 ? 1 : 2;
-            if ($progress['isBodyweight'] || $achievedReps < $maxReps) {
+            $repStep = ($progress['personalProgram'] ?? false) || $minReps < 8 ? 1 : 2;
+            if (($progress['personalProgram'] ?? false) && $progress['isBodyweight'] && $achievedReps >= $maxReps) {
+                $reps = $maxReps;
+                $status = 'Bereik gehaald';
+                $reason = 'Bovengrens met lichaamsgewicht gehaald. Behoud dit doel of kies bewust een moeilijkere variant; een andere uitvoering vraagt een nieuwe referentie.';
+            } elseif ($progress['isBodyweight'] || $achievedReps < $maxReps) {
                 $reps = $progress['isBodyweight'] ? $achievedReps + $repStep : min($maxReps, $achievedReps + $repStep);
                 $status = 'Reps opbouwen';
                 $change = 'reps';
@@ -251,7 +255,7 @@ class Periodization
         }
 
         return ['weight' => $weight, 'reps' => $reps, 'minReps' => $minReps, 'maxReps' => $maxReps,
-            'status' => $status, 'reason' => $reason, 'requiredSets' => $this->requiredSets($nextWeek), 'provisional' => $provisional, 'change' => $change];
+            'status' => $status, 'reason' => $reason, 'requiredSets' => $this->isDeloadWeek($nextWeek) ? min(2, (int) ($progress['setCount'] ?? 3)) : (int) ($progress['setCount'] ?? $this->requiredSets($nextWeek)), 'provisional' => $provisional, 'change' => $change];
     }
 
     public function dayName(string $day): string

@@ -7,6 +7,7 @@ use App\Models\ProgramSlot;
 use App\Models\WorkoutSlot;
 use App\Services\Catalog;
 use App\Services\CycleFactory;
+use App\Services\ProgramLibrary;
 use App\Services\TrainingPrescription;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -79,6 +80,8 @@ class AdminController extends Controller
 
         return view('admin.dashboard', [
             'slotCount' => ProgramSlot::query()->count(),
+            'variantCount' => count(app(ProgramLibrary::class)->export()['variants']),
+            'templateCount' => count(app(ProgramLibrary::class)->export()['templates']),
             'exerciseCount' => Exercise::query()->count(),
             'missingVideos' => $this->catalog->missingVideoCount(),
             'overloadIncrement' => $prefs->overload_increment,

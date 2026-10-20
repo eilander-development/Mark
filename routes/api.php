@@ -18,6 +18,7 @@ Route::patch('/profile', [WorkoutController::class, 'updateProfile']);
 Route::post('/days/clear', [WorkoutController::class, 'clearDay']);
 Route::post('/weeks/advance', [WorkoutController::class, 'applyOverload']);
 Route::get('/cycles/next-advice', [WorkoutController::class, 'nextCycleAdvice']);
+Route::post('/cycles/preview', [WorkoutController::class, 'previewCycle']);
 Route::post('/cycles', [WorkoutController::class, 'startCycle']);
 Route::middleware('throttle:10,1')->group(function () {
     Route::get('/backup', [BackupController::class, 'export']);

@@ -12,7 +12,7 @@ class MotorParityTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_new_cycle_carries_peak_from_last_heavy_week_without_adding_increment(): void
+    public function test_new_cycle_does_not_copy_barbell_peak_to_dumbbell_alternative(): void
     {
         $this->getJson('/api/state')->assertOk();
 
@@ -35,7 +35,7 @@ class MotorParityTest extends TestCase
             ->firstOrFail();
         $newSlot = $newWeek1->slots()->where('slot_key', 'slot_a1')->with('sets')->firstOrFail();
 
-        $this->assertSame('Incline Barbell Press', $newSlot->selected_name);
+        $this->assertSame('Dumbbell Bench Press', $newSlot->selected_name);
         $this->assertNotSame($slot6->selected_name, $newSlot->selected_name);
         $this->assertSame('', $newSlot->sets->first()->weight);
     }

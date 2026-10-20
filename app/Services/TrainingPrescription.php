@@ -23,6 +23,9 @@ class TrainingPrescription
     /** @return array{minReps: int, maxReps: int} */
     public function rangeForSlot(WorkoutSlot $slot, int $baseReps): array
     {
+        if ($slot->prescription) {
+            return ['minReps' => (int) $slot->prescription['minReps'], 'maxReps' => (int) $slot->prescription['maxReps']];
+        }
         $cycle = $slot->session->cycle;
         $goal = $cycle->training_goal ?? 'hypertrophy';
         $key = $slot->slot_key;
@@ -98,8 +101,8 @@ class TrainingPrescription
         $periodization = app(Periodization::class);
         foreach ($cycle->sessions()->where('week', $week)->with('slots.sets')->get() as $session) {
             foreach (app(CoreWorkout::class)->reportingSlots($session) as $slot) {
-                $required = str_starts_with($slot->slot_key, 'slot_core_') ? $slot->sets->count() : $periodization->requiredSets($week);
-                $classification = $map[mb_strtolower(trim($slot->selected_name))] ?? null;
+                $required = $slot->requiredSetCount($week);
+                $classification = isset($slot->prescription['primary']) ? $slot->prescription : ($map[mb_strtolower(trim($slot->selected_name))] ?? null);
                 if (! $classification) {
                     $unknown[] = $slot->selected_name;
 

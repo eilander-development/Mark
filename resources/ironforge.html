@@ -132,13 +132,9 @@
 
   <!-- TOP HEADER MET HORIZONTALE ACTIEBALK (SCREENSHOT 2) EN DRAWER MENU KNOP -->
   <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shadow-lg">
-    <!-- Rij 1: Horizontale actieknoppen direct boven de header (Schema Vast, Weekrapport, Start Training, Reset) -->
+    <!-- Rij 1: Horizontale actieknoppen direct boven de header (Weekrapport, Start Training, Reset) -->
     <div class="border-b border-slate-800/80 bg-slate-950/80 px-3 py-2">
       <div class="max-w-4xl w-full min-w-0 mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar flex-nowrap whitespace-nowrap">
-        <button id="routineSetupBtn" onclick="handleRoutineLockButtonClick()" class="flex-shrink-0 px-2.5 py-1.5 text-xs font-mono font-bold bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap" title="Vaste routine vergrendeling">
-          <span id="routineLockIcon">🔒</span>
-          <span id="routineLockText">Schema Vast</span>
-        </button>
         <button id="weekReportHeaderBtn" onclick="openWeekReportModal(appState.currentWeek)" class="flex-shrink-0 px-2.5 py-1.5 text-xs font-mono font-bold bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap" title="Bekijk week voortgang en overload advies">
           <span>📊</span>
           <span>Weekrapport</span>
@@ -248,7 +244,7 @@
           <span class="text-[10px] uppercase font-semibold text-slate-400 block">Voltooide Sets Vandaag</span>
           <div class="flex items-baseline justify-between mt-1">
             <span id="completedSetsRatio" class="text-xl sm:text-2xl font-black font-mono text-amber-400">0/18</span>
-            <span id="daySetsSubtext" class="text-[11px] text-slate-500">6 oefeningen</span>
+            <span id="daySetsSubtext" class="text-[11px] text-slate-500">Trainingsschema laden…</span>
           </div>
           <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
             <div id="dayProgressBar" class="bg-gradient-to-r from-blue-500 to-emerald-400 h-full w-0 transition-all duration-300"></div>
@@ -301,9 +297,9 @@
         </span>
       </div>
       <p class="text-xs text-slate-300 leading-relaxed">
-        <strong>Week 7: herstelweek met aangepast advies.</strong> Twee sets per oefening. Je herstelcheck en eerdere setbeoordelingen bepalen het advies: circa 60%, 70% of 80% van de laatste eerdere referentieweek (normaal week 6). Afronding gebeurt op jouw gewichtstappen; als lager gewicht niet kan, worden de reps verlaagd. Eigen invoer en eenmaal gestarte doelen blijven behouden.
+        <strong>Lichte herstelweek met aangepast advies.</strong> Maximaal twee sets per oefening. Je herstelcheck en eerdere setbeoordelingen bepalen het advies: circa 60%, 70% of 80% van de laatste eerdere referentieweek (normaal week 6). Afronding gebeurt op jouw gewichtstappen; als lager gewicht niet kan, worden de reps verlaagd. Eigen invoer en eenmaal gestarte doelen blijven behouden.
       </p>
-      <details class="text-xs text-purple-200"><summary class="cursor-pointer">Hoe en waarom?</summary><p class="mt-2">60% bij veel gemelde vermoeidheid, of gemiste doelen met minstens de helft maximale sets (minstens 3 opgeslagen sets). 80% alleen bij een herstelcheck ‘goed hersteld’ én alle referentiesets met controle gehaald. Anders 70%. Dit zijn praktische appregels, geen bewezen persoonlijke herstelpercentages. Ook week 7 en twee sets zijn schemakeuzes.</p><a class="underline" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10511399/" target="_blank" rel="noopener noreferrer">Expertconsensus over individuele deloadplanning (2023)</a></details>
+      <details class="text-xs text-purple-200"><summary class="cursor-pointer">Hoe en waarom?</summary><p class="mt-2">60% bij veel gemelde vermoeidheid, of gemiste doelen met minstens de helft maximale sets (minstens 3 opgeslagen sets). 80% alleen bij een herstelcheck ‘goed hersteld’ én alle referentiesets met controle gehaald. Anders 70%. Dit zijn praktische appregels, geen bewezen persoonlijke herstelpercentages. De timing en het aantal herstelsets zijn schemakeuzes.</p><a class="underline" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10511399/" target="_blank" rel="noopener noreferrer">Expertconsensus over individuele deloadplanning (2023)</a></details>
     </div>
 
     <!-- DAG TITEL -->
@@ -370,7 +366,7 @@
   </div>
 
   <!-- OEFENING DETAILS & ANATOMIE GIDS MODAL -->
-  <div id="exerciseGuideModal" class="hidden fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md" style="z-index: 80;" onclick="if(event.target === this) closeGuideModal()">
+  <div id="exerciseGuideModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md" style="z-index: 100;" onclick="if(event.target === this) closeGuideModal()">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl p-4 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
       
       <!-- Modal Header -->
@@ -384,7 +380,7 @@
             Barbell Bench Press
           </h3>
           <div id="guideActiveNotice" class="text-[11px] font-mono text-slate-400 flex items-center gap-1.5 mt-0.5">
-            <span>Actueel in schema:</span> 
+            <span id="guideActiveLabel">Actueel in schema:</span> 
             <span id="guideActiveName" class="text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.2 rounded border border-emerald-500/20">Barbell Bench Press</span>
           </div>
         </div>
@@ -615,7 +611,7 @@
             <span class="text-lg">🎯</span>
             <div>
               <span class="text-[10px] text-slate-500 uppercase block font-bold">Richtlijn Sets & Rust</span>
-              <span id="guideTargetRest" class="text-slate-200 font-semibold">3 × 8 reps • 2:30m rust</span>
+              <div id="guidePreviewHistory" class="mt-2 text-xs text-slate-400"></div><span id="guideTargetRest" class="text-slate-200 font-semibold">3 × 8 reps • 2:30m rust</span>
             </div>
           </div>
         </div>
@@ -848,10 +844,10 @@
           </div>
           <div>
             <h3 id="setupRoutineModalTitle" class="font-black text-sm uppercase tracking-wider text-slate-100">
-              Vaste Thuisgym Routine & Periode Inrichten
+              Huidig schema aanpassen
             </h3>
             <p id="setupRoutineModalSubtitle" class="text-[11px] text-slate-400">
-              Kies je oefeningen, stel startgewichten in en vergrendel je schema voor de hele cyclus
+              Pas oefeningen en startgewichten aan in je lopende periode
             </p>
           </div>
         </div>
@@ -892,7 +888,7 @@
 
   <!-- NIEUWE PERIODE STARTEN BEVESTIGING MODAL -->
   <div id="startCycleModal" class="hidden fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md" style="z-index: 80;" onclick="if(event.target === this) closeStartCycleModal()">
-    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 text-slate-200 max-h-[92vh] overflow-y-auto no-scrollbar" onclick="event.stopPropagation()">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 text-slate-200 max-h-[92vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div class="flex items-center gap-2.5">
           <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xl flex-shrink-0">
@@ -908,9 +904,10 @@
         <button onclick="closeStartCycleModal()" class="text-slate-400 hover:text-white text-lg p-1.5 rounded-lg hover:bg-slate-800">✕</button>
       </div>
 
-      <div id="startCycleModalContent" class="space-y-4">
+      <div id="startCycleModalContent" class="min-h-0 flex-1 overflow-y-auto space-y-4 no-scrollbar">
         <!-- Dynamisch gevuld via startNewMesocyclePrompt() -->
       </div>
+      <div id="startCycleModalActions" class="shrink-0 space-y-2 border-t border-slate-800 pt-3"></div>
     </div>
   </div>
 
@@ -1122,8 +1119,8 @@
               🎯
             </div>
             <div class="flex-1">
-              <div class="text-xs font-bold text-slate-200">Routine</div>
-              <div class="text-[10px] text-slate-400">Oefeningen kiezen en vastzetten</div>
+              <div class="text-xs font-bold text-slate-200">Huidig schema aanpassen</div>
+              <div class="text-[10px] text-slate-400">Oefeningen en gewichten in je lopende periode</div>
             </div>
           </button>
 
@@ -1153,7 +1150,7 @@
             </div>
             <div class="flex-1">
               <div id="menuNewPeriodTitle" class="text-xs font-bold text-slate-400">Nieuwe periode</div>
-              <div id="menuNewPeriodHint" class="text-[10px] text-slate-500">Beschikbaar na week 7</div>
+              <div id="menuNewPeriodHint" class="text-[10px] text-slate-500">Beschikbaar aan het einde van deze periode</div>
             </div>
           </button>
         </div>
@@ -3044,6 +3041,8 @@
           cues: managed.cues || [],
           isCustom: false,
           isAthlean: !!managed.isAthlean,
+          matchType: managed.matchType,
+          matchedExercise: managed.matchedExercise,
           url: managed.url || (managed.videoId ? ("https://www.youtube.com/watch?v=" + managed.videoId) : "")
         };
       }
@@ -3198,6 +3197,7 @@
       if (slotKey && typeof appState !== "undefined" && appState.weeks && appState.weeks[w] && appState.weeks[w][d] && appState.weeks[w][d][slotKey]) {
         const slotData = appState.weeks[w][d][slotKey];
         if (slotData?.progressionPlan?.reps) return Number(slotData.progressionPlan.reps);
+        if (slotData?.prescription && slotData?.backendAdvice?.advisedReps) return Number(slotData.backendAdvice.advisedReps);
         if (slotData && slotData.targetReps && Number(slotData.targetReps) > 0) {
           return Number(slotData.targetReps);
         }
@@ -3272,6 +3272,22 @@
       fri: { title: "Vrijdag: Upper B (Hypertrofie & Armen)", slots: ["slot_b1", "slot_b2", "slot_b3", "slot_b4", "slot_b5", "slot_b6"] }
     };
 
+    function applyProgramSplits(splits) {
+      if (!splits || typeof splits !== "object") return;
+      Object.entries(splits).forEach(([day, split]) => {
+        if (!SPLIT_INFO[day] || !Array.isArray(split?.slots)) return;
+        SPLIT_INFO[day].title = split.title || SPLIT_INFO[day].title;
+        SPLIT_INFO[day].slots = [...split.slots];
+        const tab = document.querySelector(`.day-tab[data-day="${day}"]`);
+        const label = tab?.querySelectorAll('span')[1];
+        if (label) {
+          label.textContent = SPLIT_INFO[day].title.includes(':')
+            ? SPLIT_INFO[day].title.split(':').slice(1).join(':').trim()
+            : SPLIT_INFO[day].title;
+        }
+      });
+    }
+
     const STORAGE_KEY = "ironforge_periodized_v8";
 
     /* 2. STATE INITIALISATIE */
@@ -3291,6 +3307,7 @@
       showLiveVideoPanel: true,
       weeks: {}
     };
+    let nextCycleProposal = null;
 
     function isBiweeklyHoldWeek(weekNum) {
       return (appState.overloadFrequency || "weekly") === "biweekly" && weekNum > 1 && weekNum % 2 === 0;
@@ -3311,16 +3328,15 @@
           lastPersisted = clonePersistedState(appState);
           laravelPersistEnabled = true;
         } else {
-          seedInitialWeeks(7);
-          laravelPersistEnabled = false;
+          throw new Error("Ongeldige trainingsgegevens ontvangen");
         }
       } catch (err) {
-        console.warn("Kon /api/marker-state niet laden, start leeg schema.", err);
-        seedInitialWeeks(7);
+        console.error("Trainingsgegevens konden niet worden geladen.", err);
         laravelPersistEnabled = false;
+        throw err;
       }
 
-      appState.totalWeeks = 7;
+      appState.totalWeeks = Number(appState.totalWeeks) || 7;
       if (appState.weeks) {
         for (let w = 8; w <= 30; w++) {
           if (appState.weeks[w]) delete appState.weeks[w];
@@ -3334,6 +3350,7 @@
       if (!appState.preferredRestTimes) appState.preferredRestTimes = {};
       if (!appState.overloadIncrement) appState.overloadIncrement = 2.0;
       if (!appState.trainingGoal) appState.trainingGoal = 'hypertrophy';
+      applyProgramSplits(appState.splits);
       applyGoalOrdering();
       if (!appState.overloadFrequency) appState.overloadFrequency = "weekly";
       if (!appState.userProfile) {
@@ -3344,7 +3361,8 @@
           equipment: { dumbbells: true, barbell: true, bench: true, bodyweight: true, pullup_bar: false, bands: false }
         };
       }
-      if (appState.routineLocked === undefined) appState.routineLocked = true;
+      appState.routineLocked = true;
+      applyProgramLibrary();
       if (!appState.customExerciseVideos) appState.customExerciseVideos = {};
       if (appState.showLiveVideoPanel === undefined) {
         appState.showLiveVideoPanel = typeof window !== "undefined" ? window.innerWidth >= 768 : true;
@@ -3614,7 +3632,9 @@
           if (failed) throw new Error("incremental persist HTTP " + failed.status);
         }
         lastPersisted = clonePersistedState(next);
+        lastTrainingSaveError = null;
       } catch (err) {
+        lastTrainingSaveError = err;
         console.warn("Kon training niet incrementieel naar de database schrijven:", err);
       } finally {
         laravelPersistInFlight = false;
@@ -3683,6 +3703,8 @@
 
     function isExerciseCompatibleWithEquipment(exerciseName, equipment) {
       if (!equipment) return true;
+      const requirements = appState.programLibrary?.exerciseRequirements?.[exerciseName];
+      if (requirements) return requirements.every(key => !!equipment[key]);
       const n = (exerciseName || "").toLowerCase();
 
       // Barbell check
@@ -3718,7 +3740,7 @@
       const ageFactor = age > 50 ? 0.90 : (age > 45 ? 0.95 : 1.0);
       const name = (exerciseName || "").toLowerCase();
 
-      if (name.includes("incline") && (name.includes("dumbbell") || name.includes("db"))) {
+      if (name.includes("incline") && name.includes("press") && (name.includes("dumbbell") || name.includes("db"))) {
         const baseInter = Math.round(26 * bwFactor * ageFactor);
         return {
           exerciseName,
@@ -4096,17 +4118,20 @@
       const firstPlanned = slot.sets.find(set => Number(set.weight) > 0);
       const plan = slot.progressionPlan || { weight: isBW ? 0 : Number(firstLogged?.weight || firstPlanned?.weight || 0), reps: getExerciseTargetReps(name, slotKey, weekNum, dayKey) };
       const baseReps = Number(EXERCISE_CATALOG[slotKey].targetReps || 8);
-      const range = goalRepetitionRange(appState.trainingGoal, slotKey, baseReps, isBW, name);
+      const range = slot.prescription || goalRepetitionRange(appState.trainingGoal, slotKey, baseReps, isBW, name);
       const minReps = Number(plan.minReps || range.minReps);
       const maxReps = Number(plan.maxReps || range.maxReps);
       return { ...calculateSetProgress(slot.sets, Number(plan.weight), Number(plan.reps), getTrainingSetCount(weekNum, dayKey, slotKey), isBW), minReps, maxReps };
     }
 
     function applyGoalOrdering() {
+      if (appState.programDefinition) return;
       for (const day of ['tue', 'fri']) {
         if (!SPLIT_INFO[day]) continue;
-        const first = appState.trainingGoal === 'strength' ? ['slot_b2', 'slot_b1'] : ['slot_b1', 'slot_b2'];
-        SPLIT_INFO[day].slots = [...first, ...SPLIT_INFO[day].slots.filter(key => !first.includes(key))];
+        const slots = [...SPLIT_INFO[day].slots];
+        const preferred = appState.trainingGoal === 'strength' ? ['slot_b2', 'slot_b1'] : ['slot_b1', 'slot_b2'];
+        const first = preferred.filter(key => slots.includes(key));
+        SPLIT_INFO[day].slots = [...first, ...slots.filter(key => !first.includes(key))];
       }
     }
 
@@ -4133,7 +4158,7 @@
           const slot = day?.[key];
           if (!slot) continue;
           const name = slot.selectedName || EXERCISE_CATALOG[key]?.defaultName || '';
-          const required = isCoreSlot(key) ? slot.sets.length : isDeloadWeek(weekNum) ? 2 : 3;
+          const required = isCoreSlot(key) ? slot.sets.length : getPlannedSetCount(slot, weekNum);
           const classification = coreExerciseByName(name) ? { primary: 'core', secondary: [] } : map[name.trim().toLowerCase()];
           if (!classification) { unknown.add(name); continue; }
           const completed = (slot.sets || []).slice(0, required).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(name) || Number(set.weight) > 0)).length;
@@ -4198,7 +4223,7 @@
     }
 
     function equipmentLabels() {
-      return { dumbbells: 'Dumbbells', barbell: 'Barbell', bench: 'Bankje', bodyweight: 'Lichaamsgewicht', pullup_bar: 'Optrekstang', bands: 'Weerstandsbanden' };
+      return { dumbbells: 'Dumbbells', barbell: 'Barbell', bench: 'Bankje', adjustable_bench: 'Verstelbaar bankje', rack: 'Barbellrek / veilige druksteunen', bodyweight: 'Lichaamsgewicht', pullup_bar: 'Optrekstang', bands: 'Weerstandsbanden' };
     }
 
     function profileSummaryHtml() {
@@ -4393,7 +4418,7 @@
         }
       } else if (progress.achieved) {
         const achievedReps = Math.max(reps, Number(progress.achievedReps || reps));
-        const repStep = minReps < 8 ? 1 : 2;
+        const repStep = appState.programDefinition ? 1 : (minReps < 8 ? 1 : 2);
         if (progress.isBodyweight || achievedReps < maxReps) {
           reps = progress.isBodyweight ? achievedReps + repStep : Math.min(maxReps, achievedReps + repStep);
           status = 'Reps opbouwen';
@@ -4417,7 +4442,7 @@
           for (const key of getTrainingSlotKeys(week, day)) {
             const slot = getTrainingDay(week, day)[key];
             if (!slot || (slot.selectedName || EXERCISE_CATALOG[key].defaultName).trim().toLowerCase() !== exerciseName.trim().toLowerCase()) continue;
-            const sets = slot.sets.slice(0, isDeloadWeek(week) ? 2 : 3).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(exerciseName) || Number(set.weight) > 0));
+            const sets = slot.sets.slice(0, getPlannedSetCount(slot, week)).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(exerciseName) || Number(set.weight) > 0));
             if (sets.length) return { week, day, key, slot, sets };
           }
         }
@@ -4455,7 +4480,7 @@
       return `<div class="space-y-3 rounded-xl border border-slate-700 bg-slate-950/70 p-3 text-xs">
         <div class="space-y-1"><div class="font-bold text-slate-100">Vandaag: ${progress.requiredSets} × ${isBW ? 'BW' : progress.targetWeight > 0 ? progress.targetWeight + ' kg' : 'startgewicht kiezen'} × ${progress.targetReps} reps</div><div class="text-slate-400">Gepland doel · ${planReason}</div></div>
         <div class="space-y-1"><div class="font-bold text-blue-300">Progressive overload: ${isDeloadWeek(weekNum) ? 'herstelweek — geen opbouwdoel' : isBW ? 'herhalingen opbouwen' : `eerst reps (${progress.minReps}–${progress.maxReps}), daarna gewicht`}</div>
-        <div class="text-slate-300">${isDeloadWeek(weekNum) ? 'Deze week telt herstel: twee werksets per oefening. Bereid daarna de nieuwe periode voor.' : isBW ? 'Na een behaald weekdoel: maximaal 2 reps per set erbij.' : `Volgende gewichtsstap: eerst alle weeksets op ${week.maxReps} reps halen, met voldoende controle. Nu ${upperSets}/${week.requiredSets} sets aan die bovengrens.`}</div></div>
+        <div class="text-slate-300">${isDeloadWeek(weekNum) ? 'Deze week telt herstel: twee werksets per oefening. Bereid daarna de nieuwe periode voor.' : isBW ? (appState.programDefinition?.type === 'push_pull' ? 'Na een behaald weekdoel: één rep per set erbij, tot de bovengrens. Daarna een moeilijkere variant overwegen.' : 'Na een behaald weekdoel: maximaal 2 reps per set erbij.') : `Volgende gewichtsstap: eerst alle weeksets op ${week.maxReps} reps halen, met voldoende controle. Nu ${upperSets}/${week.requiredSets} sets aan die bovengrens.`}</div></div>
         <div class="flex flex-wrap justify-between gap-2"><span class="font-bold text-emerald-300">${progress.achieved ? 'Doel gehaald' : progress.percent >= 80 ? 'Bijna bij je doel' : 'Op weg naar je doel'}: ${progress.achievedSets}/${progress.requiredSets} sets</span><span class="text-slate-300">Vandaag ${progress.percent}%</span></div>
         <div role="progressbar" aria-label="Doel van vandaag" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress.percent}" class="h-2 overflow-hidden rounded bg-slate-800"><div class="h-full bg-emerald-500" style="width:${progress.percent}%"></div></div>
         <div class="text-slate-200">Sets uitgevoerd: ${progress.completedSets}/${progress.requiredSets} · Doel gehaald: ${progress.achievedSets}/${progress.requiredSets}</div>
@@ -4472,7 +4497,7 @@
       if (!exerciseData?.sets) return false;
       const isBW = isExerciseBodyweight(exerciseData.selectedName);
       const firstLogged = exerciseData.sets.find(set => set.completed && Number(set.weight) > 0);
-      return calculateSetProgress(exerciseData.sets, Number(exerciseData.progressionPlan?.weight ?? firstLogged?.weight ?? 0), Number(exerciseData.progressionPlan?.reps || targetReps), isDeload ? 2 : 3, isBW).achieved;
+      return calculateSetProgress(exerciseData.sets, Number(exerciseData.progressionPlan?.weight ?? firstLogged?.weight ?? 0), Number(exerciseData.progressionPlan?.reps || targetReps), isDeload ? Math.min(2, exerciseData.prescription?.sets || 3) : (exerciseData.prescription?.sets || 3), isBW).achieved;
     }
 
     /* 4A. VIND GELIJKSOORTIGE OEFENING BINNEN DEZELFDE WEEK (CONSISTENTIE MICROCYCLE) */
@@ -4549,6 +4574,7 @@
           adviceTitle: advice.status, adviceText: advice.reason, adviceType: advice.previous ? 'repeat' : 'inregel_baseline', hasPriorData: !!advice.previous, benchmark: {} };
       }
       const slot = appState.weeks[weekNum]?.[dayKey]?.[slotKey];
+      if (slot?.backendAdvice) return { ...slot.backendAdvice, hasPriorData: !!slot.backendAdvice.prevWeekFound, benchmark: {} };
       const name = slot?.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
       const isBW = isExerciseBodyweight(name);
       const targetReps = getExerciseTargetReps(name, slotKey, weekNum, dayKey);
@@ -4625,7 +4651,7 @@
             if (!Array.isArray(slot?.sets)) return;
             const name = slot.selectedName || EXERCISE_CATALOG[key]?.defaultName || key;
             const isBW = isExerciseBodyweight(name);
-            const required = isCoreSlot(key) ? slot.sets.length : isDeloadWeek(Number(week)) ? 2 : 3;
+            const required = isCoreSlot(key) ? slot.sets.length : getPlannedSetCount(slot, Number(week));
             if (!isCoreSlot(key)) planned += required;
             const sets = slot.sets.slice(0, required).filter(set => set.completed && Number(set.reps) > 0 && (isBW || Number(set.weight) > 0));
             completed += sets.length;
@@ -4666,7 +4692,7 @@
       const weekData = appState.weeks[weekNum];
       if (!weekData) return null;
       const isDeload = isDeloadWeek(weekNum);
-      const isNextDeload = isDeloadWeek(weekNum + 1);
+      const isNextDeload = weekNum < Number(appState.totalWeeks) && isDeloadWeek(weekNum + 1);
       const inc = Number(appState.overloadIncrement) || 2.0;
 
       let totalVolume = 0;
@@ -4766,7 +4792,7 @@
       const exercisesList = Object.values(exercisesMap).map(ex => {
         const progress = getExerciseWeekProgress(weekNum, ex.name);
         const outlook = coreExerciseByName(ex.name) ? getOverloadOutlook(weekNum, ex.name) : null;
-        const next = { ...getNextProgression(progress, weekNum + 1), ...(outlook?.next || {}), ...(outlook ? { status: outlook.title, reason: outlook.reason, provisional: outlook.provisional } : {}) };
+        const next = { ...getNextProgression(progress, weekNum + 1), ...(serverWeekReports.get(weekNum)?.exercises?.find(item => item.name === ex.name)?.next || {}), ...(outlook?.next || {}), ...(outlook ? { status: outlook.title, reason: outlook.reason, provisional: outlook.provisional } : {}) };
         return { ...ex, progress, dominantExertion: progress.exertion,
           maxWeight: Math.max(0, ...ex.weights), maxReps: Math.max(0, ...ex.repsList),
           nextAdvisedWeight: next.weight, nextAdvisedReps: next.reps,
@@ -4796,8 +4822,9 @@
 
     /* 4E. WEEK AFRONDINGSRAPPORT MODAL CONTROLLERS */
     let currentWeekReportWeek = 1;
+    const serverWeekReports = new Map();
 
-    function openWeekReportModal(weekNum) {
+    async function openWeekReportModal(weekNum) {
       currentWeekReportWeek = weekNum || appState.currentWeek;
       renderWeekReportModal(currentWeekReportWeek);
       const modal = document.getElementById("weekReportModal");
@@ -4806,6 +4833,13 @@
         modal.style.zIndex = "75";
         document.getElementById("weekReportScrollArea")?.focus();
       }
+      try {
+        await ensureTrainingSaved();
+        const response = await fetch('/api/weeks/' + currentWeekReportWeek + '/report', { headers: { Accept: 'application/json' }, cache: 'no-store' });
+        if (!response.ok) throw new Error('Weekadvies kon niet worden geladen.');
+        serverWeekReports.set(currentWeekReportWeek, await response.json());
+        renderWeekReportModal(currentWeekReportWeek);
+      } catch (error) { showToast(error.message, 'error'); }
     }
 
     function closeWeekReportModal() {
@@ -4871,45 +4905,19 @@
       }
     }
 
-    function applyWeekOverloadAndAdvance(fromWeekNum) {
-      const evalData = getWeekEvaluation(fromWeekNum);
-      if (!evalData) return;
-      const nextWeekNum = fromWeekNum + 1;
-
-      if (nextWeekNum > (appState.totalWeeks || 7)) {
-        startNewMesocyclePrompt();
-        return;
-      }
-      if (!appState.weeks[nextWeekNum]) {
-        appState.weeks[nextWeekNum] = generateEmptyWeekData(nextWeekNum);
-      }
-
-      const nextWeekData = appState.weeks[nextWeekNum];
-      const isNextDeload = isDeloadWeek(nextWeekNum);
-
-      if (!appState.bodyweightTargetReps) appState.bodyweightTargetReps = {};
-      if (!appState.bodyweightTargetReps[nextWeekNum]) appState.bodyweightTargetReps[nextWeekNum] = {};
-
-      evalData.exercises.forEach(ex => {
-        for (const dKey of ["mon", "tue", "thu", "fri"]) {
-          for (const sKey of SPLIT_INFO[dKey].slots) {
-            const slot = nextWeekData[dKey]?.[sKey];
-            if (!slot || (slot.selectedName || EXERCISE_CATALOG[sKey].defaultName).trim().toLowerCase() !== ex.name.trim().toLowerCase()) continue;
-            if (slot.sets.some(set => set.completed || set.inputFields?.weight || set.inputFields?.reps || (set.reps !== '' && set.reps != null))) continue;
-            slot.progressionPlan = { weight: ex.isBodyweight ? 0 : ex.nextAdvisedWeight, reps: ex.nextAdvisedReps, minReps: ex.nextMinReps, maxReps: ex.nextMaxReps };
-            slot.targetReps = ex.nextAdvisedReps;
-            slot.sets.forEach((set, index) => {
-              if (isNextDeload && index >= 2) return;
-              if (!set.inputFields?.weight) set.weight = ex.isBodyweight ? 0 : ex.nextAdvisedWeight;
-            });
-          }
-        }
-      });
-
-      saveState();
-      closeWeekReportModal();
-      switchWeek(nextWeekNum);
+    async function applyWeekOverloadAndAdvance(fromWeekNum, recoveryWeek = false) {
+      try {
+        await ensureTrainingSaved();
+        const response = await jsonApi('/api/weeks/advance', 'POST', { week: fromWeekNum, recovery_week: recoveryWeek });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(Object.values(payload.errors || {}).flat().join(' ') || 'Volgende week kon niet worden voorbereid.');
+        await reloadTrainingState();
+        serverWeekReports.clear();
+        closeWeekReportModal();
+      } catch (error) { showToast(error.message, 'error'); }
     }
+
+    function chooseRecoveryWeek() { return applyWeekOverloadAndAdvance(6, true); }
 
     function renderWeekReportModal(weekNum) {
       const container = document.getElementById("weekReportModalContent");
@@ -4989,12 +4997,17 @@
               Week 1 fungeert als je kalibratie- en nulmetingsweek. Progressive overload wordt pas berekend en toegepast na afloop van deze week voor Week 2. Oefeningen binnen deze week delen hetzelfde gewicht voor een betrouwbare nulmeting.
             </div>
           </div>
+        ` : appState.programDefinition?.type === 'push_pull' && weekNum === 6 && Number(appState.totalWeeks) === 6 ? `
+          <div class="p-3.5 rounded-2xl bg-purple-950/40 border border-purple-500/40 text-xs text-purple-200">
+            <b class="block mb-1">Zes trainingsweken: tijd om te evalueren</b>
+            Kies onderaan een lichte herstelweek of een nieuwe periode. Zes weken is een praktisch evaluatiemoment, geen bewezen optimale duur. Bij aanhoudende vermoeidheid helpt alleen een nieuw schema kiezen niet.
+          </div>
         ` : evalData.isNextDeload ? `
           <div class="p-3.5 rounded-2xl bg-purple-950/40 border border-purple-500/40 text-xs text-purple-200 leading-relaxed flex items-start gap-2.5">
             <span class="text-lg flex-shrink-0">🌿</span>
             <div>
               <b class="text-purple-300 block mb-0.5">Volgende week is Week ${nextWeekNum} (Deload & Herstel):</b>
-              In Week ${nextWeekNum} wordt het werkgewicht automatisch teruggebracht naar ~70% voor 2 lichte sets met perfecte uitvoering om je centrale zenuwstelsel en pezen rust te geven.
+              In week ${nextWeekNum} gebruikt het hersteladvies maximaal twee sets en circa 60%, 70% of 80% van je eerdere werkgewicht, afhankelijk van je herstelcheck en setbeoordelingen. Je eigen invoer blijft behouden.
             </div>
           </div>
         ` : `
@@ -5002,7 +5015,7 @@
             <span class="text-lg flex-shrink-0">💡</span>
             <div>
               <b class="text-slate-200 block mb-0.5">Einde Week Overload Toepassing:</b>
-              Eerst reps opbouwen binnen je repbereik: maximaal 1 bij krachtaccent, anders maximaal 2. Pas aan de bovengrens van alle weeksets: +${inc} kg en terug naar de ondergrens. Een maximale set vraagt eerst bevestiging. Consolidatie- en herstelweken blijven gelden.
+              Eerst reps opbouwen binnen je repbereik: ${appState.programDefinition?.type === 'push_pull' || appState.trainingGoal === 'strength' ? 'één rep per geslaagde stap' : 'maximaal twee reps per geslaagde stap'}. Daarna één ingestelde gewichtsstap als alle geplande werksets de bovengrens met passende inspanning halen. Onvolledige of onbeoordeelde sets blokkeren een verhoging.
             </div>
           </div>
         `}
@@ -5078,7 +5091,7 @@
         <div class="space-y-2">
           <div class="flex items-center justify-between text-xs">
             <h4 class="font-bold text-slate-200 uppercase tracking-wider text-[11px]">
-              Oefeningen Voortgang & Overload Advies voor Week ${nextWeekNum}
+              ${weekNum >= Number(appState.totalWeeks) ? 'Oefeningen: voortgang en afronding van je periode' : 'Oefeningen: voortgang en advies voor week ' + nextWeekNum}
             </h4>
             <span class="text-[10px] text-slate-400 font-mono">${evalData.exercises.length} unieke oefeningen</span>
           </div>
@@ -5102,10 +5115,11 @@
 
         <!-- Actie Knoppen Footer -->
         <div class="pt-3 border-t border-slate-800 flex items-center gap-3 flex-wrap">
+          ${appState.programDefinition?.type === 'push_pull' && weekNum === 6 && appState.totalWeeks === 6 ? `<p class="w-full text-xs text-slate-300">${escapeReportText(serverWeekReports.get(weekNum)?.recoveryAdvice || 'Na zes trainingsweken: kies een lichte herstelweek of een nieuwe periode. Een nieuwe periode is geen vervanging voor herstel.')}</p><button onclick="chooseRecoveryWeek()" class="flex-1 rounded-xl bg-purple-700 p-3 text-sm font-bold">Lichte herstelweek</button>` : ''}
           ${isDeloadWeek(weekNum) || weekNum >= appState.totalWeeks ? `
             <button onclick="closeWeekReportModal(); startNewMesocyclePrompt();" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition shadow-lg active:scale-95 cursor-pointer">
               <span>🏆</span>
-              <span>Periode ${Number(appState.currentCycle || 1) + 1} met advies</span>
+              <span>Nieuwe periode ${Number(appState.currentCycle || 1) + 1} kiezen</span>
             </button>
           ` : `
             <button onclick="applyWeekOverloadAndAdvance(${weekNum})" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg active:scale-95 cursor-pointer">
@@ -5123,12 +5137,12 @@
 
     /* 5. WEKEN & MESOCYCLES NAVIGATIE */
     function addNewWeek() {
-      // Strikt 7-weken mesocycle (6 weken opbouwende overload + 1 week deload)
-      // Week 8 is verwijderd; open de prompt om een nieuwe periode van 7 weken te starten
+      // Bereid een nieuwe periode voor via de bestaande voorstelkeuze.
       startNewMesocyclePrompt();
     }
 
     function removeLastWeek() {
+      if (appState.programDefinition?.type === 'push_pull') { showToast('Kies na zes trainingsweken via het weekrapport een lichte week of een nieuwe periode.', 'info'); return; }
       if (appState.totalWeeks <= 7) {
         alert("Een standaard trainingsperiode (mesocycle) bestaat uit minimaal 7 weken (6 weken opbouwende overload + 1 week deload).");
         return;
@@ -5164,6 +5178,7 @@
     }
 
     function setToStandardSevenWeeks() {
+      if (appState.programDefinition?.type === 'push_pull') { showToast('Push/Pull gebruikt zes trainingsweken en een optionele herstelweek. Kies die via het weekrapport.', 'info'); return; }
       if (appState.totalWeeks <= 7) return;
       let hasLaterData = false;
       for (let w = 8; w <= appState.totalWeeks; w++) {
@@ -5278,329 +5293,176 @@
       return slot.sets.slice(0, isDeloadWeek(peakWeek) ? 2 : 3).reduce((max, set) => set?.completed && Number(set.reps) > 0 ? Math.max(max, Number(set.weight) || 0) : max, 0);
     }
 
-    function enrichNextCycleAdvice(advice) {
-      (advice.days || []).forEach((day) => {
-        (day.slots || []).forEach((slot) => {
-          const range = goalRepetitionRange(appState.nextTrainingGoal || appState.trainingGoal || 'hypertrophy', slot.slotKey, EXERCISE_CATALOG[slot.slotKey]?.targetReps || 8, slot.isBodyweight, slot.selectedName, advice.schema);
-          slot.targetReps = range.minReps < 8 ? range.minReps : Math.max(range.minReps, Math.min(range.maxReps, Number(slot.targetReps) || range.minReps));
-          if (advice.schema?.[day.day]?.[slot.slotKey]) advice.schema[day.day][slot.slotKey].targetReps = slot.targetReps;
-          if (slot.isBodyweight) {
-            return;
-          }
-          if (slot.weight) {
-            slot.weightSource = slot.weightSource || "peak";
-            return;
-          }
-          const bench = typeof getStrengthBenchmark === "function" ? getStrengthBenchmark(slot.selectedName) : null;
-          if (bench && !bench.isBodyweight && bench.suggestedStart) {
-            slot.weight = bench.suggestedStart;
-            slot.weightSource = "benchmark";
-          }
-          if (advice.schema && advice.schema[day.day] && advice.schema[day.day][slot.slotKey]) {
-            advice.schema[day.day][slot.slotKey].weight = slot.weight;
-            advice.schema[day.day][slot.slotKey].weightSource = slot.weightSource;
-          }
-        });
+    const periodDrafts = new Map();
+    let periodRequestNumber = 0;
+    let periodStarting = false;
+    let lastTrainingSaveError = null;
+
+    function applyProgramLibrary() {
+      if (appState.programDefinition?.type !== 'push_pull') return;
+      Object.entries(appState.programLibrary?.roles || {}).forEach(([key, role]) => {
+        if (EXERCISE_CATALOG[key]) Object.assign(EXERCISE_CATALOG[key], { alternatives: [...role.exercises], targetReps: role.minReps, restTime: role.rest, restType: role.label });
       });
-      return advice;
     }
 
-    function buildLocalNextCycleAdvice() {
-      if (appState.nextCycle && Array.isArray(appState.nextCycle.days) && appState.nextCycle.days.length) {
-        return enrichNextCycleAdvice(JSON.parse(JSON.stringify(appState.nextCycle)));
+    async function ensureTrainingSaved() {
+      if (!laravelPersistEnabled) throw new Error('Trainingsgegevens zijn niet geladen.');
+      if (laravelPersistTimer) { clearTimeout(laravelPersistTimer); laravelPersistTimer = null; }
+      await persistIncrementalToLaravel();
+      const until = Date.now() + 15000;
+      while (laravelPersistInFlight || laravelPersistQueued) {
+        if (Date.now() > until) throw new Error('Wacht tot je laatste training is opgeslagen en probeer opnieuw.');
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
-      const schema = {};
-      const days = [];
-      ["mon", "tue", "thu", "fri"].forEach((day) => {
-        const slots = [];
-        schema[day] = {};
-        (SPLIT_INFO[day].slots || []).forEach((slotKey) => {
-          const catalog = EXERCISE_CATALOG[slotKey] || {};
-          const peakWeek = lastHeavyWeekNum();
-          const current = appState.weeks && appState.weeks[peakWeek] && appState.weeks[peakWeek][day]
-            ? appState.weeks[peakWeek][day][slotKey]
-            : null;
-          const fromName = (current && current.selectedName) || catalog.defaultName || "";
-          const selectedName = nextSlotAlternative(slotKey, fromName);
-          const rotated = selectedName !== fromName;
-          const peak = peakSlotWeight(day, slotKey);
-          const item = {
-            selectedName,
-            fromName,
-            weight: (!rotated && peak > 0) ? peak : null,
-            targetReps: catalog.targetReps || 8,
-            rotated,
-            isBodyweight: typeof isExerciseBodyweight === "function" ? isExerciseBodyweight(selectedName) : false,
-          };
-          schema[day][slotKey] = item;
-          slots.push({ slotKey, ...item });
-        });
-        days.push({ day, title: SPLIT_INFO[day].title, slots });
-      });
-      return enrichNextCycleAdvice({
-        available: canStartNewPeriod(),
-        schema,
-        days,
-        reason: "Wissel naar een nabije variant. Zelfde lift houdt piekgewicht; nieuwe lift krijgt een inregelgewicht.",
-      });
+      if (lastTrainingSaveError) throw new Error('Je laatste invoer is nog niet opgeslagen. Probeer opnieuw.');
+    }
+
+    async function reloadTrainingState() {
+      const response = await fetch('/api/marker-state', { headers: { Accept: 'application/json' }, cache: 'no-store' });
+      if (!response.ok) throw new Error('Trainingsgegevens konden niet opnieuw worden geladen.');
+      const payload = await response.json();
+      if (!payload.appState?.weeks) throw new Error('Ongeldige trainingsgegevens ontvangen.');
+      appState = payload.appState;
+      appState.routineLocked = true;
+      lastPersisted = clonePersistedState(appState);
+      applyProgramLibrary();
+      applyProgramSplits(appState.splits);
+      renderWeekPills();
+      switchDay(appState.currentDay || 'mon');
+      updateDashboard();
+    }
+
+    function enrichNextCycleAdvice(advice) { return advice; }
+    function buildLocalNextCycleAdvice() { return appState.nextCycle ? clonePersistedState(appState.nextCycle) : null; }
+
+    function proposalOverrides(schema) {
+      const result = {};
+      Object.entries(schema || {}).forEach(([day, slots]) => Object.entries(slots).forEach(([key, slot]) => {
+        const item = {};
+        if (slot.nameEdited) item.selectedName = slot.selectedName;
+        if (slot.weightEdited) { item.weight = slot.weight === '' ? null : slot.weight; item.weightEdited = true; }
+        if (Object.keys(item).length) { result[day] ||= {}; result[day][key] = item; }
+      }));
+      return result;
+    }
+
+    function proposalDayVariants(program) {
+      return Object.fromEntries(Object.entries(program?.days || {}).filter(([, day]) => day.variantKey).map(([key, day]) => [key, day.variantKey]));
+    }
+
+    async function fetchPeriodProposal(key, dayVariants = {}, schema = {}) {
+      const response = await jsonApi('/api/cycles/preview', 'POST', { templateKey: key,
+        training_goal: appState.nextTrainingGoal || appState.trainingGoal || 'hypertrophy', dayVariants, schema: proposalOverrides(schema) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(Object.values(payload.errors || {}).flat().join(' ') || 'Voorstel kon niet worden geladen.');
+      Object.entries(schema).forEach(([day, slots]) => Object.entries(slots).forEach(([slotKey, prior]) => {
+        if (prior.nameEdited && payload.schema?.[day]?.[slotKey]) payload.schema[day][slotKey].nameEdited = true;
+      }));
+      return payload;
+    }
+
+    async function selectPeriodTemplate(key, preserveCurrent = true) {
+      if (periodStarting) return;
+      if (preserveCurrent && nextCycleProposal?.programTemplate) periodDrafts.set(nextCycleProposal.programTemplate.key, clonePersistedState(nextCycleProposal));
+      const requestNumber = ++periodRequestNumber, draft = periodDrafts.get(key);
+      try {
+        const payload = await fetchPeriodProposal(key, draft ? proposalDayVariants(draft.programTemplate) : {}, draft?.schema || {});
+        if (requestNumber !== periodRequestNumber) return;
+        nextCycleProposal = payload;
+        startNewMesocyclePrompt();
+      } catch (error) { showToast(error.message, 'error'); }
     }
 
     function updateNewPeriodMenuItem() {
-      const btn = document.getElementById("menuNewPeriodBtn");
-      const title = document.getElementById("menuNewPeriodTitle");
-      const hint = document.getElementById("menuNewPeriodHint");
-      const ready = canStartNewPeriod();
-      if (title) {
-        title.textContent = "Nieuwe periode voorbereiden";
-        title.className = ready ? "text-xs font-bold text-amber-300" : "text-xs font-bold text-slate-400";
-      }
-      if (hint) {
-        hint.textContent = ready ? "Schema voorbereiden, daarna periode afsluiten" : "Eerst week 7 (deload) afronden";
-        hint.className = ready ? "text-[10px] text-amber-400/80" : "text-[10px] text-slate-500";
-      }
-      if (btn) {
-        btn.className = ready
-          ? "w-full p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-left border border-amber-500/30 transition flex items-center gap-3 cursor-pointer"
-          : "w-full p-2.5 rounded-xl bg-slate-800/40 text-left border border-slate-800 transition flex items-center gap-3 cursor-pointer";
-      }
+      const title = document.getElementById('menuNewPeriodTitle'), hint = document.getElementById('menuNewPeriodHint');
+      if (title) title.textContent = 'Nieuwe periode · Push/Pull-varianten';
+      if (hint) hint.textContent = canStartNewPeriod() ? 'Voorstellen en dagvarianten A–F bekijken en aanpassen' : 'Voorstellen bekijken; starten na week ' + appState.totalWeeks;
+    }
+
+    function proposalHistoryHtml(last, unit = '') {
+      if (!last) return '<p class="text-xs text-slate-500">Nog niet uitgevoerd. Startgewicht inregelen.</p>';
+      const sets = (last.sets || []).map(set => (set.weight ? set.weight + ' kg × ' : 'BW × ') + set.reps).join(' / ');
+      return '<p class="text-xs text-slate-400">Laatst: ' + escapeReportText(last.date || '') + ' · P' + last.cycle + ' W' + last.week +
+        (last.isDeload ? ' · herstelweek' : '') + '<br>' + escapeReportText(sets) + (unit ? ' · ' + escapeReportText(unit) : '') + '</p>';
     }
 
     function renderNextCycleAdviceSlots(advice) {
-      return (advice.days || []).map((day) => {
-        const rows = (day.slots || []).map((slot) => {
-          const load = slot.isBodyweight
-            ? `${slot.targetReps} reps (BW)`
-            : (slot.weight ? `${slot.weight} kg × ${slot.targetReps}` : `${slot.targetReps} reps`);
-          const note = slot.rotated
-            ? (slot.weightSource === "benchmark" ? "nieuw · norm" : "nieuw · inregelen")
-            : "piek week 6";
-          return `<div class="flex items-start justify-between gap-2 py-1 border-b border-slate-800/70 last:border-0">
-            <div class="min-w-0">
-              <div class="text-[11px] font-bold text-slate-200 truncate">${slot.selectedName}</div>
-              ${slot.rotated && slot.fromName ? `<div class="text-[10px] text-slate-500 truncate">was ${slot.fromName}</div>` : ""}
-            </div>
-            <div class="text-right flex-shrink-0">
-              <div class="text-[11px] font-mono font-bold text-emerald-300">${load}</div>
-              <div class="text-[9px] uppercase tracking-wide text-slate-500">${note}</div>
-            </div>
-          </div>`;
-        }).join("");
-        return `<div class="rounded-xl border border-slate-800 bg-slate-900/70 p-2.5">
-          <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-1.5">${day.title}</div>
-          ${rows}
-        </div>`;
-      }).join("");
+      return (advice.days || []).map(day => '<div class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">' +
+        '<div class="mb-2 text-xs font-bold text-blue-300">' + escapeReportText(day.title) + '</div>' +
+        day.slots.map(slot => '<div class="space-y-1 border-b border-slate-800 py-2 last:border-0">' +
+          '<div class="text-sm font-bold">' + escapeReportText(slot.selectedName) + '</div>' +
+          (slot.rotated && slot.fromName ? '<p class="text-xs text-slate-500">Vervangt: ' + escapeReportText(slot.fromName) + '</p>' : '') +
+          '<p class="text-xs text-emerald-300">' + slot.sets + ' × ' + slot.minReps + '–' + slot.maxReps + ' reps · ' +
+          (slot.isBodyweight ? 'Lichaamsgewicht' : slot.weight > 0 ? slot.weight + ' ' + escapeReportText(slot.weightLabel) : 'Startgewicht bepalen') + ' · ' + slot.rest + 's rust</p>' +
+          '<p class="text-xs text-slate-400">' + escapeReportText(slot.weightReason || '') + '</p>' +
+          (slot.materialAlternative ? '<p class="text-xs text-amber-300">Materiaalalternatief voor ' + escapeReportText(slot.materialAlternative) + '. ' + (slot.missingEquipment?.length ? 'Niet aangevinkt in je materiaalprofiel: ' + escapeReportText(slot.missingEquipment.map(key => equipmentLabels()[key] || key).join(', ')) + '.' : 'Aangepast om met je beschikbare materiaal verschillende oefeningen te behouden.') + '</p>' : '') +
+          proposalHistoryHtml(slot.lastPerformed, slot.weightLabel) +
+          '<button type="button" onclick="openProposalGuide(\'' + day.day + '\',\'' + slot.slotKey + '\')" class="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-300">▶ Video & uitleg</button>' + '</div>').join('') + '</div>').join('');
     }
 
     function acceptRecommendedNextCycle() {
-      const advice = buildLocalNextCycleAdvice();
-      executeStartNewMesocycle(true, advice.schema);
+      if (nextCycleProposal) executeStartNewMesocycle(true, nextCycleProposal.schema, nextCycleProposal.programTemplate);
     }
 
     function startNewMesocyclePrompt() {
-      const curCycle = appState.currentCycle || 1;
-      appState.nextTrainingGoal ||= appState.trainingGoal || 'hypertrophy';
-      const modal = document.getElementById("startCycleModal");
-      const content = document.getElementById("startCycleModalContent");
+      const modal = document.getElementById('startCycleModal'), content = document.getElementById('startCycleModalContent');
       if (!modal || !content) return;
-
-      if (!canStartNewPeriod()) {
-        content.innerHTML = `
-          <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
-            <div class="text-sm font-black text-slate-100">Eerst de deload</div>
-            <p class="text-xs text-slate-300 leading-relaxed">
-              Je zit in <strong>week ${appState.currentWeek || 1}</strong> van ${appState.totalWeeks || 7}.
-              Een nieuwe periode start pas ná week 7. Eerst afronden, dan wisselen van variant.
-            </p>
-            <p class="text-[11px] text-slate-500 leading-relaxed">
-              ${appState.nextCycle && appState.nextCycle.reason ? appState.nextCycle.reason : "Helms / Israetel: accumulatie → deload → nieuwe meso."}
-            </p>
-          </div>
-          <div class="flex flex-wrap gap-2 justify-end">
-            <button onclick="closeStartCycleModal(); openWeekReportModal(appState.currentWeek);" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono cursor-pointer">Weekrapport</button>
-            <button onclick="closeStartCycleModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-mono cursor-pointer">Sluiten</button>
-          </div>
-        `;
-        modal.classList.remove("hidden");
-        return;
-      }
-
-      const advice = buildLocalNextCycleAdvice();
-      content.innerHTML = `
-        <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-xs font-mono uppercase text-slate-400">Advies periode ${curCycle + 1}</span>
-            <span class="text-xs font-bold text-amber-400 font-mono">Na deload</span>
-          </div>
-          <p class="text-[11px] text-slate-400 leading-relaxed">
-            ${advice.reason || "Nabije varianten, startgewichten van piek of norm, dezelfde herhalingen."}
-          </p>
-        </div>
-        <label class="block text-sm font-bold">Doel voor deze nieuwe periode<select onchange="appState.nextTrainingGoal=this.value; startNewMesocyclePrompt()" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white">${['hypertrophy', 'strength', 'combined'].map(goal => `<option value="${goal}" ${appState.nextTrainingGoal === goal ? 'selected' : ''}>${trainingGoalLabel(goal)}</option>`).join('')}</select></label>
-        <p class="text-xs text-slate-400">${appState.nextTrainingGoal === 'hypertrophy' ? 'Spiergroei: 8–12 of 12–15 reps, weeksets per spiergroep en maximaal 2 reps per opbouwstap.' : appState.nextTrainingGoal === 'strength' ? 'Kracht: hoofdlifts 4–6 reps, maximaal 1 rep per stap; accessoires 8–12 of 12–15. Shoulder press krijgt voorrang op Upper B.' : 'Combinatie: eerste twee oefeningen van Upper A 4–6 reps; overige oefeningen met spiergroeiaccent.'} Een oefening met krachtaccent houdt dat accent bij iedere uitvoering in deze periode. Dit zijn praktische schemakeuzes. Startgewichten zijn referenties; regel ze in op nette uitvoering.</p>
-        <div class="space-y-2 max-h-[45vh] overflow-y-auto pr-0.5">
-          ${renderNextCycleAdviceSlots(advice)}
-        </div>
-        <div class="space-y-2 pt-1">
-          <button onclick="acceptRecommendedNextCycle()" class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-black text-sm transition shadow-lg cursor-pointer active:scale-98">
-            Periode afsluiten & periode ${curCycle + 1} starten
-          </button>
-          <button onclick="closeStartCycleModal(); openSetupRoutineModal(true, true);" class="w-full p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs cursor-pointer">
-            Schema zelf kiezen
-          </button>
-        </div>
-        <div class="pt-1 flex justify-end">
-          <button onclick="closeStartCycleModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-mono cursor-pointer">Annuleren</button>
-        </div>
-      `;
-
-      modal.classList.remove("hidden");
+      appState.nextTrainingGoal ||= appState.trainingGoal || 'hypertrophy';
+      nextCycleProposal ||= buildLocalNextCycleAdvice();
+      const advice = nextCycleProposal;
+      if (!advice) { showToast('Laad je trainingsgegevens opnieuw.', 'error'); return; }
+      const library = advice.library || appState.programLibrary || {};
+      const options = [...(library.templates || []), { key: 'repeat', name: 'Huidige indeling herhalen' }];
+      const selected = advice.programTemplate?.key;
+      const volumes = Object.entries(advice.weekMuscles || {}).map(([group, count]) =>
+        escapeReportText(appState.trainingRules?.muscles?.[group] || group) + ': ' + count.direct + ' direct / ' + count.supporting + ' ondersteunend').join(' · ');
+      content.innerHTML = '<div class="space-y-4">' +
+        '<p class="text-sm text-slate-300">Push: borst, schouders en triceps · Pull: rug, achterste schouders, biceps en trapezius. Zes trainingsweken, daarna een lichte week of nieuwe periode. Houd doorgaans 1–3 herhalingen over; bij inregelen 2–3.</p>' +
+        '<label class="block text-sm font-bold">Doel voor deze periode<select onchange="appState.nextTrainingGoal=this.value; selectPeriodTemplate(nextCycleProposal.programTemplate.key)" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3">' +
+        ['hypertrophy','strength','combined'].map(goal => '<option value="' + goal + '"' + (appState.nextTrainingGoal === goal ? ' selected' : '') + '>' + trainingGoalLabel(goal) + '</option>').join('') + '</select></label>' +
+        '<p class="text-xs text-slate-400">Spiergroei: oefeningsspecifieke repbereiken. Kracht: geschikte hoofdoefeningen 4–6. Combinatie: eerste borstpress en row 6–8. Eigen invoer blijft behouden.</p>' +
+        '<label class="block text-sm font-bold">Periodevoorstel<select onchange="selectPeriodTemplate(this.value)" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3">' +
+        options.map(item => '<option value="' + escapeReportText(item.key) + '"' + (selected === item.key ? ' selected' : '') + '>' + escapeReportText(item.name) +
+        (item.key === advice.recommendedTemplateKey ? ' · aanbevolen' : '') + '</option>').join('') + '</select></label>' +
+        '<p class="text-xs text-slate-400">' + escapeReportText(advice.programTemplate?.focus || '') + '</p>' +
+        '<p class="text-xs text-slate-400">' + escapeReportText(advice.reason || '') + '</p>' +
+        (advice.unavailableReason ? '<p class="text-sm text-amber-300">' + escapeReportText(advice.unavailableReason) + '</p>' : '') +
+        '<p class="text-xs text-slate-400">' + volumes + '. Directe en ondersteunende sets zijn aparte tellingen.</p>' +
+        '<div class="space-y-3">' + renderNextCycleAdviceSlots(advice) + '</div>' +
+        '</div>';
+      const actions = document.getElementById('startCycleModalActions');
+      if (actions) actions.innerHTML =
+        (advice.days?.length ? '<button id="choosePeriodVariantsBtn" onclick="closeStartCycleModal(); openSetupRoutineModal(true, true)" class="w-full rounded-xl border border-blue-500/40 bg-blue-950 p-3 font-bold text-blue-200">Schema zelf kiezen · dagvarianten A–F</button>' : '') +
+        (canStartNewPeriod() && advice.days?.length ? '<button id="confirmPeriodStartBtn" onclick="acceptRecommendedNextCycle()" class="w-full rounded-xl bg-emerald-600 p-3 font-bold">Periode afsluiten & periode ' + (Number(appState.currentCycle) + 1) + ' starten</button>' : '') +
+        '<button onclick="closeStartCycleModal()" class="w-full rounded-xl bg-slate-800 p-2 text-sm text-slate-300">Sluiten</button>';
+      modal.classList.remove('hidden');
     }
 
-    function closeStartCycleModal() {
-      const modal = document.getElementById("startCycleModal");
-      if (modal) modal.classList.add("hidden");
-    }
+    function closeStartCycleModal() { document.getElementById('startCycleModal')?.classList.add('hidden'); }
 
-    function nextSlotAlternative(slotKey, currentName) {
-      const catalog = EXERCISE_CATALOG[slotKey] || {};
-      const alts = (catalog.alternatives || []).filter(Boolean);
-      if (!alts.length) return currentName || catalog.defaultName || "";
-      const cur = currentName || catalog.defaultName || "";
-      const idx = alts.indexOf(cur);
-      if (idx === -1) return alts[0];
-      return alts[(idx + 1) % alts.length];
-    }
-
-    function applyRotatedPeakSchema(peakWeights, carryWeights) {
-      ["mon", "tue", "thu", "fri"].forEach(d => {
-        SPLIT_INFO[d].slots.forEach(sKey => {
-          const peak = peakWeights[d] && peakWeights[d][sKey];
-          const previousName = (peak && peak.selectedName) || (EXERCISE_CATALOG[sKey] || {}).defaultName || "";
-          const nextName = nextSlotAlternative(sKey, previousName);
-          for (let w = 1; w <= 7; w++) {
-            if (appState.weeks[w] && appState.weeks[w][d] && appState.weeks[w][d][sKey]) {
-              appState.weeks[w][d][sKey].selectedName = nextName;
-            }
-          }
-          if (carryWeights && nextName === previousName && peak && peak.weight > 0 && appState.weeks[1][d][sKey]) {
-            appState.weeks[1][d][sKey].sets.forEach(s => {
-              s.weight = peak.weight;
-            });
-          }
-        });
-      });
-      appState.routineLocked = true;
-    }
-
-    function executeStartNewMesocycle(carryForwardWeights = true, customSchema = null) {
-      if (!canStartNewPeriod()) return;
-      let openDays = 0;
-      for (let week = 1; week <= appState.totalWeeks; week++) {
-        ['mon', 'tue', 'thu', 'fri'].forEach(day => {
-          if (!getDayCompletionStatus(week, day).isReviewed) openDays++;
-        });
-      }
-      if (!window.confirm(`Huidige periode afsluiten en de nieuwe periode starten? ${openDays ? `${openDays} trainingen zijn niet volledig afgerond. Je bevestigt dat je deze niet meer uitvoert; ze blijven onvoltooid in het archief.` : 'Alle trainingen zijn afgerond.'} Je opgeslagen sets blijven behouden.`)) return;
-      const curCycleNum = appState.currentCycle || 1;
-
-      const report = getCycleReport(appState.weeks);
-
-      // Piekgewichten uit laatste zware werkweek
-      const peakWeights = {};
-      let peakWeek = appState.totalWeeks;
-      for (let w = appState.totalWeeks; w >= 1; w--) {
-        if (!isDeloadWeek(w)) {
-          peakWeek = w;
-          break;
-        }
-      }
-      if (appState.weeks[peakWeek]) {
-        ["mon", "tue", "thu", "fri"].forEach(d => {
-          peakWeights[d] = {};
-          SPLIT_INFO[d].slots.forEach(sKey => {
-            const slot = appState.weeks[peakWeek][d] ? appState.weeks[peakWeek][d][sKey] : null;
-            if (slot) {
-              const maxW = Math.max(0, ...(slot.sets || []).slice(0, 3).map(s => s.completed && Number(s.reps) > 0 ? Number(s.weight) || 0 : 0));
-              peakWeights[d][sKey] = {
-                selectedName: slot.selectedName,
-                weight: maxW > 0 ? maxW : null
-              };
-            }
-          });
-        });
-      }
-
-      // Sla de cyclus op in het archief
-      const cycleRecord = {
-        cycleNumber: curCycleNum,
-        trainingGoal: appState.trainingGoal || 'hypertrophy',
-        title: `Mesocycle ${curCycleNum}`,
-        totalWeeks: appState.totalWeeks,
-        completedAt: new Date().toISOString(),
-        startDate: appState.cycleStartedAt || (new Date().toLocaleDateString('nl-NL')),
-        ...report,
-        weeksSnapshot: JSON.parse(JSON.stringify(appState.weeks))
-      };
-
-      if (!appState.cyclesHistory) appState.cyclesHistory = [];
-      appState.cyclesHistory.push(cycleRecord);
-
-      // Initialiseer nieuwe cyclus (standaard 7 weken)
-      appState.currentCycle = curCycleNum + 1;
-      appState.trainingGoal = appState.nextTrainingGoal || appState.trainingGoal || 'hypertrophy';
-      delete appState.nextTrainingGoal;
-      applyGoalOrdering();
-      appState.pendingCycleSchema = customSchema || null;
-      appState.totalWeeks = 7;
-      appState.currentWeek = 1;
-      appState.currentDay = "mon";
-      appState.cycleStartedAt = new Date().toLocaleDateString('nl-NL');
-      appState.weeks = {};
-
-      for (let w = 1; w <= 7; w++) {
-        appState.weeks[w] = generateEmptyWeekData(w);
-      }
-
-      // Als er een specifiek ingericht schema is vanuit de Setup Wizard
-      if (customSchema) {
-        ["mon", "tue", "thu", "fri"].forEach(d => {
-          SPLIT_INFO[d].slots.forEach(sKey => {
-            const item = customSchema[d] ? customSchema[d][sKey] : null;
-            if (item) {
-              for (let w = 1; w <= 7; w++) {
-                if (appState.weeks[w] && appState.weeks[w][d] && appState.weeks[w][d][sKey]) {
-                  appState.weeks[w][d][sKey].selectedName = item.selectedName;
-                  const range = goalRepetitionRange(appState.trainingGoal, sKey, EXERCISE_CATALOG[sKey].targetReps, isExerciseBodyweight(item.selectedName), item.selectedName, customSchema);
-                  appState.weeks[w][d][sKey].targetReps = range.minReps < 8 ? range.minReps : Math.max(range.minReps, Math.min(range.maxReps, Number(item.targetReps) || range.minReps));
-                  item.targetReps = appState.weeks[w][d][sKey].targetReps;
-                }
-              }
-              const wVal = Number(item.weight);
-              if (wVal > 0) {
-                appState.weeks[1][d][sKey].sets.forEach(s => {
-                  s.weight = wVal;
-                });
-              }
-            }
-          });
-        });
-        appState.routineLocked = true;
-      } else {
-        applyRotatedPeakSchema(peakWeights, carryForwardWeights);
-      }
-
-      saveState();
-      closeStartCycleModal();
-      closeWeekReportModal();
-      renderWeekPills();
-      switchDay("mon");
-      updateDashboard();
-
-      // Open het Historie Dashboard met confetti-viering
-      triggerCelebration();
-      openCycleHistoryModal();
-      return true;
+    async function executeStartNewMesocycle(carryForwardWeights = true, customSchema = null, programTemplate = null) {
+      if (periodStarting || !canStartNewPeriod()) return false;
+      if (!window.confirm('Huidige periode afsluiten en de nieuwe Push/Pull-periode starten? Je opgeslagen sets blijven behouden. Open trainingen blijven onvoltooid in het archief.')) return false;
+      periodStarting = true;
+      try {
+        await ensureTrainingSaved();
+        const program = programTemplate || nextCycleProposal?.programTemplate;
+        const response = await jsonApi('/api/cycles', 'POST', { close_current_period: true, cycleId: appState.cycleId,
+          training_goal: appState.nextTrainingGoal || appState.trainingGoal || 'hypertrophy',
+          templateKey: program.key, dayVariants: proposalDayVariants(program),
+          programVersions: Object.fromEntries(Object.entries(program.days || {}).map(([day, item]) => [day, item.version || null])),
+          schema: customSchema || nextCycleProposal.schema });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(Object.values(payload.errors || {}).flat().join(' ') || 'Periode kon niet worden gestart.');
+        await reloadTrainingState();
+        nextCycleProposal = null;
+        periodDrafts.clear();
+        closeStartCycleModal();
+        closeSetupRoutineModal();
+        showToast('Nieuwe Push/Pull-periode gestart. Je vorige resultaten zijn bewaard.', 'success');
+        return true;
+      } catch (error) { showToast(error.message, 'error'); return false; }
+      finally { periodStarting = false; }
     }
 
     function openCycleHistoryModal() {
@@ -5633,7 +5495,7 @@
             if (!Array.isArray(slot?.sets)) return;
             const name = slot.selectedName || EXERCISE_CATALOG[key]?.defaultName || key;
             names.add(name);
-            unknown += slot.sets.slice(0, isDeloadWeek(week) ? 2 : 3).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(name) || Number(set.weight) > 0) && !['easy', 'good', 'max'].includes(set.exertion)).length;
+            unknown += slot.sets.slice(0, getPlannedSetCount(slot, week)).filter(set => set.completed && Number(set.reps) > 0 && (isExerciseBodyweight(name) || Number(set.weight) > 0) && !['easy', 'good', 'max'].includes(set.exertion)).length;
           });
           if (unknown) attention.push({ week, day, count: unknown });
           return { day, status: status.isSkipped ? 'Overgeslagen' : status.isFullyCompleted ? 'Voltooid' : status.hasStarted ? 'Bezig' : 'Open' };
@@ -5697,7 +5559,7 @@
         }).join('') : '<p class="text-xs text-slate-400">Nog geen prestaties in de opbouwweken opgeslagen.</p>'}
         <h5 class="text-sm font-bold">Nog te beoordelen</h5>
         ${data.attention.length ? data.attention.map(item => `<button onclick="openPeriodDay(${item.week}, '${item.day}')" class="block text-xs text-amber-300 underline">Week ${item.week} ${labels[item.day]}: inspanning van ${item.count} sets ontbreekt</button>`).join('') : '<p class="text-xs text-slate-400">Geen ontbrekende inspanningsbeoordelingen bij opgeslagen sets.</p>'}
-        ${canStartNewPeriod() ? `<button onclick="closeCycleHistoryModal(); startNewMesocyclePrompt();" class="rounded-xl bg-purple-950 border border-purple-500 p-3 text-xs text-purple-200">Periode afronden & volgende periode voorbereiden</button>` : '<p class="text-xs text-slate-400">In week 7 kun je de volgende periode voorbereiden.</p>'}
+        ${canStartNewPeriod() ? `<button onclick="closeCycleHistoryModal(); startNewMesocyclePrompt();" class="rounded-xl bg-purple-950 border border-purple-500 p-3 text-xs text-purple-200">Periode afronden & volgende periode voorbereiden</button>` : '<p class="text-xs text-slate-400">Aan het einde van de trainingsweken kun je de volgende periode voorbereiden.</p>'}
       </section>`;
     }
 
@@ -5779,7 +5641,7 @@
               <div class="text-3xl">🏛️</div>
               <div class="text-xs font-bold text-slate-300">Nog geen gearchiveerde periodes</div>
               <p class="text-[11px] text-slate-400 max-w-md mx-auto leading-relaxed">
-                Je traint momenteel in <strong>Mesocycle ${curCycle}</strong>. Na 6 weken opbouwende overload en de afsluitende Deload (Week 7) rond je de cyclus af. Al je trainingsdata, PR's en volumes worden dan hier permanent bewaard!
+                Je traint momenteel in <strong>Mesocycle ${curCycle}</strong>. Aan het einde van de trainingsweken beoordeel je je herstel en bereid je de volgende periode voor. Al je trainingsdata, PR's en volumes worden dan hier permanent bewaard!
               </p>
             </div>
           ` : `
@@ -5866,7 +5728,7 @@
                                   ${["mon", "tue", "thu", "fri"].map(dKey => {
                                     const day = wData[dKey];
                                     if (!day) return '';
-                                    const completedSlots = SPLIT_INFO[dKey].slots.map(sKey => {
+                                    const completedSlots = Object.keys(day).filter(sKey => /^slot_[ab]\d+$/.test(sKey)).map(sKey => {
                                       const slot = day[sKey];
                                       if (!slot) return null;
                                       const exName = slot.selectedName || (EXERCISE_CATALOG[sKey]?.defaultName || sKey);
@@ -5907,149 +5769,115 @@
       `;
     }
 
-    /* 5b. VASTE ROUTINE SETUP WIZARD & VERGRENDELING */
-    let setupWizardState = {
-      activeDay: "mon",
-      forNewCycle: false,
-      carryForwardWeights: true,
-      schema: {}
-    };
+    /* 5b. SCHEMA KIEZEN MET BEHEERDE DAGVARIANTEN */
+    let setupWizardState = { forNewCycle: false, activeDay: 'mon', schema: {}, daySlots: {}, dayTitles: {}, programTemplate: null, busy: false };
+
+    function setupOptions(key) {
+      return setupWizardState.programTemplate?.type === 'push_pull' || !setupWizardState.forNewCycle && appState.programDefinition?.type === 'push_pull'
+        ? (appState.programLibrary?.roles?.[key]?.exercises || []) : (EXERCISE_CATALOG[key]?.alternatives || []);
+    }
 
     function openSetupRoutineModal(forNewCycle = false, carryForwardWeights = true) {
-      setupWizardState.forNewCycle = forNewCycle;
-      setupWizardState.carryForwardWeights = carryForwardWeights;
-      setupWizardState.activeDay = appState.currentDay || "mon";
-      setupWizardState.schema = {};
-
-      const days = ["mon", "tue", "thu", "fri"];
-
-      // Haal piekgewichten op als we een nieuwe cyclus starten met carry-forward
-      const peakWeights = {};
-      if (forNewCycle && carryForwardWeights) {
-        let peakWeek = appState.totalWeeks;
-        for (let w = appState.totalWeeks; w >= 1; w--) {
-          if (!isDeloadWeek(w)) {
-            peakWeek = w;
-            break;
-          }
-        }
-        if (appState.weeks[peakWeek]) {
-          days.forEach(d => {
-            peakWeights[d] = {};
-            SPLIT_INFO[d].slots.forEach(sKey => {
-              const slot = appState.weeks[peakWeek][d] ? appState.weeks[peakWeek][d][sKey] : null;
-              if (slot) {
-                const maxW = Math.max(0, ...(slot.sets || []).slice(0, 3).map(s => s.completed && Number(s.reps) > 0 ? Number(s.weight) || 0 : 0));
-                peakWeights[d][sKey] = {
-                  selectedName: slot.selectedName,
-                  weight: maxW > 0 ? maxW : null
-                };
-              }
-            });
+      if (setupWizardState.busy) return;
+      if (forNewCycle) {
+        if (!nextCycleProposal?.schema) { showToast('Kies eerst een periodevoorstel.', 'info'); return; }
+        setupWizardState = { forNewCycle: true, activeDay: 'mon', schema: clonePersistedState(nextCycleProposal.schema),
+          daySlots: Object.fromEntries(nextCycleProposal.days.map(day => [day.day, day.slots.map(slot => slot.slotKey)])),
+          dayTitles: Object.fromEntries(nextCycleProposal.days.map(day => [day.day, day.title])),
+          programTemplate: clonePersistedState(nextCycleProposal.programTemplate), busy: false };
+      } else {
+        const schema = {};
+        ['mon','tue','thu','fri'].forEach(day => {
+          schema[day] = {};
+          SPLIT_INFO[day].slots.forEach(key => {
+            const slot = getTrainingDay(appState.currentWeek, day)[key];
+            const last = getExerciseHistory(slot.selectedName).slice(-1)[0];
+            schema[day][key] = { selectedName: slot.selectedName, weight: slot.sets.find(set => Number(set.weight) > 0)?.weight || null,
+              targetReps: slot.targetReps, ...(slot.prescription || {}),
+              sets: slot.prescription?.sets || 3, minReps: slot.prescription?.minReps || slot.targetReps || 8,
+              maxReps: slot.prescription?.maxReps || slot.targetReps || 12, rest: slot.prescription?.rest || EXERCISE_CATALOG[key].restTime,
+              weightLabel: getExerciseVolumeRule(slot.selectedName).weightLabel, lastPerformed: last || null };
           });
-        }
-      }
-
-      days.forEach(d => {
-        setupWizardState.schema[d] = {};
-        SPLIT_INFO[d].slots.forEach(sKey => {
-          const catalogItem = EXERCISE_CATALOG[sKey];
-          let chosenName = catalogItem.defaultName;
-          let chosenWeight = "";
-
-          if (forNewCycle) {
-            if (carryForwardWeights && peakWeights[d] && peakWeights[d][sKey]) {
-              if (peakWeights[d][sKey].selectedName) {
-                chosenName = peakWeights[d][sKey].selectedName;
-              }
-              if (peakWeights[d][sKey].weight) {
-                chosenWeight = peakWeights[d][sKey].weight;
-              }
-            } else {
-              // Geen carry-forward: gebruik fysiologische benchmark
-              const bench = getStrengthBenchmark(chosenName);
-              chosenWeight = bench.suggestedStart || "";
-            }
-          } else {
-            // Huidige cyclus routine inrichten
-            const curSlot = (appState.weeks[appState.currentWeek] && appState.weeks[appState.currentWeek][d])
-              ? appState.weeks[appState.currentWeek][d][sKey] : null;
-            if (curSlot) {
-              chosenName = curSlot.selectedName || catalogItem.defaultName;
-              const setWithW = (curSlot.sets || []).find(s => Number(s.weight) > 0);
-              if (setWithW) {
-                chosenWeight = Number(setWithW.weight);
-              } else {
-                const bench = getStrengthBenchmark(chosenName);
-                chosenWeight = bench.suggestedStart || "";
-              }
-            }
-          }
-
-          setupWizardState.schema[d][sKey] = {
-            selectedName: chosenName,
-            weight: chosenWeight
-          };
         });
-      });
-
+        setupWizardState = { forNewCycle: false, activeDay: appState.currentDay || 'mon', schema,
+          daySlots: Object.fromEntries(Object.entries(SPLIT_INFO).map(([day, item]) => [day, [...item.slots]])),
+          dayTitles: Object.fromEntries(Object.entries(SPLIT_INFO).map(([day, item]) => [day, item.title])),
+          programTemplate: appState.programDefinition, busy: false };
+      }
       renderSetupRoutineModal();
-      const modal = document.getElementById("setupRoutineModal");
-      if (modal) modal.classList.remove("hidden");
+      document.getElementById('setupRoutineModal')?.classList.remove('hidden');
+    }
+
+    function rememberSetupProposal() {
+      if (!setupWizardState.forNewCycle || !nextCycleProposal) return;
+      nextCycleProposal.schema = clonePersistedState(setupWizardState.schema);
+      nextCycleProposal.programTemplate = clonePersistedState(setupWizardState.programTemplate);
+      nextCycleProposal.days = ['mon','tue','thu','fri'].map(day => ({ day, title: setupWizardState.dayTitles[day],
+        slots: Object.entries(setupWizardState.schema[day]).map(([key, slot]) => ({ slotKey: key, ...slot })) }));
+      periodDrafts.set(nextCycleProposal.programTemplate.key, clonePersistedState(nextCycleProposal));
     }
 
     function closeSetupRoutineModal() {
-      const modal = document.getElementById("setupRoutineModal");
-      if (modal) modal.classList.add("hidden");
+      if (setupWizardState.busy) return;
+      rememberSetupProposal();
+      document.getElementById('setupRoutineModal')?.classList.add('hidden');
     }
 
-    function setSetupWizardDay(dayKey) {
-      setupWizardState.activeDay = dayKey;
+    function setSetupWizardDay(day) { setupWizardState.activeDay = day; renderSetupRoutineModal(); }
+
+    async function refreshSetupProposal(dayVariants, schema, rollback = null) {
+      setupWizardState.busy = true;
       renderSetupRoutineModal();
-    }
-
-    function onSetupSlotChange(dayKey, slotKey, newName) {
-      if (!setupWizardState.schema[dayKey]) setupWizardState.schema[dayKey] = {};
-      if (!setupWizardState.schema[dayKey][slotKey]) setupWizardState.schema[dayKey][slotKey] = {};
-      
-      setupWizardState.schema[dayKey][slotKey].selectedName = newName;
-      
-      // Update het voorgestelde startgewicht naar de benchmark van de nieuwe oefening
-      const bench = getStrengthBenchmark(newName);
-      setupWizardState.schema[dayKey][slotKey].weight = bench.suggestedStart || "";
-      
-      renderSetupRoutineModal();
-    }
-
-    function onSetupWeightChange(dayKey, slotKey, newWeight) {
-      if (!setupWizardState.schema[dayKey]) setupWizardState.schema[dayKey] = {};
-      if (!setupWizardState.schema[dayKey][slotKey]) setupWizardState.schema[dayKey][slotKey] = {};
-      setupWizardState.schema[dayKey][slotKey].weight = newWeight;
-    }
-
-    function adjustSetupWeight(dayKey, slotKey, delta) {
-      const cur = Number(setupWizardState.schema[dayKey][slotKey].weight) || 0;
-      const next = Math.max(0, Math.round((cur + delta) * 10) / 10);
-      setupWizardState.schema[dayKey][slotKey].weight = next > 0 ? next : "";
-      renderSetupRoutineModal();
-    }
-
-    function handleRoutineLockButtonClick() {
-      if (appState.routineLocked) {
-        appState.routineLocked = false;
-        window.showDetailedSetsOnMainScreen = false;
-        saveState();
-        renderExercises();
-        updateDashboard();
-        showToast("🔓 Schema ontgrendeld (slotje open & rood). Oefeningen en schema zijn nu zichtbaar op het hoofdscherm om aan te passen.", "info");
-      } else {
-        appState.routineLocked = true;
-        window.showDetailedSetsOnMainScreen = false;
-        saveState();
-        renderExercises();
-        updateDashboard();
-        showToast("🔒 Schema vastgezet (slotje dicht & groen)! Het schema is nu uit het hoofdscherm gehaald.", "success");
+      try {
+        const payload = await fetchPeriodProposal(setupWizardState.programTemplate.key, dayVariants, schema);
+        nextCycleProposal = payload;
+        setupWizardState.schema = clonePersistedState(payload.schema);
+        setupWizardState.programTemplate = clonePersistedState(payload.programTemplate);
+        setupWizardState.daySlots = Object.fromEntries(payload.days.map(day => [day.day, day.slots.map(slot => slot.slotKey)]));
+        setupWizardState.dayTitles = Object.fromEntries(payload.days.map(day => [day.day, day.title]));
+      } catch (error) {
+        if (rollback) setupWizardState.schema = rollback;
+        showToast(error.message, 'error');
       }
+      finally { setupWizardState.busy = false; renderSetupRoutineModal(); }
+    }
+
+    async function onSetupVariantChange(day, variantKey) {
+      const dayVariants = proposalDayVariants(setupWizardState.programTemplate);
+      dayVariants[day] = variantKey;
+      const schema = clonePersistedState(setupWizardState.schema);
+      delete schema[day];
+      await refreshSetupProposal(dayVariants, schema);
+    }
+
+    async function onSetupSlotChange(day, key, name) {
+      if (setupWizardState.schema[day][key].selectedName === name) return;
+      const rollback = clonePersistedState(setupWizardState.schema);
+      const prior = clonePersistedState(setupWizardState.schema[day][key]);
+      const item = setupWizardState.schema[day][key];
+      item.selectedName = name;
+      item.nameEdited = true;
+      item.weight = null;
+      item.weightEdited = false;
+      if (setupWizardState.forNewCycle) {
+        await refreshSetupProposal(proposalDayVariants(setupWizardState.programTemplate), setupWizardState.schema, rollback);
+      } else {
+        item.weightReason = 'Andere oefening gekozen. Controleer de historie en regel het startgewicht in.';
+        if (prior.selectedName === name) setupWizardState.schema[day][key] = prior;
+        renderSetupRoutineModal();
+      }
+    }
+
+    function onSetupWeightChange(day, key, value) {
+      const item = setupWizardState.schema[day][key];
+      item.weight = value === '' ? null : Math.max(0, Number(value) || 0);
+      item.weightEdited = true;
+      item.weightReason = 'Jouw eigen startgewicht.';
+    }
+
+    function adjustSetupWeight(day, key, delta) {
+      onSetupWeightChange(day, key, Math.max(0, Number(setupWizardState.schema[day][key].weight || 0) + delta));
+      renderSetupRoutineModal();
     }
 
     function toggleDetailedSetsView() {
@@ -6057,289 +5885,78 @@
       renderExercises();
     }
 
-    function toggleRoutineLock() {
-      appState.routineLocked = !appState.routineLocked;
-      saveState();
-      renderExercises();
-      updateDashboard();
-      if (document.getElementById("setupRoutineModal") && !document.getElementById("setupRoutineModal").classList.contains("hidden")) {
-        renderSetupRoutineModal();
-      }
-      if (appState.routineLocked) {
-        showToast("🔒 Schema vastgezet (slotje dicht & groen)!", "success");
-      } else {
-        showToast("🔓 Schema ontgrendeld (slotje open & rood)!", "info");
-      }
-    }
-
-    function saveAndLockRoutine(forNewCycle = false) {
+    async function saveAndLockRoutine(forNewCycle = false) {
+      if (setupWizardState.busy || periodStarting) return;
+      rememberSetupProposal();
       if (forNewCycle || setupWizardState.forNewCycle) {
-        if (executeStartNewMesocycle(true, setupWizardState.schema)) closeSetupRoutineModal();
+        await executeStartNewMesocycle(true, setupWizardState.schema, setupWizardState.programTemplate);
         return;
       }
-
-      // Pas toe op de huidige cyclus
-      const days = ["mon", "tue", "thu", "fri"];
-      for (let w = 1; w <= appState.totalWeeks; w++) {
-        if (!appState.weeks[w]) continue;
-        days.forEach(d => {
-          if (!appState.weeks[w][d]) return;
-          SPLIT_INFO[d].slots.forEach(sKey => {
-            if (setupWizardState.schema[d] && setupWizardState.schema[d][sKey]) {
-              const item = setupWizardState.schema[d][sKey];
-              if (appState.weeks[w][d][sKey]) {
-                const targetSlot = appState.weeks[w][d][sKey];
-                if (targetSlot.selectedName !== item.selectedName && targetSlot.sets.some(set => set.completed)) return;
-                if (targetSlot.selectedName !== item.selectedName) targetSlot.progressionPlan = null;
-                targetSlot.selectedName = item.selectedName;
-                
-                // Vul startgewicht in Week 1 ALLEEN in op sets die nog NIET voltooid zijn!
-                // Reeds gelogde of afgevinkte sets van gisteren blijven 100% onaangeroerd!
-                if (w === 1 && item.weight && Number(item.weight) > 0) {
-                  targetSlot.sets.forEach(s => {
-                    if (!s.completed && (!s.reps || s.reps === "")) {
-                      s.weight = Number(item.weight);
-                    }
-                  });
+      try {
+        await ensureTrainingSaved();
+        for (const [day, items] of Object.entries(setupWizardState.schema)) {
+          for (const [key, item] of Object.entries(items)) {
+            for (let week = appState.currentWeek; week <= appState.totalWeeks; week++) {
+              const target = appState.weeks[week]?.[day]?.[key];
+              if (!target || target.sets.some(set => set.completed || set.inputFields?.weight || set.inputFields?.reps)) continue;
+              if (target.selectedName !== item.selectedName) {
+                const response = await jsonApi('/api/slots/' + target.id, 'PATCH', { context: 'setup', selectedName: item.selectedName });
+                const result = await response.json();
+                if (!response.ok) throw new Error(Object.values(result.errors || {}).flat().join(' ') || 'Oefening kon niet worden aangepast.');
+              }
+              if (item.weightEdited) {
+                for (const set of target.sets) {
+                  const response = await jsonApi('/api/sets/' + set.id, 'PATCH', { weight: item.weight ?? '', inputFields: {weight: true}, context: 'live' });
+                  if (!response.ok) throw new Error('Startgewicht kon niet worden opgeslagen.');
                 }
               }
+              break;
             }
-          });
-        });
-      }
-
-      appState.routineLocked = true;
-      saveState();
-      closeSetupRoutineModal();
-      renderExercises();
-      updateDashboard();
-
-      showToast("🔒 Je trainingsroutine is succesvol vastgezet en vergrendeld voor de hele cyclus!", "success");
+          }
+        }
+        await reloadTrainingState();
+        closeSetupRoutineModal();
+        showToast('Schema opgeslagen. Uitgevoerde sets en eigen invoer zijn behouden.', 'success');
+      } catch (error) { showToast(error.message, 'error'); }
     }
 
     function renderSetupRoutineModal() {
-      const content = document.getElementById("setupRoutineContent") || document.getElementById("setupRoutineModalContent");
+      const content = document.getElementById('setupRoutineContent') || document.getElementById('setupRoutineModalContent');
       if (!content) return;
-
-      const isNewCycle = setupWizardState.forNewCycle;
-      const nextCycleNum = (Number(appState.currentCycle) || 1) + 1;
-      const activeDay = setupWizardState.activeDay;
-
-      const dayNames = {
-        mon: { short: "MA", title: "Borst & Rug (Zwaar)", icon: "🛡️" },
-        tue: { short: "DI", title: "Schouders & Armen (Zwaar)", icon: "⚔️" },
-        thu: { short: "DO", title: "Borst & Rug (Hypertrofie)", icon: "🎯" },
-        fri: { short: "VR", title: "Schouders & Armen (Hypertrofie)", icon: "⚡" }
-      };
-
-      const dayTabsHtml = ["mon", "tue", "thu", "fri"].map(d => {
-        const isActive = d === activeDay;
-        const info = dayNames[d];
-        return `
-          <button onclick="setSetupWizardDay('${d}')" class="flex-1 py-2.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border ${
-            isActive 
-              ? 'bg-blue-600/25 text-blue-300 border-blue-500/50 shadow-sm' 
-              : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:bg-slate-800/60'
-          }">
-            <span>${info.icon}</span>
-            <span class="font-mono">${info.short}:</span>
-            <span class="truncate hidden sm:inline">${info.title}</span>
-          </button>
-        `;
-      }).join("");
-
-      // Render slots van actieve dag
-      const currentDaySlots = SPLIT_INFO[activeDay].slots;
-      const slotsHtml = currentDaySlots.map((slotKey, idx) => {
-        const catalogItem = EXERCISE_CATALOG[slotKey];
-        const slotState = (setupWizardState.schema[activeDay] && setupWizardState.schema[activeDay][slotKey])
-          ? setupWizardState.schema[activeDay][slotKey]
-          : { selectedName: catalogItem.defaultName, weight: "" };
-
-        const selectedName = slotState.selectedName || catalogItem.defaultName;
-        const bench = getStrengthBenchmark(selectedName);
-        const isBw = isExerciseBodyweight(selectedName);
-        const weightVal = slotState.weight;
-
-        const optionsHtml = catalogItem.alternatives.map(alt => {
-          const isCompatible = isExerciseCompatibleWithEquipment(alt, appState.userProfile ? appState.userProfile.equipment : null);
-          const isSelected = alt === selectedName;
-          return `<option value="${alt}" ${isSelected ? 'selected' : ''}>${alt}${isCompatible ? '' : ' (Let op: materiaal)'}</option>`;
-        }).join("");
-
-        const curWeekSlot = (appState.weeks[appState.currentWeek] && appState.weeks[appState.currentWeek][activeDay])
-          ? appState.weeks[appState.currentWeek][activeDay][slotKey]
-          : null;
-        const completedSetsCount = (curWeekSlot?.sets || []).filter(s => s.completed).length;
-
-        return `
-          <div class="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="w-6 h-6 rounded-md bg-slate-900 font-mono text-[11px] font-bold text-slate-400 flex items-center justify-center border border-slate-800">
-                  0${idx + 1}
-                </span>
-                <span class="text-xs font-bold text-slate-300 font-mono uppercase">
-                  ${catalogItem.focus || 'Oefening'}
-                </span>
-                ${isBw ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 font-mono">Bodyweight</span>' : ''}
-                ${completedSetsCount > 0 ? `<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono flex items-center gap-1"><span>✅</span><span>${completedSetsCount} set(s) voltooid (blijft bewaard)</span></span>` : ''}
-              </div>
-
-              <div class="flex items-center gap-2 text-[11px] font-mono text-slate-400">
-                <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
-                  Doel: 3 × ${catalogItem.targetReps || '6-8'} reps
-                </span>
-                <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-blue-400">
-                  ⏱️ ${Math.floor(catalogItem.restTime/60)}:${String(catalogItem.restTime%60).padStart(2,'0')}m
-                </span>
-              </div>
-            </div>
-
-            <!-- Oefening Dropdown -->
-            <div class="space-y-1">
-              <label class="text-[11px] text-slate-400 block">Kies vaste oefening voor dit slot:</label>
-              <select onchange="onSetupSlotChange('${activeDay}', '${slotKey}', this.value)" class="w-full bg-slate-900 text-xs sm:text-sm font-bold text-slate-100 py-2 px-3 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-none transition cursor-pointer">
-                ${optionsHtml}
-              </select>
-            </div>
-
-            <!-- Fysiologische Benchmark & Doelbox -->
-            <div class="p-2.5 rounded-xl bg-slate-900/90 border border-amber-500/20 space-y-1.5">
-              <div class="flex items-center justify-between text-[11px]">
-                <span class="text-amber-300 font-bold flex items-center gap-1">
-                  <span>📊</span> Schemareferenties bij jouw profiel:
-                </span>
-                <span class="font-mono text-slate-400 text-[10px]">
-                  Norm: <b class="text-slate-200">${bench.intermediate} ${bench.unit}</b>
-                </span>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2 text-center text-xs font-mono py-1">
-                <div class="p-1.5 rounded-lg bg-slate-950/80 border border-slate-800">
-                  <div class="text-[10px] text-slate-500">Aanbevolen Start (Wk 1)</div>
-                  <div class="text-sm font-black text-blue-400 mt-0.5">${bench.suggestedStart} ${bench.unit}</div>
-                </div>
-                <div class="p-1.5 rounded-lg bg-slate-950/80 border border-slate-800">
-                  <div class="text-[10px] text-slate-500">Cyclus Piekdoel (Wk 6)</div>
-                  <div class="text-sm font-black text-amber-400 mt-0.5">${bench.cycleGoal} ${bench.unit}</div>
-                </div>
-              </div>
-
-              <div class="text-[10px] text-slate-400 leading-tight">
-                💡 <span class="text-slate-300">${bench.explanation}</span>
-              </div>
-            </div>
-
-            <!-- Startgewicht Invoer & Fine-tuning -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
-              <div class="text-[11px] text-slate-400">
-                <span>Vastgesteld Startgewicht (Week 1):</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <button type="button" onclick="adjustSetupWeight('${activeDay}', '${slotKey}', -2.0)" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-mono font-bold cursor-pointer transition">-2</button>
-                <button type="button" onclick="adjustSetupWeight('${activeDay}', '${slotKey}', -1.0)" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-mono font-bold cursor-pointer transition">-1</button>
-                <div class="relative w-24">
-                  <input type="number" step="0.5" min="0" value="${weightVal}" placeholder="${bench.suggestedStart}" oninput="onSetupWeightChange('${activeDay}', '${slotKey}', this.value)" class="w-full bg-slate-900 text-center text-xs font-mono font-bold text-emerald-400 py-1.5 px-2 rounded-lg border border-slate-700 focus:border-emerald-500 focus:outline-none">
-                  <span class="absolute right-2 top-1.5 text-[10px] font-mono text-slate-500 pointer-events-none">${bench.unit}</span>
-                </div>
-                <button type="button" onclick="adjustSetupWeight('${activeDay}', '${slotKey}', 1.0)" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-mono font-bold cursor-pointer transition">+1</button>
-                <button type="button" onclick="adjustSetupWeight('${activeDay}', '${slotKey}', 2.0)" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-mono font-bold cursor-pointer transition">+2</button>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      content.innerHTML = `
-        <!-- HEADER & INTRO -->
-        <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="text-base sm:text-lg font-black text-slate-100 font-mono">
-                  ${isNewCycle ? `🚀 Mesocycle ${nextCycleNum} Inrichten` : '🎯 Vaste Thuisgym Routine Inrichten'}
-                </span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                  appState.routineLocked 
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
-                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                }">
-                  ${appState.routineLocked ? '🔒 Vergrendeld' : '🔓 Bewerkbaar'}
-                </span>
-              </div>
-              <p class="text-xs text-slate-400 mt-0.5">
-                ${isNewCycle 
-                  ? 'Stel je oefeningen en startgewichten vast vóórdat we de nieuwe periode van 7 weken starten.' 
-                  : 'Zet je oefeningen per trainingsdag vast voor een zuivere progressive overload zonder ongewenste schommelingen.'}
-              </p>
-            </div>
-
-            <button onclick="openBenchmarkModal()" class="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer self-start sm:self-auto">
-              <span>📊</span>
-              <span>Startgewichten & onderbouwing</span>
-            </button>
-          </div>
-
-          <!-- PROFIEL & THUISGYM CONTEXT -->
-          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 flex items-start gap-2.5">
-            <span class="text-base flex-shrink-0 mt-0.5">👤</span>
-            <div class="space-y-0.5 leading-relaxed">
-              <div class="font-bold text-slate-200">
-                Thuisgym Profiel: <span class="text-blue-400">${profileSummaryHtml()}</span>
-              </div>
-              <div class="text-[11px] text-slate-400">
-                ${equipmentSummaryHtml()} <button onclick="openSettingsModal()" class="text-blue-300 underline">Profiel aanpassen</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- DAGEN SELECTIE TABS -->
-        <div class="space-y-1.5">
-          <div class="text-[11px] font-mono uppercase text-slate-400 px-1 font-semibold flex items-center justify-between">
-            <span>Kies trainingsdag om in te richten:</span>
-            <span class="text-blue-400 font-bold">${dayNames[activeDay].title}</span>
-          </div>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            ${dayTabsHtml}
-          </div>
-        </div>
-
-        <!-- OEFENINGEN VAN DE DAG -->
-        <div class="space-y-3">
-          ${slotsHtml}
-        </div>
-
-        <!-- FOOTER ACTIES -->
-        <div class="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2.5">
-          <div class="flex items-center gap-2 w-full sm:w-auto">
-            <button onclick="closeSetupRoutineModal()" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-mono transition cursor-pointer">
-              Annuleren
-            </button>
-            ${!isNewCycle ? `
-              <button onclick="toggleRoutineLock()" class="flex-1 sm:flex-none px-3 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-mono transition cursor-pointer flex items-center justify-center gap-1.5">
-                <span>${appState.routineLocked ? '🔓' : '🔒'}</span>
-                <span>${appState.routineLocked ? 'Ontgrendelen' : 'Vergrendelen'}</span>
-              </button>
-            ` : ''}
-          </div>
-
-          <div class="w-full sm:w-auto">
-            ${isNewCycle ? `
-              <button onclick="saveAndLockRoutine(true)" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition shadow-lg active:scale-95 cursor-pointer">
-                <span>🚀</span>
-                <span>Periode afsluiten & periode ${nextCycleNum} starten</span>
-              </button>
-            ` : `
-              <button onclick="saveAndLockRoutine(false)" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg active:scale-95 cursor-pointer">
-                <span>🔒</span>
-                <span>Routine Opslaan & Vastzetten</span>
-              </button>
-            `}
-          </div>
-        </div>
-      `;
+      const state = setupWizardState, day = state.activeDay, isNew = state.forNewCycle;
+      const title = document.getElementById('setupRoutineModalTitle'), subtitle = document.getElementById('setupRoutineModalSubtitle');
+      if (title) title.textContent = isNew ? 'Nieuwe Push/Pull-periode inrichten' : 'Huidig schema · periode ' + appState.currentCycle;
+      if (subtitle) subtitle.textContent = isNew ? 'Bekijk dagvarianten A–F en pas het voorstel aan voordat je start' : 'Je bekijkt de oefeningen van je lopende periode';
+      const control = 'w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-slate-100';
+      const disabled = state.busy ? ' disabled' : '';
+      const variants = (appState.programLibrary?.variants || []).filter(variant => variant.family === (['mon','thu'].includes(day) ? 'push' : 'pull'));
+      const variantSelector = isNew && state.programTemplate?.type === 'push_pull' ? '<label class="block text-sm font-bold">Dagvariant<select onchange="onSetupVariantChange(\'' + day + '\',this.value)" class="' + control + '"' + disabled + '>' +
+        variants.map(variant => '<option value="' + escapeReportText(variant.key) + '"' + (state.programTemplate.days[day].variantKey === variant.key ? ' selected' : '') + '>' + escapeReportText(variant.name) + '</option>').join('') + '</select></label>' : '';
+      const slots = (state.daySlots[day] || []).map((key, index) => {
+        const item = state.schema[day][key], name = item.selectedName, bodyweight = isExerciseBodyweight(name);
+        const unit = item.weightLabel || getExerciseVolumeRule(name).weightLabel;
+        const options = setupOptions(key).map(alt => '<option value="' + escapeReportText(alt) + '"' +
+          (alt === name ? ' selected' : '') + (!isExerciseCompatibleWithEquipment(alt, appState.userProfile?.equipment) ? ' disabled' : '') + '>' + escapeReportText(alt) +
+          (!isExerciseCompatibleWithEquipment(alt, appState.userProfile?.equipment) ? ' · materiaal ontbreekt' : '') + '</option>').join('');
+        return '<div class="space-y-3 rounded-2xl border border-slate-800 bg-slate-950 p-4"><p class="text-xs text-slate-400">' + (index + 1) + ' · ' +
+          item.sets + ' × ' + item.minReps + '–' + item.maxReps + ' reps · ' + item.rest + 's rust</p>' +
+          '<label class="block text-xs text-slate-400">Oefening<select aria-label="Oefening ' + (index + 1) + '" onchange="onSetupSlotChange(\'' + day + '\',\'' + key + '\',this.value)" class="' + control + '"' + disabled + '>' + options + '</select></label>' +
+          '<button type="button" onclick="openSetupGuide(\'' + day + '\',\'' + key + '\')"' + disabled + ' class="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-sm font-bold text-blue-300">▶ Video & uitleg</button>' +
+          proposalHistoryHtml(item.lastPerformed, unit) +
+          (bodyweight ? '<p class="text-sm text-emerald-300">Lichaamsgewicht</p>' :
+            '<label class="block text-xs text-slate-400">Startgewicht · ' + escapeReportText(unit) + '<input aria-label="Startgewicht ' + (index + 1) + '" type="number" min="0" step="0.5" value="' + escapeReportText(item.weight ?? '') + '" placeholder="Inregelen" onchange="onSetupWeightChange(\'' + day + '\',\'' + key + '\',this.value)" class="' + control + '"' + disabled + '></label>') +
+          '<p class="text-xs text-slate-400">' + escapeReportText(item.weightReason || 'Bevestig het gewicht tijdens je eerste werksets.') + '</p></div>';
+      }).join('');
+      content.innerHTML = '<div class="space-y-4"><h2 class="text-lg font-black">' + (isNew ? 'Nieuwe Push/Pull-periode inrichten' : 'Huidig schema aanpassen') + '</h2>' +
+        '<p class="text-xs text-slate-400">' + (isNew ? 'Kies per dag een variant. Pas oefeningen aan waar nodig. Je startgewicht volgt je eigen historie.' : 'Wijzigingen gelden alleen voor nog niet uitgevoerde trainingen vanaf deze week. Opgeslagen sets blijven behouden. De Push/Pull-varianten voor een volgende periode vind je via Menu → Nieuwe periode · Push/Pull-varianten, daarna Schema zelf kiezen.') + '</p>' +
+        '<p class="text-xs text-slate-400">' + equipmentSummaryHtml() + ' <button onclick="openSettingsModal()" class="text-blue-300 underline">Profiel aanpassen</button></p>' +
+        '<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">' + ['mon','tue','thu','fri'].map(key => '<button onclick="setSetupWizardDay(\'' + key + '\')"' + disabled + ' class="rounded-xl border p-2 text-xs ' +
+          (key === day ? 'border-blue-500 bg-blue-950 text-blue-200' : 'border-slate-700 bg-slate-900 text-slate-300') + '">' + escapeReportText(state.dayTitles[key]) + '</button>').join('') + '</div>' +
+        variantSelector + (state.busy ? '<p role="status" class="text-sm text-blue-300">Voorstel en startgewichten bijwerken…</p>' : '') +
+        '<div class="space-y-3">' + slots + '</div>' +
+        '<div class="flex flex-wrap gap-2 border-t border-slate-800 pt-4"><button onclick="closeSetupRoutineModal()' + (isNew ? ';startNewMesocyclePrompt()' : '') + '"' + disabled + ' class="rounded-xl bg-slate-800 px-4 py-3 text-sm">' +
+          (isNew ? 'Terug naar voorstellen' : 'Annuleren') + '</button><button onclick="saveAndLockRoutine(' + isNew + ')" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold"' +
+          (state.busy || periodStarting ? ' disabled' : '') + '>' + (isNew ? 'Periode afsluiten & nieuwe periode starten' : 'Schema opslaan') + '</button></div></div>';
     }
 
     /* 5c. FYSIOLOGISCHE BENCHMARKS MODAL */
@@ -6406,7 +6023,7 @@
           Object.entries(trainingDayWithCore(week[day] || {})).forEach(([key, slot]) => {
             if (!Array.isArray(slot?.sets) || (slot.selectedName || EXERCISE_CATALOG[key]?.defaultName || '').trim().toLowerCase() !== name.trim().toLowerCase()) return;
             const isBW = isExerciseBodyweight(name);
-            const sets = slot.sets.slice(0, isDeloadWeek(weekNum) ? 2 : 3).map((set, index) => ({ ...set, position: index + 1 }))
+            const sets = slot.sets.slice(0, getPlannedSetCount(slot, weekNum)).map((set, index) => ({ ...set, position: index + 1 }))
               .filter(set => set.completed && Number(set.reps) > 0 && (isBW || Number(set.weight) > 0));
             if (sets.length) entries.push({ cycle: source.cycle, week: weekNum, day, dayIndex, key, sets, perSide: !!coreExerciseByName(name)?.perSide, isBodyweight: isBW, isDeload: isDeloadWeek(weekNum) });
           });
@@ -6448,7 +6065,7 @@
       const reason = slot.progressionPlan ? 'Doel vastgelegd bij de start. Je eigen setinvoer blijft leidend.'
         : advice.adviceText || (advice.adviceType === 'same_week' ? 'Referentie uit dezelfde week. De weekprestaties bepalen de volgende verhoging.' : 'Vooraf ingevuld startdoel; kies tijdens de training je passende startgewicht.');
       return `<div class="text-xs space-y-2 mt-3 border-t border-slate-800 pt-3">
-        <p class="text-blue-300">Gepland: ${isDeloadWeek(weekNum) ? 2 : 3} × ${isBW ? 'BW' : advice.advisedWeight > 0 ? advice.advisedWeight + ' kg' : 'startgewicht kiezen'} × ${advice.advisedReps || advice.targetReps} reps</p>
+        <p class="text-blue-300">Gepland: ${getTrainingSetCount(weekNum, dayKey, slotKey)} × ${isBW ? 'BW' : advice.advisedWeight > 0 ? advice.advisedWeight + ' kg' : 'startgewicht kiezen'} × ${advice.advisedReps || advice.targetReps} reps</p>
         <p class="text-slate-400">${escapeReportText(reason)}</p>
         <p class="text-slate-300">${previous ? `Laatste uitvoering · cyclus ${previous.cycle}, week ${previous.week}, ${escapeReportText(SPLIT_INFO[previous.day]?.title.split(':')[0] || previous.day)}: ${formatHistorySets(previous)}` : 'Nog geen eerdere uitvoering opgeslagen.'}</p>
         ${exerciseHistoryHtml(name, { week: weekNum, day: dayKey })}
@@ -6483,6 +6100,10 @@
       const next = getNextProgression(week, weekNum + 1);
       if (weekNum >= Number(appState.totalWeeks || 7)) {
         return { title: 'Nieuwe cyclus voorbereiden', reason: 'Dit is de laatste week van deze cyclus. Het nieuwe schema bepaalt je volgende startdoel.', remaining, next: null, provisional: true };
+      }
+      const serverNext = serverWeekReports.get(weekNum)?.exercises?.find(exercise => exercise.name === name)?.next;
+      if (appState.programDefinition?.type === 'push_pull' && serverNext) {
+        return { title: serverNext.status, reason: serverNext.reason, remaining, next: serverNext, provisional: remaining > 0 };
       }
       if (!remaining) return { title: next.status, reason: next.reason, remaining, next, provisional: false };
       if (week.completedSets && isDeloadWeek(weekNum + 1)) return { title: 'Herstelweek gepland', reason: next.reason, remaining, next, provisional: true };
@@ -6639,8 +6260,16 @@
       return [...(SPLIT_INFO[day]?.slots || []), ...Object.keys(getTrainingDay(week, day)).filter(isCoreSlot)];
     }
 
+    function getPlannedSetCount(slot, week) {
+      const count = Number(slot?.prescription?.sets || 3);
+      return isDeloadWeek(week) ? Math.min(2, count) : count;
+    }
+
     function getTrainingSetCount(week, day, key) {
-      return isCoreSlot(key) ? (getTrainingDay(week, day)[key]?.sets.length || 2) : isDeloadWeek(week) ? 2 : 3;
+      const slot = getTrainingDay(week, day)[key];
+      if (isCoreSlot(key)) return slot?.sets.length || 2;
+      const count = Number(slot?.prescription?.sets || 3);
+      return isDeloadWeek(week) ? Math.min(2, count) : count;
     }
 
     function coreInvitationHtml(week, day) {
@@ -6836,11 +6465,11 @@
     function trainingEvidenceHtml() {
       return `<details class="rounded-xl border border-slate-700 bg-slate-950/60 p-3 text-xs space-y-3"><summary class="cursor-pointer font-bold text-blue-300">ⓘ Hoe en waarom? Onderbouwing & bronnen</summary>
         <p><strong class="text-slate-100">Onderzoek · trainen en opbouwen.</strong> Regelmatig trainen en afstemmen op je doel zijn belangrijker dan een ingewikkeld schema. Altijd tot spierfalen trainen is niet nodig. <a class="text-blue-300 underline" href="https://acsm.org/resistance-training-guidelines-update-2026/" target="_blank" rel="noopener noreferrer">ACSM-richtlijn (2026)</a>.</p>
-        <p><strong class="text-slate-100">Appregels · progressive overload.</strong> Eerst reps opbouwen binnen het repbereik van je periodedoel, daarna een ingestelde gewichtsstap. Bij spiergroei maximaal 2 reps erbij; bij krachtaccent 4–6 reps en maximaal 1 rep erbij. Onbeoordeelde sets blokkeren opbouw. Eén maximale set vraagt bevestiging: twee opeenvolgende opbouwweken met alle doelen gehaald, maximaal één maximale set per week, geen ontbrekende beoordelingen en het huidige gewicht en repdoel al eerder gehaald. Verlagen vraagt gemiste doelen met maximale inspanning in twee volledige trainingen of twee opeenvolgende volledige opbouwweken. Dit zijn conservatieve appregels. Deze exacte combinatie is niet als persoonlijk optimaal bewezen. ‘Vlot / goed / maximaal’ zijn jouw inschattingen, geen gemeten RPE.</p>
-        <p><strong class="text-slate-100">Expertconsensus · deload.</strong> Een tijdelijke verlaging van de trainingsbelasting kan ruimte voor herstel geven. De optimale timing en grootte zijn niet vastgesteld. <a class="text-blue-300 underline" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10511399/" target="_blank" rel="noopener noreferrer">Delphi-onderzoek (2023)</a>. Week 7, twee sets en de 60/70/80%-regels zijn instellingen van deze app. Je herstelcheck is zelfrapportage. Het vroege herstelvoorstel gebruikt twee opeenvolgende dalingen bij minstens twee oefeningen, met gelijke gewichten en aantallen sets, maximale inspanning én gemelde vermoeidheid. Dat is een signaleringsregel, geen gevalideerde vermoeidheidstest.</p>
+        <p><strong class="text-slate-100">Appregels · progressive overload.</strong> Eerst reps opbouwen binnen het repbereik van je periodedoel, daarna een ingestelde gewichtsstap. In nieuwe Push/Pull-periodes één rep erbij per geslaagde stap. Bestaande schema’s behouden hun eerdere opbouwregels. Bij krachtaccent gebruiken geschikte basisoefeningen 4–6 reps. Onbeoordeelde sets blokkeren opbouw. Eén maximale set vraagt bevestiging: twee opeenvolgende opbouwweken met alle doelen gehaald, maximaal één maximale set per week, geen ontbrekende beoordelingen en het huidige gewicht en repdoel al eerder gehaald. Verlagen vraagt gemiste doelen met maximale inspanning in twee volledige trainingen of twee opeenvolgende volledige opbouwweken. Dit zijn conservatieve appregels. Deze exacte combinatie is niet als persoonlijk optimaal bewezen. ‘Vlot / goed / maximaal’ zijn jouw inschattingen, geen gemeten RPE.</p>
+        <p><strong class="text-slate-100">Expertconsensus · deload.</strong> Een tijdelijke verlaging van de trainingsbelasting kan ruimte voor herstel geven. De optimale timing en grootte zijn niet vastgesteld. <a class="text-blue-300 underline" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10511399/" target="_blank" rel="noopener noreferrer">Delphi-onderzoek (2023)</a>. Een optionele herstelweek na zes trainingsweken, maximaal twee sets en de 60/70/80%-regels zijn praktische instellingen van deze app. Bestaande periodes behouden hun oorspronkelijke planning. Je herstelcheck is zelfrapportage. Het vroege herstelvoorstel gebruikt twee opeenvolgende dalingen bij minstens twee oefeningen, met gelijke gewichten en aantallen sets, maximale inspanning én gemelde vermoeidheid. Dat is een signaleringsregel, geen gevalideerde vermoeidheidstest.</p>
         <p><strong class="text-slate-100">Schatting · 1RM.</strong> De app gebruikt gewicht × (1 + reps / 30), behalve bij één rep. Dit is de Epley-schatting, geen gemeten maximum. De fout hangt onder meer af van oefening, repaantal en hoe dicht je bij falen kwam. <a class="text-blue-300 underline" href="https://pubmed.ncbi.nlm.nih.gov/39495260/" target="_blank" rel="noopener noreferrer">Validatieonderzoek (2025)</a>. Vergelijk ook je echte gewicht en reps.</p>
         <p><strong class="text-slate-100">Registratie · rapportages.</strong> Volume is de som van opgeslagen gewicht × reps. Lichaamsgewicht telt niet mee als externe kilo’s. Dezelfde dagen en hetzelfde schema worden vergeleken; onvolledige weken en herstelweken krijgen geen oordeel over krachtverlies. Groen en rood geven de richting van een getal aan. Een zwaardere set met minder reps heeft twee afzonderlijke verschillen.</p>
-        <p><strong class="text-slate-100">Schemavoorkeuren · startgewichten, rust en nieuwe periodes.</strong> Startgewichten, leeftijdsfactoren, rusttijden en doelen zijn richtwaarden uit het schema, geen persoonlijk gevalideerde normen. Opgeslagen prestaties gaan vóór die referenties. Oefeningen hoeven na zeven weken niet te wisselen; behoud wat past en goed te volgen is. Een nieuwe periode is een evaluatiemoment.</p>
+        <p><strong class="text-slate-100">Schemavoorkeuren · startgewichten, rust en nieuwe periodes.</strong> Nieuwe Push/Pull-startgewichten volgen je eigen oefeningshistorie; zonder passende historie regel je voorzichtig in. Leeftijd en lichaamsgewicht bepalen geen persoonlijk startgewicht. Rusttijden en doelen zijn praktische richtlijnen. Oefeningen hoeven bij een nieuwe periode niet te wisselen; behoud wat past en goed te volgen is. Een nieuwe periode is een evaluatiemoment.</p>
       </details>`;
     }
 
@@ -6938,10 +6567,10 @@
             <div>
               <div class="flex items-center gap-2">
                 <h3 class="font-black text-slate-100 text-sm sm:text-base">
-                  ${SPLIT_INFO[appState.currentDay].title} (Schema Staat Vast)
+                  ${SPLIT_INFO[appState.currentDay].title}
                 </h3>
                 <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  🔒 Vast
+                  Trainingsschema
                 </span>
               </div>
               <p class="text-[11px] text-slate-400 mt-0.5">
@@ -6974,7 +6603,7 @@
               <span>📋</span> VASTGEZETTE OEFENINGEN VANDAAG
             </span>
             <span class="text-[10px] text-emerald-400 font-bold">
-              ${isDeload ? '🌿 Deload: 2 sets/oef' : '6 oefeningen • 3 sets'}
+              ${SPLIT_INFO[appState.currentDay].slots.length} oefeningen • ${SPLIT_INFO[appState.currentDay].slots.reduce((sum, key) => sum + getTrainingSetCount(appState.currentWeek, appState.currentDay, key), 0)} werksets${isDeload ? ' · herstelweek' : ''}
             </span>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -6985,9 +6614,9 @@
         <button onclick="setTrainingSkipped(true)" class="text-xs text-slate-400 hover:text-white underline">${isDayStarted ? 'Resterende training overslaan' : 'Training overslaan'}</button>
         <!-- Footer Acties: Schema Openen of Uitgebreide Sets Inzien -->
         <div class="pt-3.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5">
-          <button onclick="handleRoutineLockButtonClick()" class="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 font-mono font-bold text-[11px] border border-slate-700 transition flex items-center gap-1.5 cursor-pointer">
+          <button onclick="openSetupRoutineModal()" class="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 font-mono font-bold text-[11px] border border-slate-700 transition flex items-center gap-1.5 cursor-pointer">
             <span>🔓</span>
-            <span>Schema Ontgrendelen (Oefeningen wijzigen)</span>
+            <span>Huidig schema aanpassen</span>
           </button>
           <button onclick="toggleDetailedSetsView()" class="px-3 py-1.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 font-mono text-[11px] border border-slate-700/70 transition flex items-center gap-1.5 cursor-pointer">
             <span>👁️</span>
@@ -7020,7 +6649,7 @@
         deloadBanner.classList.add("hidden");
         document.getElementById("dashPhaseBadge").textContent = "Accumulatie Fase";
         document.getElementById("dashPhaseBadge").className = "text-[10px] font-mono px-2 py-0.5 rounded font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20";
-        document.getElementById("daySetsSubtext").textContent = "6 oefeningen × 3 sets";
+        document.getElementById("daySetsSubtext").textContent = SPLIT_INFO[appState.currentDay].slots.length + " oefeningen · " + SPLIT_INFO[appState.currentDay].slots.reduce((sum, key) => sum + getTrainingSetCount(appState.currentWeek, appState.currentDay, key), 0) + " werksets";
       }
 
       if (currentDayData.coreWorkout?.length) document.getElementById('daySetsSubtext').textContent = `${slotKeys.length} oefeningen + ${currentDayData.coreWorkout.length} buikspieroefeningen`;
@@ -7059,7 +6688,7 @@
             </div>
             <div>
               <div class="text-xs font-bold text-slate-100 flex items-center gap-2">
-                <span>Schema Staat Vast (Alleen-Lezen Weergave)</span>
+                <span>Trainingsschema · aanpassen via Schema zelf kiezen</span>
                 <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">Groen Slotje</span>
               </div>
               <div class="text-[11px] text-slate-400 mt-0.5">
@@ -7084,7 +6713,7 @@
             </div>
             <div>
               <div class="text-xs font-bold text-slate-100 flex items-center gap-2">
-                <span>Schema Staat Open (Bewerkingsmodus)</span>
+                <span>Trainingsschema aanpassen</span>
                 <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">Rood Slotje</span>
               </div>
               <div class="text-[11px] text-slate-400 mt-0.5">
@@ -7092,9 +6721,9 @@
               </div>
             </div>
           </div>
-          <button onclick="handleRoutineLockButtonClick()" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 transition shadow-md shadow-emerald-600/30 cursor-pointer active:scale-95 whitespace-nowrap">
+          <button onclick="openSetupRoutineModal()" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 transition shadow-md shadow-emerald-600/30 cursor-pointer active:scale-95 whitespace-nowrap">
             <span>🔒</span>
-            <span>Schema Nu Vastzetten</span>
+            <span>Schema aanpassen</span>
           </button>
         `;
         container.appendChild(openBanner);
@@ -7180,7 +6809,7 @@
                     <select onchange="onExerciseSwap('${slotKey}', this.value)" class="flex-1 bg-slate-900 text-sm font-bold text-slate-100 py-1.5 px-2.5 rounded-lg border border-rose-500/60 focus:border-rose-400 focus:outline-none transition cursor-pointer">
                       ${optionsHtml}
                     </select>
-                    <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 flex-shrink-0" title="Schema staat open: kies een oefening of klik op 'Schema Open' bovenin om vast te zetten">🔓 Open</span>
+                    <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 flex-shrink-0" title="Pas oefeningen aan via Schema zelf kiezen">🔓 Open</span>
                   </div>
                 `}
                 <button onclick="openGuideModal('${slotKey}')" title="Bekijk Uitvoering & Video" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-bold transition">
@@ -7201,7 +6830,7 @@
               ` : ''}
 
               <span class="px-2 py-0.5 rounded bg-slate-700 text-slate-300 font-mono text-[11px]">
-                Doel: ${isDeload ? '2' : '3'} × ${targetReps}
+                Doel: ${getTrainingSetCount(appState.currentWeek, appState.currentDay, slotKey)} × ${targetReps}
               </span>
 
               ${isCurrentOverloadAchieved ? `
@@ -7466,28 +7095,23 @@
       updateDashboard();
     }
 
-    function onExerciseSwap(slotKey, newName) {
-      if (appState.routineLocked) {
-        if (!confirm("⚠️ Je trainingsschema is momenteel vergrendeld voor deze cyclus om de progressive overload berekening zuiver te houden.\n\nWil je het schema ontgrendelen om de oefening te wijzigen?")) {
-          renderExercises();
-          return;
-        }
-        appState.routineLocked = false;
-        updateDashboard();
+    async function onExerciseSwap(slotKey, newName) {
+      const week = liveWorkout.active ? liveWorkout.weekNum : appState.currentWeek;
+      const day = liveWorkout.active ? liveWorkout.dayKey : appState.currentDay;
+      const slot = appState.weeks[week]?.[day]?.[slotKey];
+      if (!slot || slot.sets.some(set => set.completed || set.inputFields?.weight || set.inputFields?.reps)) {
+        showToast('Deze oefening bevat opgeslagen prestaties of eigen invoer. Wissel in een nog niet uitgevoerde training.', 'error');
+        return false;
       }
-      const slot = appState.weeks[appState.currentWeek][appState.currentDay][slotKey];
-      if (slot.selectedName !== newName && slot.sets.some(set => set.completed)) {
-        showToast('Deze oefening bevat opgeslagen prestaties. Wissel de oefening in een nog niet uitgevoerde training.', 'error');
-        renderExercises();
-        return;
-      }
-      if (slot.selectedName !== newName) slot.progressionPlan = null;
-      slot.selectedName = newName;
-      saveState();
-      renderExercises();
-      if (typeof liveWorkout !== 'undefined' && liveWorkout && liveWorkout.active) {
-        renderLiveWorkoutView();
-      }
+      try {
+        await ensureTrainingSaved();
+        const response = await jsonApi('/api/slots/' + slot.id, 'PATCH', { context: 'setup', selectedName: newName });
+        const result = await response.json();
+        if (!response.ok) throw new Error(Object.values(result.errors || {}).flat().join(' ') || 'Oefening kon niet worden gewisseld.');
+        await reloadTrainingState();
+        if (liveWorkout.active) { prepareCurrentLiveSetValues(); renderLiveWorkoutView(); }
+        return true;
+      } catch (error) { showToast(error.message, 'error'); return false; }
     }
 
     async function clearCurrentDay() {
@@ -7775,15 +7399,28 @@
     }
 
     /* 9. OEFENING DETAILS, ANATOMISCHE SPIEREN KAART & GIDS ENGINE */
+    let guideSetupContext = null;
+    function openSetupGuide(day, key) { openGuideModal(key, { day, key }); }
+    function openProposalGuide(day, key) { openGuideModal(key, { day, key, proposal: true }); }
+
+    function guideSlotData() {
+      if (guideSetupContext) {
+        const source = guideSetupContext.proposal ? nextCycleProposal : setupWizardState;
+        return source.schema[guideSetupContext.day][currentGuideSlot];
+      }
+      return getTrainingDay(liveWorkout.active ? liveWorkout.weekNum : appState.currentWeek, liveWorkout.active ? liveWorkout.dayKey : appState.currentDay)[currentGuideSlot];
+    }
+
     let currentGuideSlot = null;
     let guideActiveExercise = null;    // Oefening die momenteel actief in het schema staat
     let guidePreviewedExercise = null; // Oefening die op dit moment in de modal wordt bekeken
     let guideSearchQuery = "";
 
-    function openGuideModal(slotKey) {
+    function openGuideModal(slotKey, setupContext = null) {
+      guideSetupContext = setupContext;
       currentGuideSlot = slotKey;
       const catalogItem = EXERCISE_CATALOG[slotKey];
-      const slotData = getTrainingDay(liveWorkout.active ? liveWorkout.weekNum : appState.currentWeek, liveWorkout.active ? liveWorkout.dayKey : appState.currentDay)[slotKey];
+      const slotData = guideSlotData();
       guideActiveExercise = slotData.selectedName || catalogItem.defaultName;
       guidePreviewedExercise = guideActiveExercise;
       guideSearchQuery = "";
@@ -7793,14 +7430,14 @@
 
       const badge = document.getElementById("guideSlotBadge");
       if (badge) {
-        badge.textContent = `${appState.currentDay.toUpperCase()} • ${catalogItem.restType || 'OEFENING'}`;
+        badge.textContent = `${(setupContext?.day || appState.currentDay).toUpperCase()} • ${catalogItem.restType || 'OEFENING'}`;
       }
 
       renderGuideModalContent();
       const guideModal = document.getElementById("exerciseGuideModal");
       if (guideModal) {
         guideModal.classList.remove("hidden");
-        guideModal.style.zIndex = "80";
+        guideModal.style.zIndex = "100";
       }
     }
 
@@ -7821,6 +7458,8 @@
       if (titleEl) {
         titleEl.textContent = exerciseName;
       }
+      const activeLabel = document.getElementById('guideActiveLabel');
+      if (activeLabel) activeLabel.textContent = guideSetupContext?.proposal || guideSetupContext && setupWizardState.forNewCycle ? 'Gekozen in voorstel:' : 'Actueel in schema:';
       const activeNameEl = document.getElementById("guideActiveName");
       if (activeNameEl) {
         activeNameEl.textContent = guideActiveExercise;
@@ -7872,8 +7511,17 @@
       const equipEl = document.getElementById("guideEquipment");
       if (equipEl) equipEl.textContent = details.equipment;
       const targetRestEl = document.getElementById("guideTargetRest");
-      if (targetRestEl) {
-        targetRestEl.textContent = `${isCoreSlot(slotKey) ? getTrainingSetCount(liveWorkout.weekNum, liveWorkout.dayKey, slotKey) : 3} × ${isCoreSlot(slotKey) ? getExerciseTargetReps(exerciseName, slotKey, liveWorkout.weekNum, liveWorkout.dayKey) : details.targetReps} reps${coreExerciseByName(exerciseName)?.perSide ? ' per kant' : ''} • ${Math.floor(details.restTime / 60)}:${(details.restTime % 60).toString().padStart(2, '0')}m rust`;
+      const contextSlot = guideSlotData();
+      const prescription = guideSetupContext ? contextSlot : contextSlot?.prescription;
+      if (targetRestEl) targetRestEl.textContent = (prescription?.sets || contextSlot?.sets?.length || 3) + ' × ' +
+        (prescription ? prescription.minReps + '–' + prescription.maxReps : details.targetReps) + ' reps · ' + (prescription?.rest || details.restTime) + 's rust';
+      const historyBox = document.getElementById('guidePreviewHistory');
+      if (historyBox) {
+        const last = nextCycleProposal?.exerciseHistory?.[exerciseName.trim().toLowerCase()] || appState.nextCycle?.exerciseHistory?.[exerciseName.trim().toLowerCase()];
+        const video = getExerciseVideoData(exerciseName, slotKey);
+        historyBox.innerHTML = proposalHistoryHtml(last, getExerciseVolumeRule(exerciseName).weightLabel) +
+          (video.matchType === 'similar' ? '<p class="mt-2 text-amber-300">Video van een vergelijkbare variant: ' + escapeReportText(video.matchedExercise || '') + '. Let op verschillen in opstelling en uitvoering.</p>' : '') +
+          (!video.videoId ? '<p class="mt-2 text-slate-400">Geen video beschikbaar voor deze oefening. De uitvoeringsuitleg blijft beschikbaar.</p>' : '');
       }
 
       // 4. Video & Athlean-X Form Tutorial met directe Player en Bewaarfunctionaliteit
@@ -8062,7 +7710,9 @@
       if (!altsContainer || !currentGuideSlot) return;
 
       const catalogItem = EXERCISE_CATALOG[currentGuideSlot];
-      const allAlts = isCoreSlot(currentGuideSlot) ? [guideActiveExercise] : catalogItem.alternatives || [catalogItem.defaultName];
+      const allAlts = guideSetupContext?.proposal
+        ? (nextCycleProposal.programTemplate?.type === 'push_pull' ? (appState.programLibrary?.roles?.[currentGuideSlot]?.exercises || []) : catalogItem.alternatives)
+        : guideSetupContext ? setupOptions(currentGuideSlot) : isCoreSlot(currentGuideSlot) ? [guideActiveExercise] : catalogItem.alternatives || [catalogItem.defaultName];
 
       const filtered = allAlts.filter(alt => {
         if (!guideSearchQuery) return true;
@@ -8135,15 +7785,38 @@
       }
     }
 
-    function applyPreviewedExercise() {
-      if (!currentGuideSlot || !guidePreviewedExercise) return;
+    async function applyPreviewedExercise() {
+      if (!currentGuideSlot || !guidePreviewedExercise || applyPreviewedExercise.pending) return;
       if (guidePreviewedExercise === guideActiveExercise) {
         closeGuideModal();
         return;
       }
 
+      if (guideSetupContext?.proposal) {
+        const context = guideSetupContext, slotKey = currentGuideSlot;
+        const schema = clonePersistedState(nextCycleProposal.schema);
+        Object.assign(schema[context.day][slotKey], { selectedName: guidePreviewedExercise, nameEdited: true, weight: null, weightEdited: false });
+        applyPreviewedExercise.pending = true;
+        document.getElementById('applyExerciseBtn').disabled = true;
+        try {
+          const proposal = await fetchPeriodProposal(nextCycleProposal.programTemplate.key, proposalDayVariants(nextCycleProposal.programTemplate), schema);
+          nextCycleProposal = proposal;
+          periodDrafts.set(proposal.programTemplate.key, clonePersistedState(proposal));
+          startNewMesocyclePrompt();
+          closeGuideModal();
+        } catch (error) { showToast(error.message, 'error'); updateApplyButtonState(); }
+        finally { applyPreviewedExercise.pending = false; }
+        return;
+      }
+      if (guideSetupContext) {
+        const context = guideSetupContext;
+        await onSetupSlotChange(context.day, currentGuideSlot, guidePreviewedExercise);
+        closeGuideModal();
+        return;
+      }
+
       // Nu pas oefening daadwerkelijk wijzigen in appState en schema
-      onExerciseSwap(currentGuideSlot, guidePreviewedExercise);
+      if (!await onExerciseSwap(currentGuideSlot, guidePreviewedExercise)) return;
       guideActiveExercise = guidePreviewedExercise;
       
       // Update modal en toon successtatus
@@ -8166,6 +7839,7 @@
       document.getElementById("exerciseGuideModal").classList.add("hidden");
       const guideVid = document.getElementById("guideVideoContainer");
       if (guideVid) guideVid.innerHTML = "";
+      guideSetupContext = null;
       currentGuideSlot = null;
       guideActiveExercise = null;
       guidePreviewedExercise = null;
@@ -8814,8 +8488,14 @@
       if (loggedReps < targetReps) {
         // Gebruiker haalde minder reps dan voorgesteld
         const diff = targetReps - loggedReps;
+        const minimum = slotData.prescription?.minReps || advice.minReps || targetReps;
+        const step = getExerciseIncrement(exerciseName);
+        const lower = Math.max(0, Math.round((loggedWeight - step) * 10) / 10);
+        const followUp = loggedReps < minimum
+          ? (isBW ? 'Onder het bereik. Neem voldoende rust en pas zo nodig de uitvoering aan.' : 'Onder het bereik. Overweeg voor de volgende set ' + lower + ' kg; het gewicht wordt niet automatisch verlaagd.')
+          : 'Binnen het herhalingsbereik. Neem voldoende rust en behoud doorgaans hetzelfde gewicht.';
         liveWorkout.slotAdaptations[slotKey] = {
-          message: `Vorige set: ${loggedReps}/${targetReps} reps gehaald (${diff} rep${diff > 1 ? 's' : ''} onder doel). Volgende set aangepast naar ${loggedReps} herhalingen (of verlaag met 2.5 kg voor ${targetReps} reps).`,
+          message: `Vorige set: ${loggedReps}/${targetReps} reps gehaald (${diff} rep${diff > 1 ? 's' : ''} onder doel). ${followUp} Het oorspronkelijke trainingsdoel blijft staan.`,
           suggestedReps: loggedReps,
           suggestedWeight: loggedWeight,
           isUnderTarget: true
@@ -8823,7 +8503,7 @@
       } else if (loggedReps > targetReps) {
         // Gebruiker haalde meer reps dan voorgesteld
         liveWorkout.slotAdaptations[slotKey] = {
-          message: `Super! Vorige set: ${loggedReps}/${targetReps} reps (+${loggedReps - targetReps} bonus!). Je hebt voldoende krachtreserve.`,
+          message: `Super! Vorige set: ${loggedReps}/${targetReps} reps (+${loggedReps - targetReps} bonus!). Beoordeel ook de inspanning; meer reps betekent niet automatisch dat je nog kracht over had.`,
           suggestedReps: loggedReps,
           suggestedWeight: loggedWeight,
           isOverTarget: true
@@ -8893,10 +8573,10 @@
       const details = getExerciseDetails(exerciseName, slotKey);
 
       // Bepaal rustduur: kijk of gebruiker een voorkeur heeft opgeslagen, anders catalogus
-      let preferred = catalogItem.restTime || 90;
+      let preferred = slotData.prescription?.rest || catalogItem.restTime || 90;
       if (appState.preferredRestTimes && appState.preferredRestTimes[exerciseName]) {
         preferred = appState.preferredRestTimes[exerciseName];
-      } else if (details && details.restTime) {
+      } else if (!slotData.prescription && details && details.restTime) {
         preferred = details.restTime;
       }
 
@@ -10096,7 +9776,7 @@
                       <span class="uppercase tracking-wider">Week ${targetW} Volledig Voltooid!</span>
                     </div>
                     <p class="text-xs text-slate-300 leading-relaxed">
-                      Alle 4 dagen van Week ${targetW} zijn afgerond. ${Number(targetW) >= Number(appState.totalWeeks || 7) ? 'Bereid je nieuwe periode van 7 weken voor via het weekrapport.' : `Bekijk het weekrapport voor het advies van week ${Number(targetW) + 1}.`}
+                      Alle 4 dagen van Week ${targetW} zijn afgerond. ${Number(targetW) >= Number(appState.totalWeeks || 7) ? 'Bekijk het weekrapport om je periode af te ronden en je volgende stap te kiezen.' : `Bekijk het weekrapport voor het advies van week ${Number(targetW) + 1}.`}
                     </p>
                     <button onclick="closeLiveWorkoutModal(); openWeekReportModal(${targetW})" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition shadow-lg cursor-pointer">
                       <span>📋</span>
@@ -10181,7 +9861,7 @@
       Object.entries(dayData).forEach(([slotKey, slot]) => {
         if (!slot || typeof slot !== "object" || !Array.isArray(slot.sets)) return;
         const exerciseName = slot.selectedName || EXERCISE_CATALOG[slotKey]?.defaultName || '';
-        slot.sets.slice(0, isDeloadWeek(weekNum) ? 2 : 3).forEach(set => {
+        slot.sets.slice(0, getPlannedSetCount(slot, weekNum)).forEach(set => {
           total += calculateSetVolume(exerciseName, set);
         });
       });
@@ -10258,19 +9938,6 @@
       if (compRatioEl) compRatioEl.textContent = `${completedSets}/${totalSets}`;
       const dayProgEl = document.getElementById("dayProgressBar");
       if (dayProgEl) dayProgEl.style.width = `${pct}%`;
-
-      const setupBtn = document.getElementById("routineSetupBtn");
-      if (setupBtn) {
-        if (appState.routineLocked) {
-          setupBtn.innerHTML = `<span>🔒</span><span>Schema Vast</span>`;
-          setupBtn.className = "flex-shrink-0 px-3 py-1.5 text-xs font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl border border-emerald-400/60 transition flex items-center gap-1.5 shadow-md shadow-emerald-600/30 active:scale-95 cursor-pointer whitespace-nowrap";
-          setupBtn.title = "Schema staat vast (klik om te ontgrendelen)";
-        } else {
-          setupBtn.innerHTML = `<span>🔓</span><span>Schema Open</span>`;
-          setupBtn.className = "flex-shrink-0 px-3 py-1.5 text-xs font-mono font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl border border-rose-400/60 transition flex items-center gap-1.5 shadow-md shadow-rose-600/30 active:scale-95 cursor-pointer whitespace-nowrap animate-pulse";
-          setupBtn.title = "Geen vast schema (klik om vast te zetten)";
-        }
-      }
 
       renderWorkloadChart();
       updateWorkoutHeroButtons();
@@ -11077,6 +10744,7 @@
             throw new Error("Trainerstate kon niet opnieuw geladen worden.");
           }
           appState = payload.appState;
+          applyProgramSplits(appState.splits);
           applyGoalOrdering();
           lastPersisted = clonePersistedState(appState);
           renderWeekPills();
@@ -11097,7 +10765,15 @@
 
     /* 13. START */
     async function startApp() {
-      await initAppState();
+      try {
+        await initAppState();
+      } catch (error) {
+        const overlay = document.getElementById("ironforgeBootOverlay") || document.body.appendChild(document.createElement("div"));
+        overlay.id = "ironforgeBootOverlay";
+        overlay.className = "fixed inset-0 z-[9999] bg-slate-950 flex items-center justify-center p-6";
+        overlay.innerHTML = '<div class="max-w-md rounded-2xl border border-amber-500/30 bg-slate-900 p-6 text-slate-100"><h1 class="text-xl font-bold">Trainingsgegevens niet geladen</h1><p class="mt-3 text-sm text-slate-300">De verbinding met je trainingsgegevens is niet gelukt. Dit betekent niet dat je voortgang weg is. Er wordt geen leeg schema opgeslagen.</p><button onclick="location.reload()" class="mt-5 rounded-xl bg-emerald-600 px-4 py-3 font-bold">Opnieuw proberen</button></div>';
+        return;
+      }
       if (window.location.hash === "#instellingen") openSettingsModal();
       document.getElementById("ironforgeBootOverlay")?.remove();
       renderWeekPills();

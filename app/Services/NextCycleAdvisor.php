@@ -3,103 +3,111 @@
 namespace App\Services;
 
 use App\Models\Cycle;
+use App\Models\Profile;
+use Illuminate\Validation\ValidationException;
 
 class NextCycleAdvisor
 {
     public function __construct(
-        private readonly Catalog $catalog,
-        private readonly Periodization $periodization,
+        private readonly ProgramLibrary $library,
+        private readonly ExerciseHistory $history,
     ) {}
 
     /**
-     * @return array{available: bool, currentWeek: int, totalWeeks: int, reason: string, schema: array<string, array<string, array<string, mixed>>>, days: list<array<string, mixed>>}
+     * @param  array<string, string>  $dayVariants
+     * @param  array<string, array<string, array<string, mixed>>>  $overrides
+     * @return array<string, mixed>
      */
-    public function forCycle(Cycle $cycle, int $currentWeek): array
+    public function forCycle(Cycle $cycle, int $currentWeek, ?string $templateKey = null, array $dayVariants = [], ?string $goal = null, array $overrides = []): array
     {
-        $totalWeeks = (int) $cycle->total_weeks;
-        $available = $currentWeek >= $totalWeeks;
-        $schema = $this->schema($cycle);
-        $reason = $available
-            ? 'Bereid het schema voor de volgende periode voor. Start pas nadat je de huidige periode bewust hebt afgesloten; open trainingen blijven onvoltooid.'
-            : 'Een nieuwe periode start ná week '.$totalWeeks.' (deload). Je zit nu in week '.$currentWeek.'.';
+        $goal ??= $cycle->training_goal ?? 'hypertrophy';
+        $library = $this->library->export();
+        $history = $this->history->all();
+        $equipment = Profile::query()->first()?->equipment ?? ['barbell' => true, 'dumbbells' => true, 'bench' => true];
+        $keys = array_column($library['templates'], 'key');
+        $previousKey = $cycle->program_definition['key'] ?? null;
+        $index = array_search($previousKey, $keys, true);
+        $recommended = $keys[$index === false ? 0 : ($index + 1) % max(1, count($keys))] ?? null;
+        $selected = $templateKey ?? $recommended ?? 'repeat';
+        $proposals = [];
+        foreach ([...$library['templates'], ['key' => 'repeat', 'name' => 'Huidige indeling herhalen', 'description' => 'Dezelfde indeling, met een nieuw startadvies.']] as $template) {
+            try {
+                $definition = $this->library->build($cycle, $template['key'], $template['key'] === $selected ? $dayVariants : [], $goal,
+                    $template['key'] === $selected ? $overrides : [], $equipment);
+                $proposals[$template['key']] = $this->enrich($cycle, $definition, $history);
+            } catch (ValidationException $exception) {
+                if (($templateKey !== null || $dayVariants !== [] || $overrides !== []) && $selected === $template['key']) {
+                    throw $exception;
+                }
+                $proposals[$template['key']] = ['programTemplate' => ['key' => $template['key'], 'name' => $template['name']],
+                    'schema' => [], 'days' => [], 'unavailableReason' => collect($exception->errors())->flatten()->first()];
+            }
+        }
+        if ($templateKey !== null && ! isset($proposals[$selected])) {
+            throw ValidationException::withMessages(['templateKey' => 'Kies een beschikbaar periodevoorstel.']);
+        }
+        $proposal = $proposals[$selected] ?? ['schema' => [], 'days' => [], 'programTemplate' => null];
 
-        return [
-            'available' => $available,
-            'currentWeek' => $currentWeek,
-            'totalWeeks' => $totalWeeks,
-            'reason' => $reason,
-            'schema' => $schema,
-            'days' => $this->daysFromSchema($schema),
-        ];
+        return [...$proposal, 'available' => $currentWeek >= $cycle->total_weeks,
+            'cycleId' => $cycle->id, 'currentWeek' => $currentWeek, 'totalWeeks' => (int) $cycle->total_weeks,
+            'reason' => $currentWeek >= $cycle->total_weeks
+                ? 'Kies je volgende Push/Pull-periode. Start pas wanneer je de huidige periode bewust afsluit; open trainingen blijven onvoltooid.'
+                : 'Een nieuwe periode start na week '.$cycle->total_weeks.'. Je kunt het voorstel alvast bekijken.',
+            'exerciseHistory' => $history, 'library' => $library, 'proposals' => $proposals,
+            'recommendedTemplateKey' => $recommended, 'trainingGoal' => $goal];
     }
 
-    /**
-     * @return array<string, array<string, array<string, mixed>>>
-     */
+    /** @return array<string, array<string, array<string, mixed>>> */
     public function schema(Cycle $from): array
     {
-        $from->loadMissing(['sessions.slots.sets']);
-        $peakWeek = $this->periodization->lastHeavyWeek((int) $from->total_weeks);
-        $peakSessions = $from->sessions->where('week', $peakWeek);
-        $schema = [];
-
-        foreach (config('ironforge.days') as $day) {
-            $source = $peakSessions->first(
-                fn ($session) => $session->day === $day
-            );
-            if (! $source) {
-                continue;
-            }
-
-            foreach ($source->slots as $slot) {
-                $catalog = $this->catalog->slot($slot->slot_key);
-                $fromName = (string) $slot->selected_name;
-                $nextName = $this->catalog->nextAlternative($slot->slot_key, $fromName);
-                $rotated = $nextName !== $fromName;
-                $peakWeight = 0.0;
-                foreach ($slot->sets->take($this->periodization->requiredSets($peakWeek)) as $set) {
-                    if (! $set->completed || (int) $set->reps <= 0) {
-                        continue;
-                    }
-                    $peakWeight = max($peakWeight, (float) $set->weight);
-                }
-
-                $schema[$day][$slot->slot_key] = [
-                    'selectedName' => $nextName,
-                    'fromName' => $fromName,
-                    'weight' => (! $rotated && $peakWeight > 0) ? $peakWeight : null,
-                    'targetReps' => (int) ($catalog['targetReps'] ?? $slot->target_reps ?? 8),
-                    'rotated' => $rotated,
-                    'isBodyweight' => $this->periodization->isBodyweight($nextName),
-                ];
-            }
-        }
-
-        return $schema;
+        return $this->forCycle($from, (int) $from->total_weeks)['schema'];
     }
 
     /**
-     * @param  array<string, array<string, array<string, mixed>>>  $schema
-     * @return list<array<string, mixed>>
+     * @param  array<string, mixed>  $definition
+     * @param  array<string, array<string, mixed>>  $history
+     * @return array<string, mixed>
      */
-    private function daysFromSchema(array $schema): array
+    private function enrich(Cycle $cycle, array $definition, array $history): array
     {
+        $cycle->loadMissing('sessions.slots');
+        $schema = [];
         $days = [];
-        foreach (config('ironforge.days') as $day) {
+        $muscles = [];
+        foreach ($definition['days'] as $day => &$dayDefinition) {
             $slots = [];
-            foreach ($schema[$day] ?? [] as $slotKey => $item) {
-                $slots[] = [
-                    'slotKey' => $slotKey,
-                    ...$item,
-                ];
+            $source = $cycle->sessions->where('week', app(Periodization::class)->lastHeavyWeek((int) $cycle->total_weeks))->firstWhere('day', $day);
+            foreach ($dayDefinition['exercises'] as $key => &$item) {
+                $name = $item['selectedName'];
+                $last = $history[mb_strtolower(trim($name))] ?? null;
+                $start = $this->history->startAdvice($last, $item);
+                $item['weight'] = ($item['weightEdited'] ?? false) ? $item['weight'] : $start['weight'];
+                $item['weightSource'] = ($item['weightEdited'] ?? false) ? 'eigen_invoer' : $start['source'];
+                $item['weightReason'] = ($item['weightEdited'] ?? false) ? 'Jouw eigen startgewicht.' : $start['reason'];
+                $item['lastPerformed'] = $last;
+                $item['fromName'] = $source?->slots->firstWhere('slot_key', $key)?->selected_name ?? '';
+                $item['rotated'] = $item['fromName'] !== $name;
+                $item['isBodyweight'] = app(Periodization::class)->isBodyweight($name);
+                $item['requirements'] = $this->library->requirements($name);
+                $item['weightLabel'] = app(ExerciseVolume::class)->rules()[mb_strtolower($name)]['weightLabel'] ?? ($item['isBodyweight'] ? 'Lichaamsgewicht' : 'Kg totaal');
+                $schema[$day][$key] = $item;
+                $slots[] = ['slotKey' => $key, ...$item];
+                if (isset($item['primary'])) {
+                    $muscles[$item['primary']] ??= ['direct' => 0, 'supporting' => 0];
+                    $muscles[$item['primary']]['direct'] += $item['sets'];
+                    foreach ($item['secondary'] ?? [] as $secondary) {
+                        $muscles[$secondary] ??= ['direct' => 0, 'supporting' => 0];
+                        $muscles[$secondary]['supporting'] += $item['sets'];
+                    }
+                }
             }
-            $days[] = [
-                'day' => $day,
-                'title' => (string) config('ironforge.splits.'.$day.'.title', $day),
-                'slots' => $slots,
-            ];
+            unset($item);
+            $days[] = ['day' => $day, 'title' => $dayDefinition['title'], 'variantKey' => $dayDefinition['variantKey'] ?? null, 'slots' => $slots];
         }
+        unset($dayDefinition);
+        $definition['splits'] = $this->library->splits($definition);
+        $definition['cycleNumber'] = (int) $cycle->number + 1;
 
-        return $days;
+        return ['programTemplate' => $definition, 'schema' => $schema, 'days' => $days, 'weekMuscles' => $muscles];
     }
 }

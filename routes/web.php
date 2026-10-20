@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ProgramLibraryController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Vite;
 
@@ -11,7 +12,11 @@ Route::prefix('beheer')->name('admin.')->middleware('cache.headers:no_store;no_c
 
     Route::middleware('admin.password')->group(function () {
         Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
-        Route::get('/programma', [AdminController::class, 'program'])->name('program');
+        Route::get('/programma', [ProgramLibraryController::class, 'index'])->name('program');
+        Route::patch('/programma/varianten/{variant}', [ProgramLibraryController::class, 'updateVariant'])->name('variants.update');
+        Route::post('/programma/varianten/{variant}/kopieren', [ProgramLibraryController::class, 'duplicateVariant'])->name('variants.duplicate');
+        Route::patch('/programma/voorstellen/{template}', [ProgramLibraryController::class, 'updateTemplate'])->name('templates.update');
+        Route::post('/programma/voorstellen/{template}/kopieren', [ProgramLibraryController::class, 'duplicateTemplate'])->name('templates.duplicate');
         Route::patch('/programma/{slot}', [AdminController::class, 'updateProgram'])->name('program.update');
         Route::post('/programma/{slot}/toepassen', [AdminController::class, 'applyProgram'])->name('program.apply');
         Route::get('/oefeningen', [AdminController::class, 'exercises'])->name('exercises');

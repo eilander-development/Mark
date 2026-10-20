@@ -20,7 +20,7 @@ class StrengthBenchmark
         $name = mb_strtolower($exerciseName);
         $isBw = $this->periodization->isBodyweight($exerciseName);
 
-        if (str_contains($name, 'incline') && (str_contains($name, 'dumbbell') || str_contains($name, 'db'))) {
+        if (str_contains($name, 'incline') && str_contains($name, 'press') && (str_contains($name, 'dumbbell') || str_contains($name, 'db'))) {
             $base = (int) round(26 * $bwFactor * $ageFactor);
 
             return $this->row($exerciseName, 'Borst Schuin (Bovenkant)', false, true, (int) round(16 * $bwFactor), $base, (int) round(34 * $bwFactor), max(16, $base - 2), $base + 2, $base.' kg per dumbbell');

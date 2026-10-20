@@ -25,12 +25,13 @@ class StateAssembler
         $cycle->load(['sessions.slots.sets']);
 
         $weeks = [];
+        $recordCache = [];
         foreach ($cycle->sessions as $session) {
             $week = (string) $session->week;
             $weeks[$week] ??= [];
             $slots = [];
             foreach ($session->slots as $slot) {
-                $record = $this->records->allTime($slot->selected_name);
+                $record = $recordCache[$slot->selected_name] ??= $this->records->allTime($slot->selected_name);
                 $advice = $this->advisor->forSlot(
                     $cycle,
                     $session,
@@ -45,6 +46,8 @@ class StateAssembler
                     'slotKey' => $slot->slot_key,
                     'selectedName' => $slot->selected_name,
                     'progressionPlan' => $slot->progression_plan,
+                    'prescription' => $slot->prescription,
+                    'requiredSets' => $slot->requiredSetCount((int) $session->week),
                     'note' => $slot->note,
                     'targetReps' => $targetReps,
                     'catalog' => $this->catalog->slot($slot->slot_key),
@@ -70,7 +73,7 @@ class StateAssembler
             }
             $weeks[$week][$session->day] = [
                 'id' => $session->id,
-                'title' => config('ironforge.splits.'.$session->day.'.title'),
+                'title' => $this->catalog->splitsForCycle($cycle)[$session->day]['title'],
                 'duration' => $session->actual_duration,
                 'avgRest' => $session->actual_avg_rest,
                 'restCount' => $session->actual_rest_count,
@@ -88,7 +91,7 @@ class StateAssembler
         $history = Cycle::query()
             ->where('is_current', false)
             ->orderByDesc('number')
-            ->get(['id', 'number', 'started_at', 'completed_at', 'snapshot', 'training_goal']);
+            ->get(['id', 'number', 'started_at', 'completed_at', 'snapshot', 'training_goal', 'program_definition']);
 
         return [
             'currentWeek' => (int) $prefs->current_week,
@@ -96,6 +99,8 @@ class StateAssembler
             'totalWeeks' => (int) $cycle->total_weeks,
             'currentCycle' => (int) $cycle->number,
             'trainingGoal' => $cycle->training_goal ?? 'hypertrophy',
+            'programDefinition' => $cycle->program_definition,
+            'programLibrary' => app(ProgramLibrary::class)->export(),
             'trainingRules' => app(TrainingPrescription::class)->rules(),
             'cycleId' => $cycle->id,
             'cycleStartedAt' => optional($cycle->started_at)?->toDateString(),
@@ -111,7 +116,7 @@ class StateAssembler
                 'equipment' => $profile->equipment,
             ],
             'weeks' => $weeks,
-            'splits' => $this->catalog->splits($cycle->training_goal ?? 'hypertrophy'),
+            'splits' => $this->catalog->splitsForCycle($cycle),
             'catalog' => $this->catalog->allSlots(),
             'days' => config('ironforge.days'),
             'cyclesHistory' => $history,
@@ -135,7 +140,7 @@ class StateAssembler
             foreach (app(CoreWorkout::class)->reportingSlots($session) as $slot) {
                 $ex = $slot->selected_name;
                 $exercises[$ex] ??= ['name' => $ex, 'sets' => 0, 'volume' => 0.0, 'maxWeight' => 0.0];
-                $requiredSets = str_starts_with($slot->slot_key, 'slot_core_') ? $slot->sets->count() : $this->periodization->requiredSets($week);
+                $requiredSets = $slot->requiredSetCount($week);
                 $totalSets += $requiredSets;
                 foreach ($slot->sets->take($requiredSets) as $set) {
                     if (! $set->completed || (int) $set->reps <= 0 || (! $this->periodization->isBodyweight($ex) && (float) $set->weight <= 0)) {
@@ -177,6 +182,9 @@ class StateAssembler
             'coreCompletedSets' => $sessions->sum(fn ($session): int => collect($session->core_workout ?? [])->sum(fn (array $exercise): int => collect($exercise['sets'])->where('completed', true)->count())),
             'totalSets' => $totalSets,
             'skippedDays' => $sessions->where('skipped', true)->count(),
+            'recoveryAdvice' => $sessions->contains(fn ($session): bool => in_array($session->recovery, ['tired', 'exhausted'], true)) || collect($exercises)->contains(fn (array $exercise): bool => (bool) ($exercise['progress']['repeatedMaxMisses'] ?? false))
+                ? 'Een lichte herstelweek is aan te raden: je hebt vermoeidheid of herhaald gemiste doelen gemeld. Een nieuwe periode vervangt herstel niet.'
+                : 'Geen duidelijk herstelprobleem vastgesteld op basis van je invoer. Kies een lichte week bij aanhoudende vermoeidheid; start anders een nieuwe periode. Zes weken is een praktisch evaluatiemoment, geen bewezen optimum.',
             'exercises' => array_values($exercises),
         ];
     }

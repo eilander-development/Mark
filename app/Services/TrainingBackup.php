@@ -31,6 +31,7 @@ class TrainingBackup
             'version' => self::VERSION,
             'updatedAt' => now()->utc()->toIso8601String(),
             'appState' => $this->marker->export()['appState'],
+            'programLibrary' => app(ProgramLibrary::class)->backup(),
         ];
     }
 
@@ -68,7 +69,12 @@ class TrainingBackup
             throw new RuntimeException('Backup heeft geen voltooide sets. Bestaande training blijft staan.');
         }
 
-        DB::transaction(fn () => $this->replaceAll($state));
+        DB::transaction(function () use ($state, $payload): void {
+            if (isset($payload['programLibrary']) && is_array($payload['programLibrary'])) {
+                app(ProgramLibrary::class)->restore($payload['programLibrary']);
+            }
+            $this->replaceAll($state);
+        });
         $hadExport = Storage::disk('local')->exists(self::LATEST_PATH);
         $this->deleteLatest();
 
@@ -111,10 +117,11 @@ class TrainingBackup
      */
     private function replaceAll(array $state): void
     {
+        app(ProgramLibrary::class)->validateDefinition($state['programDefinition'] ?? null);
         Cycle::query()->delete();
 
         $number = max(1, (int) ($state['currentCycle'] ?? 1));
-        $cycle = $this->factory->createCycle($number);
+        $cycle = $this->factory->createCycle($number, goal: $state['trainingGoal'] ?? 'hypertrophy', program: $state['programDefinition'] ?? null);
 
         if (! isset($state['userProfile']) || ! is_array($state['userProfile'])) {
             $state['userProfile'] = [
@@ -162,10 +169,11 @@ class TrainingBackup
                 'number' => $number,
                 'training_goal' => in_array($item['trainingGoal'] ?? $item['snapshot']['trainingGoal'] ?? null, array_keys(TrainingPrescription::GOALS), true) ? ($item['trainingGoal'] ?? $item['snapshot']['trainingGoal']) : null,
                 'is_current' => false,
-                'total_weeks' => (int) config('ironforge.total_weeks', 7),
+                'total_weeks' => (int) ($item['programDefinition']['totalWeeks'] ?? $item['snapshot']['programDefinition']['totalWeeks'] ?? (count($item['snapshot']['weeksSnapshot'] ?? []) ?: 7)),
                 'started_at' => $started,
                 'completed_at' => $completed,
                 'snapshot' => is_array($item['snapshot'] ?? null) ? $item['snapshot'] : null,
+                'program_definition' => $item['programDefinition'] ?? $item['snapshot']['programDefinition'] ?? null,
             ]);
         }
     }

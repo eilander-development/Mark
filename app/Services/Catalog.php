@@ -2,12 +2,21 @@
 
 namespace App\Services;
 
+use App\Models\Cycle;
 use App\Models\Exercise;
 use App\Models\ProgramSlot;
 use Illuminate\Support\Collection;
 
 class Catalog
 {
+    /** @return array<string, array<string, mixed>> */
+    public function splitsForCycle(Cycle $cycle): array
+    {
+        return $cycle->program_definition
+            ? app(ProgramLibrary::class)->splits($cycle->program_definition)
+            : $this->splits($cycle->training_goal ?? 'hypertrophy', (int) $cycle->number);
+    }
+
     private bool $synced = false;
 
     /**
@@ -46,16 +55,74 @@ class Catalog
     /**
      * @return array<string, array<string, mixed>>
      */
-    public function splits(string $goal = 'hypertrophy'): array
+    public function splits(string $goal = 'hypertrophy', ?int $cycleNumber = null): array
     {
         $splits = config('ironforge.splits');
+
+        if ($cycleNumber !== null) {
+            $template = $this->programTemplateForCycle($cycleNumber);
+            if ($template !== null) {
+                $splits = $template['splits'];
+            }
+        }
+
         if ($goal === 'strength') {
-            foreach (['tue', 'fri'] as $day) {
-                $splits[$day]['slots'] = ['slot_b2', 'slot_b1', 'slot_b3', 'slot_b4', 'slot_b5', 'slot_b6'];
+            foreach ($splits as $day => $split) {
+                $priorities = in_array($day, ['mon', 'thu'], true)
+                    ? ['slot_a1', 'slot_a2']
+                    : ['slot_b2'];
+                $first = array_values(array_filter($priorities, fn (string $slotKey): bool => in_array($slotKey, $split['slots'], true)));
+                $splits[$day]['slots'] = [
+                    ...$first,
+                    ...array_values(array_filter($split['slots'], fn (string $slotKey): bool => ! in_array($slotKey, $first, true))),
+                ];
             }
         }
 
         return $splits;
+    }
+
+    /** @return array<string, mixed> */
+    public function programTemplates(): array
+    {
+        return config('ironforge.program_templates', []);
+    }
+
+    /** @return array<string, mixed>|null */
+    public function programTemplateForCycle(int $cycleNumber): ?array
+    {
+        $program = $this->programTemplates();
+        $rotationStart = (int) ($program['rotation_start_cycle'] ?? 2);
+        $variants = $program['variants'] ?? [];
+        if ($cycleNumber < $rotationStart || $variants === []) {
+            return null;
+        }
+
+        $variantKeys = array_keys($variants);
+        sort($variantKeys, SORT_NUMERIC);
+        $variantIndex = ($cycleNumber - $rotationStart) % count($variantKeys);
+        $variantKey = (string) $variantKeys[$variantIndex];
+        $variant = $variants[$variantKey];
+        $splits = [];
+        foreach (config('ironforge.days') as $day) {
+            $slots = $program['day_slots'][$day] ?? [];
+            if ($slots === []) {
+                continue;
+            }
+            $splits[$day] = [
+                'title' => (string) ($program['day_titles'][$day] ?? $day),
+                'slots' => $slots,
+            ];
+        }
+
+        return [
+            'key' => $variantKey,
+            'cycleNumber' => $cycleNumber,
+            'name' => (string) ($variant['name'] ?? 'Schema '.$variantKey),
+            'focus' => (string) ($variant['focus'] ?? ''),
+            'exercises' => $variant['exercises'] ?? [],
+            'splits' => $splits,
+        ];
     }
 
     /**
@@ -78,7 +145,12 @@ class Catalog
         return Exercise::query()
             ->orderBy('name')
             ->get()
-            ->mapWithKeys(fn (Exercise $exercise) => [$exercise->name => $exercise->toVideoArray()])
+            ->mapWithKeys(function (Exercise $exercise): array {
+                $resolved = $this->resolveBuiltinVideo($exercise->name);
+                $similar = ! isset($this->builtinVideos()[$exercise->name]) && $resolved && ($resolved['videoId'] ?? null) === $exercise->youtube_id;
+
+                return [$exercise->name => [...$exercise->toVideoArray(), 'matchType' => $similar ? 'similar' : ($exercise->youtube_id ? 'assigned' : 'missing'), 'matchedExercise' => $similar ? ($resolved['title'] ?? 'vergelijkbare oefening') : $exercise->name]];
+            })
             ->all();
     }
 
@@ -266,10 +338,11 @@ class Catalog
 
     public function applyBuiltinVideos(): void
     {
+        $existing = Exercise::query()->get()->keyBy('name');
         $names = array_unique(array_merge(
             array_keys($this->builtinVideos()),
             array_keys($this->builtinAliases()),
-            Exercise::query()->pluck('name')->all(),
+            $existing->keys()->all(),
         ));
 
         foreach ($names as $name) {
@@ -281,7 +354,7 @@ class Catalog
                 continue;
             }
 
-            $exercise = Exercise::query()->firstOrNew(['name' => $name]);
+            $exercise = $existing->get($name) ?? new Exercise(['name' => $name]);
             if ($exercise->exists && ! $this->shouldRefreshFromLibrary($exercise, $video)) {
                 continue;
             }

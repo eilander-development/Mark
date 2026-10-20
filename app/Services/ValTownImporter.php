@@ -178,6 +178,9 @@ class ValTownImporter
                         $slot->target_reps = (int) $slotData['targetReps'];
                     }
                     $slot->progression_plan = $slotData['progressionPlan'] ?? null;
+                    if (isset($slotData['prescription']) && is_array($slotData['prescription'])) {
+                        $slot->prescription = $slotData['prescription'];
+                    }
                     $slot->save();
                     $sets = is_array($slotData['sets'] ?? null) ? $slotData['sets'] : [];
                     foreach ($sets as $index => $setData) {
@@ -200,7 +203,7 @@ class ValTownImporter
                             'input_fields' => json_encode($setData['inputFields'] ?? []),
                             'exertion' => in_array($exertion, ['unknown', 'easy', 'good', 'max'], true) ? $exertion : 'unknown',
                             'created_at' => $set->created_at ?? $now,
-                            'updated_at' => $now,
+                            'updated_at' => isset($setData['performedAt']) && is_string($setData['performedAt']) && strtotime($setData['performedAt']) !== false ? date('Y-m-d H:i:s', strtotime($setData['performedAt'])) : $now,
                         ];
                     }
                 }

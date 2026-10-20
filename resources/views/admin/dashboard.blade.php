@@ -7,8 +7,8 @@
     <div class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <a href="{{ route('admin.program') }}" class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
             <div class="text-[10px] font-mono uppercase text-slate-500">Programma</div>
-            <div class="text-2xl font-black text-emerald-300">{{ $slotCount }} oefenplekken</div>
-            <p class="mt-1 text-xs text-slate-400">Basisschema: oefeningen, startreps en rust</p>
+            <div class="text-2xl font-black text-emerald-300">{{ $variantCount }} dagvarianten</div>
+            <p class="mt-1 text-xs text-slate-400">Push/Pull · {{ $templateCount }} periodevoorstellen</p>
         </a>
         <a href="{{ route('admin.exercises') }}" class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
             <div class="text-[10px] font-mono uppercase text-slate-500">Oefeningen</div>
@@ -30,7 +30,7 @@
     <div class="rounded-2xl border border-slate-800 bg-slate-900 p-5 text-sm leading-relaxed text-slate-300">
         <h2 class="mb-2 text-sm font-bold text-slate-200">Wanneer gebruik je welke pagina?</h2>
         <ul class="list-disc space-y-2 pl-5">
-            <li><strong>Programma:</strong> verander een standaardoefening, startreps of rusttijd. Controleer vóór toepassen welke nog niet gestarte trainingen worden aangepast.</li>
+            <li><strong>Programma:</strong> beheer Push/Pull-dagvarianten en stel periodevoorstellen samen door per dag een variant te kiezen. Wijzigingen veranderen geen gestarte periode.</li>
             <li><strong>Oefeningen:</strong> controleer of vervang een instructievideo. De uitklapbare spierindeling verklaart de weekteller; dit is geen trainingsadvies.</li>
             <li><strong>Voorkeuren:</strong> kies de standaard gewichtsstap en het opbouwritme. Je eigen stappen per oefening stel je in via Instellingen in de trainer.</li>
             <li><strong>Trainingsregels:</strong> lees hoe adviezen worden berekend en wat onderzoek ondersteunt. Je hoeft hier niets in te vullen.</li>

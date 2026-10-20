@@ -28,6 +28,88 @@ return [
         ],
     ],
 
+    'program_templates' => [
+        'rotation_start_cycle' => 2,
+        'day_titles' => [
+            'mon' => 'Maandag: Borst & Rug',
+            'tue' => 'Dinsdag: Schouders & Armen',
+            'thu' => 'Donderdag: Borst & Rug',
+            'fri' => 'Vrijdag: Schouders & Armen',
+        ],
+        'day_slots' => [
+            'mon' => ['slot_a1', 'slot_a2', 'slot_a3', 'slot_b4'],
+            'tue' => ['slot_b2', 'slot_a5', 'slot_b5', 'slot_a6', 'slot_b6', 'slot_a4'],
+            'thu' => ['slot_a1', 'slot_a2', 'slot_a3', 'slot_b4'],
+            'fri' => ['slot_b2', 'slot_a5', 'slot_b5', 'slot_a6', 'slot_b6', 'slot_a4'],
+        ],
+        'variants' => [
+            '1' => [
+                'name' => 'Variant 1 · barbellbasis',
+                'focus' => 'Barbell bij de hoofdbewegingen, dumbbells voor aanvullende borst-, rug- en armsets.',
+                'exercises' => [
+                    'slot_a1' => 'Incline Barbell Press',
+                    'slot_a2' => 'Barbell Row',
+                    'slot_a3' => 'Incline Dumbbell Press',
+                    'slot_b4' => 'Dumbbell One-Arm Row',
+                    'slot_b2' => 'Seated Dumbbell Shoulder Press',
+                    'slot_a5' => 'Dumbbell Lateral Raises',
+                    'slot_b5' => 'Rear Delt Flyes',
+                    'slot_a6' => 'Dumbbell Bicep Curls',
+                    'slot_b6' => 'Dumbbell Overhead Tricep Extension',
+                    'slot_a4' => 'Barbell Shrugs',
+                ],
+            ],
+            '2' => [
+                'name' => 'Variant 2 · dumbbellbasis',
+                'focus' => 'Dumbbell bij de eerste druk- en roeibewegingen, met barbellvarianten als afwisseling.',
+                'exercises' => [
+                    'slot_a1' => 'Dumbbell Bench Press',
+                    'slot_a2' => 'Dumbbell One-Arm Row',
+                    'slot_a3' => 'Incline Dumbbell Flyes',
+                    'slot_b4' => 'Barbell Row',
+                    'slot_b2' => 'Barbell Overhead Press (OHP)',
+                    'slot_a5' => 'Seated Dumbbell Lateral Raises',
+                    'slot_b5' => 'Barbell Rear Delt Raise',
+                    'slot_a6' => 'Barbell Bicep Curls',
+                    'slot_b6' => 'Barbell Lying Tricep Extension (Skull Crushers)',
+                    'slot_a4' => 'Dumbbell Shrugs',
+                ],
+            ],
+            '3' => [
+                'name' => 'Variant 3 · andere hoeken',
+                'focus' => 'Een nieuwe drukhoek, ondersteunde rows en gecontroleerde isolatievarianten.',
+                'exercises' => [
+                    'slot_a1' => 'Barbell Bench Press',
+                    'slot_a2' => 'Chest-Supported Dumbbell Row',
+                    'slot_a3' => 'Dumbbell Chest Flyes',
+                    'slot_b4' => 'Meadows Row (Landmine)',
+                    'slot_b2' => 'Arnold Press',
+                    'slot_a5' => 'Leaning Dumbbell Lateral Raises',
+                    'slot_b5' => 'Seated Rear Delt Flyes',
+                    'slot_a6' => 'Incline Dumbbell Curls',
+                    'slot_b6' => 'Dumbbell Skull Crushers (Liggend op Bankje)',
+                    'slot_a4' => 'Incline Bench Dumbbell Shrugs',
+                ],
+            ],
+            '4' => [
+                'name' => 'Variant 4 · dumbbell & tempo',
+                'focus' => 'Meer dumbbell- en tempowerk, met een barbellrow en barbell shoulder press.',
+                'exercises' => [
+                    'slot_a1' => 'Tempo Dumbbell Bench Press',
+                    'slot_a2' => 'Underhand Barbell Row (Yates Row)',
+                    'slot_a3' => 'Incline Dumbbell Flyes',
+                    'slot_b4' => 'Seal Row (Op Hoog Bankje)',
+                    'slot_b2' => 'Seated Barbell Press',
+                    'slot_a5' => 'Lying Incline Lateral Raises',
+                    'slot_b5' => 'Prone Incline Rear Delt Raises',
+                    'slot_a6' => 'Hammer Curls (Dumbbells)',
+                    'slot_b6' => 'Incline Dumbbell Overhead Extension',
+                    'slot_a4' => 'Dumbbell Shrugs met Pauze (2s Squeeze)',
+                ],
+            ],
+        ],
+    ],
+
     'catalog' => [
         'slot_a1' => [
             'defaultName' => 'Barbell Bench Press',

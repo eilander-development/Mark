@@ -121,16 +121,42 @@ class WorkoutController extends Controller
     {
         $data = $request->validate([
             'week' => ['required', 'integer', 'min:1', 'max:14'],
+            'recovery_week' => ['sometimes', 'boolean'],
         ]);
 
-        return response()->json($this->writer->applyOverloadAndAdvance((int) $data['week']));
+        return response()->json($this->writer->applyOverloadAndAdvance((int) $data['week'], (bool) ($data['recovery_week'] ?? false)));
     }
 
-    public function nextCycleAdvice(NextCycleAdvisor $advisor, CycleFactory $factory): JsonResponse
+    public function nextCycleAdvice(Request $request, NextCycleAdvisor $advisor, CycleFactory $factory): JsonResponse
     {
         $cycle = $factory->ensureCurrent();
 
-        return response()->json($advisor->forCycle($cycle, (int) $factory->preferences()->current_week));
+        $data = $request->validate([
+            'templateKey' => ['sometimes', 'string', 'max:100'],
+            'training_goal' => ['sometimes', 'in:hypertrophy,strength,combined'],
+            'dayVariants' => ['sometimes', 'array:mon,tue,thu,fri'],
+            'dayVariants.*' => ['string', 'max:100'],
+        ]);
+
+        return response()->json($advisor->forCycle($cycle, (int) $factory->preferences()->current_week,
+            $data['templateKey'] ?? null, $data['dayVariants'] ?? [], $data['training_goal'] ?? null));
+    }
+
+    public function previewCycle(Request $request, NextCycleAdvisor $advisor, CycleFactory $factory): JsonResponse
+    {
+        $data = $request->validate([
+            'templateKey' => ['required', 'string', 'max:100'],
+            'training_goal' => ['required', 'in:hypertrophy,strength,combined'],
+            'dayVariants' => ['sometimes', 'array:mon,tue,thu,fri'],
+            'dayVariants.*' => ['string', 'max:100'],
+            'schema' => ['sometimes', 'array:mon,tue,thu,fri'],
+            'schema.*.*.selectedName' => ['sometimes', 'string', 'max:160'],
+            'schema.*.*.weight' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'schema.*.*.weightEdited' => ['sometimes', 'boolean'],
+        ]);
+
+        return response()->json($advisor->forCycle($factory->ensureCurrent(), (int) $factory->preferences()->current_week,
+            $data['templateKey'], $data['dayVariants'] ?? [], $data['training_goal'], $data['schema'] ?? []));
     }
 
     public function startCycle(Request $request): JsonResponse
@@ -144,8 +170,15 @@ class WorkoutController extends Controller
             'schema.*.*.selectedName' => ['sometimes', 'string', 'max:160'],
             'schema.*.*.weight' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'schema.*.*.targetReps' => ['sometimes', 'integer', 'min:1', 'max:30'],
+            'schema.*.*.weightEdited' => ['sometimes', 'boolean'],
+            'templateKey' => ['sometimes', 'string', 'max:100'],
+            'dayVariants' => ['sometimes', 'array:mon,tue,thu,fri'],
+            'dayVariants.*' => ['string', 'max:100'],
+            'programVersions' => ['sometimes', 'array:mon,tue,thu,fri'],
+            'programVersions.*' => ['nullable', 'string', 'max:100'],
+            'cycleId' => ['sometimes', 'integer', 'min:1'],
         ]);
 
-        return response()->json($this->writer->startNextCycle($data['schema'] ?? null, (bool) ($data['close_current_period'] ?? false), $data['training_goal'] ?? 'hypertrophy'));
+        return response()->json($this->writer->startNextCycle($data['schema'] ?? null, (bool) ($data['close_current_period'] ?? false), $data['training_goal'] ?? 'hypertrophy', $data));
     }
 }

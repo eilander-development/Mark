@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\Cycle;
 use App\Models\Preference;
 use App\Models\WorkoutSession;
 use App\Models\WorkoutSet;
 use App\Models\WorkoutSlot;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class WorkoutWriter
@@ -80,18 +82,45 @@ class WorkoutWriter
      */
     public function updateSlot(WorkoutSlot $slot, array $data, string $context = 'main'): array
     {
+        return DB::transaction(fn (): array => $this->writeSlot($slot, $data, $context));
+    }
+
+    /** @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function writeSlot(WorkoutSlot $slot, array $data, string $context): array
+    {
         if (isset($data['selectedName'])) {
             $prefs = $this->factory->preferences();
             if ($prefs->routine_locked && $context !== 'setup') {
                 throw ValidationException::withMessages([
-                    'selectedName' => 'Schema staat vast. Ontgrendel eerst om te wisselen.',
+                    'selectedName' => 'Pas oefeningen aan via Schema zelf kiezen.',
                 ]);
             }
+            if ($slot->prescription) {
+                if ($slot->session->slots()->where('id', '!=', $slot->id)->where('selected_name', $data['selectedName'])->exists()) {
+                    throw ValidationException::withMessages(['selectedName' => 'Deze oefening staat al op deze trainingsdag. Kies een andere oefening.']);
+                }
+                $allowed = config('push_pull.roles.'.$slot->slot_key.'.exercises', []);
+                if (! in_array($data['selectedName'], $allowed, true)) {
+                    throw ValidationException::withMessages(['selectedName' => 'Deze oefening past niet bij deze Push/Pull-positie.']);
+                }
+                if (! app(ProgramLibrary::class)->compatible($data['selectedName'], $this->factory->profile()->equipment ?? [])) {
+                    throw ValidationException::withMessages(['selectedName' => 'Het benodigde materiaal staat niet in je profiel.']);
+                }
+            }
             if ($slot->selected_name !== $data['selectedName']) {
-                if ($slot->sets()->where('completed', true)->exists()) {
+                if ($slot->sets()->where(fn ($query) => $query->where('completed', true)->orWhere('input_fields->weight', true)->orWhere('input_fields->reps', true)->orWhere('reps', '!=', ''))->exists()) {
                     throw ValidationException::withMessages(['selectedName' => 'Deze oefening bevat opgeslagen prestaties. Wissel in een nog niet uitgevoerde training.']);
                 }
                 $slot->progression_plan = null;
+                foreach ($slot->sets as $set) {
+                    $set->update(['weight' => '', 'reps' => '']);
+                }
+                if ($slot->prescription) {
+                    $slot->prescription = app(ProgramLibrary::class)->prescription($slot->slot_key, $data['selectedName'], $slot->session->cycle->training_goal ?? 'hypertrophy', ['sets' => $slot->prescription['sets']]);
+                    $slot->target_reps = $slot->prescription['minReps'];
+                }
             }
             $slot->selected_name = (string) $data['selectedName'];
         }
@@ -267,10 +296,23 @@ class WorkoutWriter
     /**
      * @return array<string, mixed>
      */
-    public function applyOverloadAndAdvance(int $fromWeek): array
+    public function applyOverloadAndAdvance(int $fromWeek, bool $recoveryWeek = false): array
     {
         $cycle = $this->factory->ensureCurrent();
         $prefs = $this->factory->preferences();
+        if ($recoveryWeek) {
+            if (($cycle->program_definition['type'] ?? null) !== 'push_pull' || $fromWeek !== 6 || (int) $prefs->current_week < 6) {
+                throw ValidationException::withMessages(['recovery_week' => 'Kies een herstelweek na de zes trainingsweken van je Push/Pull-periode.']);
+            }
+            if ((int) $cycle->total_weeks === 6) {
+                $program = $cycle->program_definition;
+                $program['totalWeeks'] = 7;
+                $cycle->update(['total_weeks' => 7, 'program_definition' => $program]);
+                $this->factory->ensureSkeleton($cycle);
+            }
+        } elseif ($fromWeek >= (int) $cycle->total_weeks) {
+            throw ValidationException::withMessages(['week' => 'Deze periode is klaar. Kies een herstelweek of een nieuwe periode.']);
+        }
         $nextWeek = min($cycle->total_weeks, $fromWeek + 1);
 
         $toSessions = $cycle->sessions()->where('week', $nextWeek)->with('slots.sets')->get();
@@ -279,13 +321,13 @@ class WorkoutWriter
                 if ($slot->sets->contains(fn ($set): bool => $set->completed || ! empty($set->input_fields) || $set->reps !== '')) {
                     continue;
                 }
-                $progress = $this->advisor->exerciseProgress($cycle, $fromWeek, $slot->selected_name);
+                $progress = $this->advisor->exerciseProgress($cycle, $fromWeek, $slot->selected_name, true, $slot->prescription ? ['minReps' => $slot->prescription['minReps'], 'maxReps' => $slot->prescription['maxReps']] : null);
                 if (! $progress['completedSets']) {
                     continue;
                 }
                 $next = $this->periodization->nextProgression($progress, $nextWeek, $prefs->incrementFor($slot->selected_name), $prefs->overload_frequency);
                 $slot->update(['progression_plan' => ['weight' => $next['weight'], 'reps' => $next['reps'], 'minReps' => $next['minReps'], 'maxReps' => $next['maxReps']], 'target_reps' => $next['reps']]);
-                foreach ($slot->sets->take($next['requiredSets']) as $set) {
+                foreach ($slot->sets->take($slot->requiredSetCount($nextWeek)) as $set) {
                     if (! ($set->input_fields['weight'] ?? false)) {
                         $set->update(['weight' => (string) $next['weight']]);
                     }
@@ -304,30 +346,31 @@ class WorkoutWriter
      * @param  array<string, array<string, array<string, mixed>>>|null  $schema
      * @return array<string, mixed>
      */
-    public function startNextCycle(?array $schema = null, bool $closeCurrentPeriod = false, string $goal = 'hypertrophy'): array
+    public function startNextCycle(?array $schema = null, bool $closeCurrentPeriod = false, string $goal = 'hypertrophy', array $options = []): array
     {
-        $current = $this->factory->ensureCurrent();
-        $prefs = $this->factory->preferences();
-        $advice = $this->nextCycle->forCycle($current, (int) $prefs->current_week);
-        if (! $advice['available']) {
-            throw ValidationException::withMessages([
-                'cycle' => $advice['reason'],
-            ]);
-        }
-
-        if (! $closeCurrentPeriod) {
-            throw ValidationException::withMessages([
-                'close_current_period' => 'Sluit eerst de huidige periode bewust af. Open trainingen blijven onvoltooid in het archief.',
-            ]);
-        }
-
-        $this->factory->createCycle(
-            ((int) $current->number) + 1,
-            true,
-            $current,
-            $schema ?: $advice['schema'],
-            $goal,
-        );
+        $this->factory->ensureCurrent();
+        DB::transaction(function () use ($schema, $closeCurrentPeriod, $goal, $options): void {
+            $current = Cycle::query()->where('is_current', true)->lockForUpdate()->firstOrFail();
+            if (isset($options['cycleId']) && (int) $options['cycleId'] !== $current->id) {
+                throw ValidationException::withMessages(['cycleId' => 'Deze periode is al gestart of het voorstel is verouderd. Vernieuw het overzicht.']);
+            }
+            $prefs = $this->factory->preferences();
+            $advice = $this->nextCycle->forCycle($current, (int) $prefs->current_week, $options['templateKey'] ?? null,
+                $options['dayVariants'] ?? [], $goal, $schema ?? []);
+            if (! $advice['available'] || ! empty($advice['unavailableReason'])) {
+                throw ValidationException::withMessages(['cycle' => $advice['unavailableReason'] ?? $advice['reason']]);
+            }
+            if (! $closeCurrentPeriod) {
+                throw ValidationException::withMessages(['close_current_period' => 'Sluit eerst de huidige periode bewust af. Open trainingen blijven onvoltooid in het archief.']);
+            }
+            foreach ($options['programVersions'] ?? [] as $day => $version) {
+                if (($advice['programTemplate']['days'][$day]['version'] ?? null) !== $version) {
+                    throw ValidationException::withMessages(['programVersions' => 'Een variant is gewijzigd sinds je het voorstel opende. Bekijk het voorstel opnieuw.']);
+                }
+            }
+            $this->factory->createCycle(((int) $current->number) + 1, true, $current,
+                $advice['schema'], $goal, $advice['programTemplate']);
+        });
 
         return $this->state->payload();
     }
@@ -348,16 +391,21 @@ class WorkoutWriter
     private function syncNameAcrossCycle(WorkoutSlot $slot): void
     {
         $slot->loadMissing('session');
-        $sessions = WorkoutSession::query()
-            ->where('cycle_id', $slot->session->cycle_id)
-            ->where('week', '>=', $slot->session->week)
-            ->pluck('id');
-
-        WorkoutSlot::query()
-            ->whereIn('workout_session_id', $sessions)
-            ->where('slot_key', $slot->slot_key)
-            ->where('selected_name', '!=', $slot->selected_name)
-            ->whereDoesntHave('sets', fn ($query) => $query->where('completed', true))
-            ->update(['selected_name' => $slot->selected_name, 'progression_plan' => null]);
+        $sessions = WorkoutSession::query()->where('cycle_id', $slot->session->cycle_id)
+            ->where('week', '>=', $slot->session->week)->where('day', $slot->session->day)->pluck('id');
+        $targets = WorkoutSlot::query()->whereIn('workout_session_id', $sessions)
+            ->where('slot_key', $slot->slot_key)->where('selected_name', '!=', $slot->selected_name)
+            ->whereDoesntHave('sets', fn ($query) => $query->where('completed', true)->orWhere('input_fields->weight', true)->orWhere('input_fields->reps', true)->orWhere('reps', '!=', ''))
+            ->with('sets')->get();
+        foreach ($targets as $target) {
+            if ($target->prescription && $target->session->slots()->where('id', '!=', $target->id)->where('selected_name', $slot->selected_name)->exists()) {
+                continue;
+            }
+            $target->update(['selected_name' => $slot->selected_name, 'progression_plan' => null,
+                'prescription' => $slot->prescription, 'target_reps' => $slot->target_reps]);
+            foreach ($target->sets as $set) {
+                $set->update(['weight' => '', 'reps' => '']);
+            }
+        }
     }
 }

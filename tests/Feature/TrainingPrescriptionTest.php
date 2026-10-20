@@ -123,17 +123,21 @@ class TrainingPrescriptionTest extends TestCase
         $this->assertSame('strength', $state['cyclesHistory'][0]['trainingGoal']);
     }
 
-    public function test_repeated_exercise_keeps_the_same_strength_range_across_days(): void
+    public function test_repeated_exercise_keeps_each_day_prescribed_range(): void
     {
         $factory = app(CycleFactory::class);
         $factory->ensureCurrent();
         $factory->preferences()->update(['current_week' => 7]);
-        $schema = ['mon' => ['slot_a2' => ['selectedName' => 'Chest-Supported Dumbbell Row']], 'tue' => ['slot_b4' => ['selectedName' => 'Chest-Supported Dumbbell Row']]];
+        $factory->profile()->update(['equipment' => ['dumbbells' => true, 'barbell' => true, 'bench' => true, 'adjustable_bench' => true, 'rack' => true]]);
+        $schema = ['tue' => ['slot_a2' => ['selectedName' => 'Chest-Supported Dumbbell Row']], 'fri' => ['slot_a2' => ['selectedName' => 'Barbell Row'], 'slot_b4' => ['selectedName' => 'Chest-Supported Dumbbell Row']]];
         $state = $this->postJson('/api/cycles', ['close_current_period' => true, 'training_goal' => 'strength', 'schema' => $schema])->assertOk()->json();
-        $row = collect($state['weeks'][1]['tue']['slots'])->firstWhere('slotKey', 'slot_b4');
-        $this->assertSame(4, $row['targetReps']);
-        $this->assertSame(4, $row['advice']['minReps']);
-        $this->assertSame(6, $row['advice']['maxReps']);
+        $row = collect($state['weeks'][1]['fri']['slots'])->firstWhere('slotKey', 'slot_b4');
+        $this->assertSame(8, $row['targetReps']);
+        $this->assertSame(8, $row['advice']['minReps']);
+        $this->assertSame(12, $row['advice']['maxReps']);
+        $primary = collect($state['weeks'][1]['tue']['slots'])->firstWhere('slotKey', 'slot_a2');
+        $this->assertSame(4, $primary['advice']['minReps']);
+        $this->assertSame(6, $primary['advice']['maxReps']);
         $this->get('/beheer')->assertOk()->assertSee('Wanneer gebruik je welke pagina?');
         $this->get('/beheer/voorkeuren')->assertOk()->assertSee('Periodedoel:')->assertSee('Kracht');
         $this->get('/beheer/oefeningen')->assertOk()->assertSee('Indeling weeksets');

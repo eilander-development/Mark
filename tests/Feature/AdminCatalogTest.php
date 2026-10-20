@@ -34,7 +34,7 @@ class AdminCatalogTest extends TestCase
 
         $this->get('/beheer/regels')
             ->assertOk()
-            ->assertSee('Week 1 — inregelen')
+            ->assertSee('Push/Pull: zes trainingsweken, daarna kiezen')
             ->assertSee('progressive overload')
             ->assertSee('Vlot (easy)')
             ->assertSee('deload');
@@ -169,7 +169,7 @@ class AdminCatalogTest extends TestCase
 
     public function test_all_admin_edit_pages_render_with_current_recovery_rules(): void
     {
-        $this->get('/beheer/programma')->assertOk()->assertSee('Upper A · maandag en donderdag');
+        $this->get('/beheer/programma')->assertOk()->assertSee('Push/Pull-programma');
         $this->get('/beheer/oefeningen')->assertOk()->assertSee('Video wijzigen');
         $this->get('/beheer/voorkeuren')->assertOk()->assertSee('max="7"', false)->assertSee('Herstel & deload', false)->assertDontSee('elke overload-week +kg');
         $this->get('/beheer/regels')->assertOk()->assertSee('60%')->assertSee('80%')->assertSee('geen dubbele gewichtsstap');

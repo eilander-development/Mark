@@ -32,11 +32,13 @@ class MarkerState
             ->map(fn (Cycle $item) => [
                 'id' => $item->id,
                 'number' => $item->number,
+                'totalWeeks' => (int) $item->total_weeks,
                 'trainingGoal' => $item->training_goal,
+                'programDefinition' => $item->program_definition,
                 'started_at' => optional($item->started_at)?->toDateString(),
                 'completed_at' => optional($item->completed_at)?->toDateString(),
                 'snapshot' => $item->sessions->isNotEmpty()
-                    ? array_merge($item->snapshot ?? [], ['weeksSnapshot' => $this->weeksForCycle($item), 'trainingGoal' => $item->training_goal])
+                    ? array_merge($item->snapshot ?? [], ['weeksSnapshot' => $this->weeksForCycle($item), 'trainingGoal' => $item->training_goal, 'programDefinition' => $item->program_definition])
                     : $item->snapshot,
             ])
             ->all();
@@ -44,7 +46,12 @@ class MarkerState
         return [
             'appState' => [
                 'currentCycle' => (int) $cycle->number,
+                'cycleId' => $cycle->id,
+                'programDefinition' => $cycle->program_definition,
+                'programLibrary' => app(ProgramLibrary::class)->export(),
                 'trainingGoal' => $cycle->training_goal ?? 'hypertrophy',
+                'splits' => $this->catalog->splitsForCycle($cycle),
+                'programTemplates' => $this->catalog->programTemplates(),
                 'trainingRules' => app(TrainingPrescription::class)->rules(),
                 'cyclesHistory' => $history,
                 'cycleStartedAt' => optional($cycle->started_at)?->toDateString() ?? now()->toDateString(),
@@ -78,16 +85,23 @@ class MarkerState
         $cycle->loadMissing(['sessions.slots.sets']);
 
         $weeks = [];
+        $prefs = $this->factory->preferences();
         foreach ($cycle->sessions as $session) {
+            $session->setRelation('cycle', $cycle);
             $week = (int) $session->week;
             $weeks[$week] ??= [];
             $daySlots = [];
             foreach ($session->slots as $slot) {
+                $slot->setRelation('session', $session);
+                $advice = $cycle->is_current && $slot->prescription ? app(SlotAdvisor::class)->forSlot($cycle, $session, $slot, $prefs->incrementFor($slot->selected_name), $prefs->overload_frequency) : null;
                 $daySlots[$slot->slot_key] = [
                     'id' => $slot->id,
                     'sessionId' => $session->id,
                     'selectedName' => $slot->selected_name,
                     'progressionPlan' => $slot->progression_plan,
+                    'prescription' => $slot->prescription,
+                    'requiredSets' => $slot->requiredSetCount($week),
+                    'backendAdvice' => $advice,
                     'note' => (string) $slot->note,
                     'targetReps' => $slot->target_reps,
                     'sets' => $slot->sets->map(fn ($set) => [
@@ -97,6 +111,7 @@ class MarkerState
                         'completed' => (bool) $set->completed,
                         'exertion' => $set->exertion ?: 'unknown',
                         'inputFields' => $set->input_fields ?? [],
+                        'performedAt' => $set->updated_at?->toIso8601String(),
                     ])->values()->all(),
                 ];
             }
