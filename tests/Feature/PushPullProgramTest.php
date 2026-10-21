@@ -141,35 +141,73 @@ class PushPullProgramTest extends TestCase
             ->assertJsonPath('schema.mon.slot_a1.weightSource', 'ander_bereik');
     }
 
-    public function test_missing_material_has_explicit_compatible_replacements(): void
+    public function test_profile_equipment_cannot_change_fixed_variants_in_preview_or_start(): void
     {
-        $this->ready();
-        app(CycleFactory::class)->profile()->update(['equipment' => ['dumbbells' => true, 'bench' => true]]);
-        $this->getJson('/api/cycles/next-advice')->assertOk()
-            ->assertJsonPath('schema.mon.slot_a1.selectedName', 'Dumbbell Bench Press')
-            ->assertJsonPath('schema.mon.slot_a1.materialAlternative', 'Barbell Bench Press');
-        $this->postJson('/api/cycles', ['close_current_period' => true, 'schema' => ['mon' => ['slot_a1' => ['selectedName' => 'Barbell Bench Press']]]])
-            ->assertUnprocessable();
-    }
-
-    public function test_material_replacements_keep_each_training_day_distinct(): void
-    {
-        $this->ready();
-        app(CycleFactory::class)->profile()->update(['equipment' => ['barbell' => true, 'dumbbells' => true, 'bench' => true]]);
+        $cycle = $this->ready();
+        app(CycleFactory::class)->profile()->update(['equipment' => []]);
         $advice = $this->getJson('/api/cycles/next-advice')->assertOk()->json();
-        $this->assertSame('Dumbbell One-Arm Row', $advice['schema']['fri']['slot_a2']['selectedName']);
-        $this->assertSame('Barbell Row', $advice['schema']['fri']['slot_b4']['selectedName']);
-        $this->assertSame('Chest-Supported Dumbbell Row', $advice['schema']['fri']['slot_a2']['materialAlternative']);
-        $this->assertSame(['adjustable_bench'], $advice['schema']['fri']['slot_a2']['missingEquipment']);
+        $this->assertSame('Barbell Bench Press', $advice['schema']['mon']['slot_a1']['selectedName']);
+        $this->assertSame('Chest-Supported Dumbbell Row', $advice['schema']['fri']['slot_a2']['selectedName']);
+        $this->assertSame('Vrijdag: Pull B', $advice['days'][3]['title']);
         foreach ($advice['proposals'] as $key => $proposal) {
-            if ($key === 'repeat' || ! empty($proposal['unavailableReason'])) {
+            if ($key === 'repeat') {
                 continue;
             }
-            foreach ($proposal['schema'] as $day => $exercises) {
-                $names = array_column($exercises, 'selectedName');
-                $this->assertCount(count($names), array_unique($names), $key.' '.$day.' bevat een dubbele oefening.');
+            $this->assertArrayNotHasKey('unavailableReason', $proposal);
+            foreach ($proposal['programTemplate']['days'] as $day => $definition) {
+                $variant = ProgramVariant::query()->where('key', $definition['variantKey'])->firstOrFail();
+                $this->assertSame(array_column($variant->exercises, 'selectedName'), array_column($proposal['schema'][$day], 'selectedName'));
+                foreach ($proposal['schema'][$day] as $item) {
+                    $this->assertArrayNotHasKey('materialAlternative', $item);
+                    $this->assertArrayNotHasKey('missingEquipment', $item);
+                }
             }
         }
+        $this->postJson('/api/cycles/preview', ['templateKey' => 'balanced', 'training_goal' => 'hypertrophy'])->assertOk()
+            ->assertJsonPath('schema.fri.slot_a2.selectedName', 'Chest-Supported Dumbbell Row');
+        $this->postJson('/api/cycles', ['cycleId' => $cycle->id, 'close_current_period' => true, 'templateKey' => 'balanced'])
+            ->assertOk();
+        $new = Cycle::query()->where('is_current', true)->firstOrFail();
+        $this->assertSame('Chest-Supported Dumbbell Row', $new->sessions()->where('week', 1)->where('day', 'fri')->first()->slots()->where('slot_key', 'slot_a2')->value('selected_name'));
+        $this->assertFalse($cycle->fresh()->is_current);
+    }
+
+    public function test_every_default_variant_has_complementary_rows_and_a_content_based_overview(): void
+    {
+        $this->ready();
+        $library = app(ProgramLibrary::class);
+        $fixedEquipment = ['barbell', 'dumbbells', 'bench', 'adjustable_bench', 'rack', 'bodyweight'];
+        foreach ($library->export()['variants'] as $variant) {
+            $this->assertSame(implode(' + ', array_slice(array_column($variant['exercises'], 'selectedName'), 0, 2)), $variant['subtitle']);
+            $this->assertSame(array_sum(array_column($variant['exercises'], 'sets')), $variant['workSets']);
+            $this->assertGreaterThan($variant['estimatedMinutes']['min'], $variant['estimatedMinutes']['max']);
+            foreach ($variant['exercises'] as $key => $item) {
+                $this->assertSame([], array_values(array_diff($library->requirements($item['selectedName']), $fixedEquipment)));
+            }
+            if ($variant['family'] === 'pull') {
+                $cues = array_map(fn (string $key): string => $library->prescription($key, $variant['exercises'][$key]['selectedName'])['focusCue'], ['slot_a2', 'slot_b4']);
+                $this->assertTrue(str_contains(implode(' ', $cues), 'Lataccent'));
+                $this->assertTrue(str_contains(implode(' ', $cues), 'Bovenrugaccent'));
+            }
+        }
+        $this->getJson('/api/cycles/next-advice')->assertOk()
+            ->assertJsonPath('days.0.workSets', 14)->assertJsonPath('days.1.workSets', 13);
+    }
+
+    public function test_corrupt_library_duplicates_are_reported_without_replacing_them(): void
+    {
+        $cycle = $this->ready();
+        app(ProgramLibrary::class)->ensureDefaults();
+        $variant = ProgramVariant::query()->where('key', 'pull_a')->firstOrFail();
+        $items = $variant->exercises;
+        $items['slot_b4']['selectedName'] = 'Barbell Row';
+        $variant->update(['exercises' => $items]);
+        $this->postJson('/api/cycles/preview', ['templateKey' => 'balanced', 'training_goal' => 'hypertrophy'])
+            ->assertUnprocessable()->assertJsonValidationErrors('schema.tue');
+        $this->postJson('/api/cycles', ['close_current_period' => true, 'templateKey' => 'balanced'])
+            ->assertUnprocessable()->assertJsonValidationErrors('schema.tue');
+        $this->assertTrue($cycle->fresh()->is_current);
+        $this->assertDatabaseCount('cycles', 1);
     }
 
     public function test_preview_and_start_reject_duplicate_exercise_choices(): void

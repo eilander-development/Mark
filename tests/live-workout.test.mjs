@@ -17,6 +17,7 @@ function setup() {
     const elements = { lwSubmitTargetBtn: { innerHTML: '' } };
     const context = vm.createContext({
         appState: { weeks: { 1: { mon: { bench: slot() }, thu: { bench: slot() } } }, userProfile: {}, trainingRules: { exerciseVolume, coreWorkout: coreRules } },
+        periodStarting: false,
         liveWorkout: { weekNum: 1, dayKey: 'thu', slots: ['bench'], currentSlotIndex: 0, currentSetIndex: 0, slotAdaptations: {}, newPRs: [], tempExertion: 'good' },
         EXERCISE_CATALOG: { slot_core_0: { defaultName: 'Buikspieren', targetReps: 10 }, slot_core_1: { defaultName: 'Buikspieren', targetReps: 8 }, bench: { defaultName: 'Dumbbell Bench Press', targetReps: 8 } },
         SPLIT_INFO: { mon: { slots: ['bench'], title: 'Maandag: training' }, thu: { slots: ['bench'], title: 'Donderdag: training' } },
@@ -33,12 +34,12 @@ function setup() {
         showLiveWorkoutSummary() { context.finished = true; },
         console,
     });
-    for (const name of ['applyGoalOrdering', 'goalRepetitionRange', 'trainingGoalLabel', 'weekMuscleSets', 'muscleSetsAction', 'muscleScheduleHtml', 'muscleSetsHtml', 'getExerciseIncrement', 'equipmentLabels', 'profileSummaryHtml', 'equipmentSummaryHtml', 'settingsExerciseNames', 'openSettingsModal', 'saveTrainingSettings', 'saveProfileSettings', 'saveDisplaySettings', 'renderBenchmarkModal', 'trainingEvidenceHtml', 'getRecoveryLoad', 'recoveryCheckHtml', 'earlyRecoveryAdviceHtml', 'performanceChangeHtml', 'comparisonIndicatorHtml', 'updateWorkoutHeroButtons', 'renderLockedRoutineView', 'renderWorkloadChart', 'getPeriodDashboardData', 'periodDashboardHtml', 'updateDayTitleBanner', 'volumeComparisonClass', 'getVolumeComparison', 'calculateSessionVolume', 'calculateWeekVolume', 'canStartNewPeriod', 'executeStartNewMesocycle', 'escapeReportText', 'getExerciseHistory', 'formatHistorySets', 'compareHistoryEntries', 'exerciseHistoryHtml', 'preparationDetailsHtml', 'weekExerciseOutlookHtml', 'getOverloadOutlook', 'completedDayResultsHtml', 'getNextSplitDay', 'getLiveRestStats', 'getTrainingTiming', 'summarizeTrainingTimes', 'getCycleReport', 'getCycleHistoryReport', 'calculate1RM', 'getAllTimeRecord', 'isSetNewAllTimePR', 'lastHeavyWeekNum', 'peakSlotWeight', 'calculateSetProgress', 'getSlotProgress', 'getExerciseWeekProgress', 'getNextProgression', 'findPreviousExerciseSession', 'rememberLiveInput', 'renderProgressDetails', 'getDayCompletionStatus', 'getWeekEvaluation', 'getSameWeekExerciseLogged', 'getSlotTargetAdvice', 'autoApplyOverloadAndDeloadInheritance', 'prepareCurrentLiveSetValues', 'submitLiveSet', 'adjustLiveReps', 'setLiveRepsManual', 'setLiveWeightManual', 'updateLiveSubmitButtonText']) {
-        const start = html.indexOf(`    function ${name}(`);
+    for (const name of ['applyGoalOrdering', 'goalRepetitionRange', 'trainingGoalLabel', 'weekMuscleSets', 'muscleSetsAction', 'muscleScheduleHtml', 'muscleSetsHtml', 'getExerciseIncrement', 'equipmentLabels', 'profileSummaryHtml', 'equipmentSummaryHtml', 'settingsExerciseNames', 'openSettingsModal', 'saveTrainingSettings', 'saveProfileSettings', 'saveDisplaySettings', 'renderBenchmarkModal', 'trainingEvidenceHtml', 'getRecoveryLoad', 'recoveryCheckHtml', 'earlyRecoveryAdviceHtml', 'performanceChangeHtml', 'comparisonIndicatorHtml', 'updateWorkoutHeroButtons', 'renderLockedRoutineView', 'renderWorkloadChart', 'getPeriodDashboardData', 'periodDashboardHtml', 'updateDayTitleBanner', 'volumeComparisonClass', 'getVolumeComparison', 'calculateSessionVolume', 'calculateWeekVolume', 'canStartNewPeriod', 'executeStartNewMesocycle', 'escapeReportText', 'getExerciseHistory', 'formatHistorySets', 'compareHistoryEntries', 'exerciseHistoryHtml', 'preparationDetailsHtml', 'weekExerciseOutlookHtml', 'getOverloadOutlook', 'completedDayResultsHtml', 'getNextSplitDay', 'getLiveRestStats', 'getTrainingTiming', 'summarizeTrainingTimes', 'getCycleReport', 'getCycleHistoryReport', 'calculate1RM', 'getAllTimeRecord', 'isSetNewAllTimePR', 'lastHeavyWeekNum', 'peakSlotWeight', 'calculateSetProgress', 'getSlotProgress', 'getExerciseWeekProgress', 'getNextProgression', 'findPreviousExerciseSession', 'rememberLiveInput', 'renderProgressDetails', 'trainingProgressSummaryHtml', 'trainingPreparationHtml', 'getDayCompletionStatus', 'getWeekEvaluation', 'getSameWeekExerciseLogged', 'getSlotTargetAdvice', 'autoApplyOverloadAndDeloadInheritance', 'prepareCurrentLiveSetValues', 'submitLiveSet', 'adjustLiveReps', 'setLiveRepsManual', 'setLiveWeightManual', 'updateLiveSubmitButtonText']) {
+        const start = html.indexOf(`    function ${name}(`) >= 0 ? html.indexOf(`    function ${name}(`) : html.indexOf(`    async function ${name}(`);
         const end = (() => { const rest = html.slice(start + 1); const end = rest.search(/\n    (?:async )?function /); return start + 1 + end; })();
         vm.runInContext(html.slice(start, end), context);
     }
-    for (const name of ['isExerciseBodyweight', 'getCoreHistory', 'getCoreAdvice', 'getCoreWorkout', 'isCoreSlot', 'coreExerciseByName', 'trainingDayWithCore', 'getTrainingDay', 'getTrainingSlotKeys', 'getTrainingSetCount', 'coreInvitationHtml', 'coreExerciseSwitchHtml', 'getExerciseVolumeRule', 'volumeInputHintHtml', 'calculateSetVolume']) {
+    for (const name of ['isExerciseBodyweight', 'getCoreHistory', 'getCoreAdvice', 'getCoreWorkout', 'isCoreSlot', 'coreExerciseByName', 'trainingDayWithCore', 'getTrainingDay', 'getTrainingSlotKeys', 'getTrainingSetCount', 'getPlannedSetCount', 'coreInvitationHtml', 'coreExerciseSwitchHtml', 'getExerciseVolumeRule', 'volumeInputHintHtml', 'calculateSetVolume']) {
         const start = html.indexOf(`    function ${name}(`);
         const end = (() => { const rest = html.slice(start + 1); const end = rest.search(/\n    (?:async )?function /); return start + 1 + end; })();
         vm.runInContext(html.slice(start, end), context);
@@ -340,6 +341,9 @@ test('live view renders actual save values and the original plan together', () =
     assert.match(elements.lwContentArea.innerHTML, /<details[^>]*><summary[^>]*>ⓘ Voortgang/);
     assert.match(elements.lwContentArea.innerHTML, /OPSLAAN \(15 kg.*12 reps\)/);
     assert.match(elements.lwContentArea.innerHTML, /Gepland doel/);
+    assert.match(elements.lwContentArea.innerHTML, /Laatste uitvoering:/);
+    assert.match(elements.lwContentArea.innerHTML, /Doel vandaag:/);
+    assert.match(elements.lwContentArea.innerHTML, /Mogelijke volgende stap/);
     assert.match(elements.lwContentArea.innerHTML, /Eigen invoer voor deze set/);
     assert.match(elements.lwContentArea.innerHTML, /Kg per dumbbell/);
     assert.match(elements.lwContentArea.innerHTML, /Beide dumbbells tellen mee/);
@@ -685,14 +689,14 @@ test('week seven detail card prepares a new cycle instead of prescribing a week 
     assert.doesNotMatch(result, /Volgende week:/);
 });
 
-test('cancelling cycle closure leaves the entire training state intact', () => {
+test('cancelling cycle closure leaves the entire training state intact', async () => {
     const { context: c } = setup();
     Object.assign(c.appState, { currentWeek: 7, totalWeeks: 7, currentCycle: 1, nextCycle: { available: false } });
     let message;
     c.window = { confirm(text) { message = text; return false; } };
     const before = JSON.stringify(c.appState);
     assert.equal(c.canStartNewPeriod(), true);
-    c.executeStartNewMesocycle();
+    await c.executeStartNewMesocycle();
     assert.match(message, /blijven onvoltooid in het archief/);
     assert.equal(JSON.stringify(c.appState), before);
 });

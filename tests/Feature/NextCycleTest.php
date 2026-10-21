@@ -40,7 +40,7 @@ class NextCycleTest extends TestCase
         ])->assertOk();
         $this->patchJson('/api/preferences', ['current_week' => 7])->assertOk();
 
-        $this->getJson('/api/cycles/next-advice')
+        $this->getJson('/api/cycles/next-advice?dayVariants[mon]=push_b')
             ->assertOk()
             ->assertJsonPath('available', true)
             ->assertJsonPath('schema.mon.slot_a1.selectedName', 'Dumbbell Bench Press')
@@ -59,8 +59,8 @@ class NextCycleTest extends TestCase
             ->assertJsonPath('programTemplate.key', 'balanced')
             ->assertJsonPath('programTemplate.cycleNumber', 2)
             ->assertJsonPath('programTemplate.name', '1 · Gemengde basis')
-            ->assertJsonPath('days.0.title', 'Maandag: Push A · aangepast')
-            ->assertJsonPath('schema.mon.slot_a1.selectedName', 'Dumbbell Bench Press');
+            ->assertJsonPath('days.0.title', 'Maandag: Push A')
+            ->assertJsonPath('schema.mon.slot_a1.selectedName', 'Barbell Bench Press');
 
         $this->assertSame(['slot_a1', 'slot_a3', 'slot_b2', 'slot_a5', 'slot_b6'], array_column($advice->json('days.0.slots'), 'slotKey'));
         $this->assertSame(['slot_a2', 'slot_b4', 'slot_b5', 'slot_a6', 'slot_a4'], array_column($advice->json('days.1.slots'), 'slotKey'));
@@ -93,6 +93,7 @@ class NextCycleTest extends TestCase
 
         $this->postJson('/api/cycles', [
             'close_current_period' => true,
+            'dayVariants' => ['mon' => 'push_b'],
             'schema' => [
                 'mon' => [
                     'slot_a1' => [

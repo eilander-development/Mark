@@ -36,6 +36,7 @@ class ProgramManagementTest extends TestCase
             $response->assertSee($text);
         }
         $response->assertDontSee('Upper A / Upper B programma');
+        $response->assertSee('Barbell Bench Press + Incline Dumbbell Press')->assertSee('inclusief korte warming-up');
     }
 
     public function test_variant_can_be_edited_and_reordered_with_prescriptions(): void
@@ -50,6 +51,9 @@ class ProgramManagementTest extends TestCase
         $this->assertSame('Push A · eigen', $variant->fresh()->name);
         $this->assertSame('slot_a3', array_key_first($variant->fresh()->exercises));
         $this->assertSame(2, $variant->fresh()->exercises['slot_a1']['sets']);
+        $exported = collect(app(ProgramLibrary::class)->export()['variants'])->firstWhere('key', 'push_a');
+        $this->assertSame(13, $exported['workSets']);
+        $this->assertSame('Incline Dumbbell Press + Barbell Bench Press', $exported['subtitle']);
     }
 
     public function test_cross_split_exercise_and_duplicate_positions_are_rejected(): void

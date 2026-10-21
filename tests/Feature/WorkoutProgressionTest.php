@@ -236,7 +236,8 @@ class WorkoutProgressionTest extends TestCase
         $slot->sets[0]->update(['weight' => '50', 'reps' => '12', 'completed' => false]);
         $slot->sets[1]->update(['weight' => '40', 'reps' => '0', 'completed' => true, 'exertion' => 'good']);
         $slot->sets[2]->update(['weight' => '12', 'reps' => '10', 'completed' => true, 'exertion' => 'good']);
-        $this->getJson('/api/cycles/next-advice')->assertOk()
+        $this->getJson('/api/cycles/next-advice?dayVariants[mon]=push_b')->assertOk()
+            ->assertJsonPath('schema.mon.slot_a1.selectedName', 'Dumbbell Bench Press')
             ->assertJsonPath('schema.mon.slot_a1.weight', 12);
     }
 

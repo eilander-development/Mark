@@ -25,7 +25,7 @@ class MotorParityTest extends TestCase
         $slot6->sets->first()->update(['weight' => '86', 'reps' => '8', 'completed' => true]);
 
         $this->patchJson('/api/preferences', ['current_week' => 7])->assertOk();
-        $this->postJson('/api/cycles', ['close_current_period' => true])
+        $this->postJson('/api/cycles', ['close_current_period' => true, 'dayVariants' => ['mon' => 'push_b']])
             ->assertOk()->assertJsonPath('currentCycle', 2);
 
         $newWeek1 = WorkoutSession::query()
@@ -51,13 +51,14 @@ class MotorParityTest extends TestCase
         $this->assertFalse($periodization->isBiweeklyHoldWeek(2, 'weekly'));
     }
 
-    public function test_wizard_schema_wins_over_automatic_rotation(): void
+    public function test_wizard_variant_and_own_start_weight_define_the_new_day(): void
     {
         $this->getJson('/api/state')->assertOk();
 
         $this->patchJson('/api/preferences', ['current_week' => 7])->assertOk();
         $this->postJson('/api/cycles', [
             'close_current_period' => true,
+            'dayVariants' => ['mon' => 'push_b'],
             'schema' => [
                 'mon' => [
                     'slot_a1' => [

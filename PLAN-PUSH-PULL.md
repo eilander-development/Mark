@@ -15,7 +15,7 @@
 Push: primaire borstpress 3 × 8–12, aanvullende borst 3 × 10–15 (press 8–12), schouderpress 2 × 8–12, lateral raises 3 × 12–20, triceps 3 × 10–15.
 Pull: eerste row 3 × 8–12, tweede row/latbeweging 3 × 8–12, rear delts 2 × 12–20, biceps 3 × 10–15, shrugs 2 × 10–15.
 Rust: circa 150 seconden presses/rows, 90 seconden isolatie; gebruikersvoorkeur blijft mogelijk. Inspanning doorgaans 1–3 herhalingen over, bij inregelen 2–3.
-Materiaalgeschikte alternatieven, geen ongetoetste landmine/hoge-bankopstelling als standaard. Kies alternatieven voor de hele trainingsdag samen: geen dubbele oefeningen, bestaande passende keuzes zo veel mogelijk behouden. Benoem bij vervanging welk materiaal in het profiel ontbreekt. Ook zelf kiezen en beheer weigeren dubbele oefeningen binnen dezelfde dag. De twaalf exacte lijsten staan in config/push_pull.php en worden eenmalig in de beheerde bibliotheek gezet.
+Vast materiaal: barbell, dumbbells, verstelbaar bankje en bankdrukopstelling. Geen automatische materiaalcontrole, vervanging of melding bij periodevoorstellen. De gekozen variant bepaalt exact de oefeningen. Beheer en periodeopbouw weigeren dubbele oefeningen binnen dezelfde dag. Geen ongetoetste landmine/hoge-bankopstelling als standaard. De twaalf exacte lijsten staan in config/push_pull.php en worden eenmalig in de beheerde bibliotheek gezet.
 Vier voorstellen: A/B, C/D, E/F en A/D (Push) met C/F (Pull). Beide types mogen onafhankelijk gecombineerd worden.
 Nieuwe Push/Pull-periode: zes trainingsweken. In het bestaande weekrapport daarna een hersteladvies en de keuze tussen een lichte zevende week of een nieuwe periode. Zes weken is een praktisch startpunt, geen bewezen optimum. Een nieuwe periode is geen vervanging voor herstel. Bestaande periodes blijven hun zeven weken houden. Herstelresultaten zijn geen normale startreferentie.
 
@@ -66,6 +66,19 @@ Nieuwe Push/Pull-periode: zes trainingsweken. In het bestaande weekrapport daarn
 
 De coachinggetallen zijn praktische startregels; persoonlijke prestaties en herstel bepalen vervolgadvies.
 
+## Aanvullingen na UI/UX- en trainingsbeoordeling — 21 oktober 2026
+
+- Materiaal is een vast uitgangspunt. Nieuwe voorstellen, previews en gestarte periodes gebruiken exact de beheerde variant. Profielvinkjes veranderen geen oefeningen en veroorzaken geen materiaalwaarschuwingen. Ongeldige dubbele oefeningen geven een beheerfout, geen automatische vervanging.
+- De twaalf standaardvarianten zijn gecontroleerd op uitvoerbaarheid met de vaste opstelling, sets, volgorde en overlap. De oefeningslijsten zijn behouden. Bij Pull krijgt iedere standaardvariant een lataccent en een bovenrugaccent via expliciete uitvoeringstips. Bij Pull B wordt de aanvullende Barbell Row met lataccent uitgevoerd; de Chest-Supported Dumbbell Row heeft bovenrugaccent. Beide accenten blijven rugwerk, geen isolatie of garantie op plaatselijke spiergroei.
+- Variantkeuzes tonen de eerste twee werkelijke oefeningen als beschrijving. Voorstel, inrichting en beheer tonen werksets en een grove tijdsindicatie op basis van sets, reps, rust, een korte warming-up en wisseltijd. Dit is geen gemeten duur en past mee aan bij beheerwijzigingen.
+- Langere weekbelasting- en hersteltoelichting is inklapbaar. Video en uitleg blijven per voorgestelde oefening direct bereikbaar. Bij wisselen van dagvariant blijven eigen startgewichten alleen behouden voor exact dezelfde oefening, ook als de oefeningspositie verandert. Een bewust leeg startgewicht blijft leeg.
+- De bestaande trainer toont laatste uitvoering, huidig doel en de (eventueel voorlopige) volgende stap met reden samen. Gewichtseenheden blijven expliciet. Reps, gewicht en inspanning staan centraal; tonnage en geschatte 1RM zijn aanvullende gegevens.
+- De trainer en bestaande oefeningsgids bevatten inklapbare instructies voor opwarmen en onderscheid tussen inspanning en pijn. Opwarmsets tellen niet als werksets. Inspanningsknoppen geven een benadering: Vlot circa 4+ reps over, Goed circa 2–3, Maximaal circa 0–1; onbekende inspanning blijft mogelijk. De bestaande conservatieve progressieregels veranderen niet.
+- De modals krijgen dialoogsemantiek, focus binnen de bovenste modal, Tab/Shift+Tab-cycli, Escape voor alleen de bovenste laag en terugkeer naar de opener. Onderliggende inhoud wordt inert. Bij een hertekende opener wordt de bijbehorende bediening opnieuw gezocht. Een bezig zijnde periode-inrichting blijft beschermd tegen sluiten.
+- De bestaande zesweekse evaluatie, optionele lichte week, weekbelasting met directe/ondersteunende sets, versieopslag en optionele buikspierflow blijven behouden. Nieuwe periodes vervangen herstel niet. Er zijn geen migraties of wijzigingen aan echte trainingssets nodig voor deze aanvulling.
+
+De beoordeling is uitgevoerd vanuit UI/UX- en trainingsprincipes door de assistent, zonder onafhankelijke designer of personal trainer. De uitgangspunten zijn opnieuw vergeleken met de [ACSM-samenvatting uit 2026](https://acsm.org/resistance-training-guidelines-update-2026/), [Pelland et al. over volume en frequentie](https://pubmed.ncbi.nlm.nih.gov/41343037/) en het [W3C-dialoogpatroon](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/). Dit bewijst geen individueel optimaal schema; werkelijke uitvoering en herstel blijven bepalend. De Windows-browserkoppeling blijft onbereikbaar, dus visuele controle op desktop en mobiel staat expliciet open.
+
 ## Uitvoering en controle — 20 oktober 2026
 
 De bovenstaande aanpassingen zijn gebouwd. De variantbibliotheek staat onder Beheer → Programma. Nieuwe periodes gebruiken zes trainingsweken met een optionele lichte zevende week; bestaande periodes behouden hun planning en prestaties.
@@ -73,3 +86,11 @@ De bovenstaande aanpassingen zijn gebouwd. De variantbibliotheek staat onder Beh
 De drie toevoegende migraties zijn toegepast. De lokale databaseverbinding werkt weer. De API bevestigt periode 1, week 7 en 448 voltooide sets; er is geen nieuwe echte trainingsperiode gestart of trainingshistorie gewist.
 
 Gecontroleerd met de PHP-regressiesuite, gerichte featuretests voor programma/beheer en trainingsvoorschriften, negentien JavaScript-tests voor schermlogica, Pint, frontendbuild en lokale HTTP-verzoeken. De gerichte PHP-tests voor vaste dagvarianten, beheer en voorschriften slagen. De lokale voorstellen bevatten geen dubbele oefeningen. Visuele browsercontrole kon niet worden uitgevoerd omdat de browserkoppeling niet beschikbaar is.
+
+## Uitvoering en controle — 21 oktober 2026
+
+De aanvullingen van 21 oktober zijn gebouwd. De volledige PHP-suite slaagt: 149 tests en 1675 assertions. Alle 120 JavaScript-tests slagen, inclusief 24 tests voor de Push/Pull-schermlogica en controles van de echte trainer-renderfunctie. De bestaande tests voor automatische materiaalvervanging zijn aangepast naar expliciete variantkeuze, met behoud van controles op persoonlijke historie en eigen startgewichten. De oudere JavaScript-testomgeving laadt nu ook de gedeelde set-teller en asynchrone periodefunctie.
+
+Pint, frontendbuild en git diff --check slagen. De lokale API bevestigt twaalf varianten, normale Push/Pull-titels, de oorspronkelijke geselecteerde oefeningen en de nieuwe overzichten en uitvoeringstips. De huidige stand bij de alleen-lezen controle is periode 1, week 7, met 460 afgevinkte sets. Tijdens deze uitvoering zijn geen echte trainingssets aangepast of periodes gestart. Er waren geen migraties nodig.
+
+De browserkoppeling blijft ook na herstelpogingen onbereikbaar. Geautomatiseerde controle van focus, lagen, Tab/Shift+Tab, Escape, conceptbehoud en trainerweergave is uitgevoerd; een visuele en interactieve controle in een echte browser op desktop en mobiel blijft open. Er is geen onafhankelijke expertgoedkeuring afgegeven.

@@ -129,7 +129,8 @@ class ProgramLibrary
 
         return ['families' => config('push_pull.families'), 'roles' => config('push_pull.roles'),
             'exerciseRequirements' => collect(config('push_pull.roles'))->pluck('exercises')->flatten()->unique()->mapWithKeys(fn (string $name): array => [$name => $this->requirements($name)])->all(),
-            'variants' => ProgramVariant::query()->where('archived', false)->orderBy('family')->orderBy('name')->get()->toArray(),
+            'variants' => ProgramVariant::query()->where('archived', false)->orderBy('family')->orderBy('name')->get()
+                ->map(fn (ProgramVariant $variant): array => [...$variant->toArray(), ...$this->overview($variant->exercises)])->all(),
             'templates' => PeriodTemplate::query()->where('archived', false)->orderBy('id')->get()->toArray()];
     }
 
@@ -153,6 +154,7 @@ class ProgramLibrary
         if ($name === 'Dumbbell Pullover') {
             $result['secondary'] = ['chest', 'triceps'];
         }
+        $result['focusCue'] = $this->focusCue($slotKey, $name);
         $result['baseMinReps'] = $result['minReps'];
         $result['baseMaxReps'] = $result['maxReps'];
         if (! app(Periodization::class)->isBodyweight($name)) {
@@ -200,25 +202,52 @@ class ProgramLibrary
         return array_values(array_unique($requirements));
     }
 
-    /** @param array<string, bool> $equipment */
-    public function compatible(string $name, array $equipment): bool
+    /**
+     * @param  array<string, array<string, mixed>>  $exercises
+     * @return array{subtitle: string, workSets: int, estimatedMinutes: array{min: int, max: int}}
+     */
+    public function overview(array $exercises): array
     {
-        foreach ($this->requirements($name) as $required) {
-            if (! ($equipment[$required] ?? false)) {
-                return false;
+        $sets = array_sum(array_column($exercises, 'sets'));
+        $seconds = 300;
+        foreach ($exercises as $item) {
+            $perSide = $item['selectedName'] === 'Dumbbell One-Arm Row' ? 2 : 1;
+            $seconds += $item['sets'] * $item['maxReps'] * 3 * $perSide + max(0, $item['sets'] - 1) * $item['rest'] + 60;
+        }
+        $minutes = (int) (ceil($seconds / 300) * 5);
+
+        return ['subtitle' => implode(' + ', array_slice(array_column($exercises, 'selectedName'), 0, 2)),
+            'workSets' => $sets, 'estimatedMinutes' => ['min' => max(10, $minutes - 5), 'max' => $minutes + 10]];
+    }
+
+    private function focusCue(string $slotKey, string $name): string
+    {
+        if (str_contains($name, 'Row')) {
+            if ($name === 'Dumbbell One-Arm Row' || str_contains($name, 'Yates') || ($name === 'Barbell Row' && $slotKey === 'slot_b4')) {
+                return 'Lataccent: trek je elleboog richting je heup; houd je romp stil en vermijd draaien.';
             }
+
+            return 'Bovenrugaccent: trek richting de onderste borst met ellebogen iets van je romp; houd je rugpositie stabiel.';
         }
 
-        return true;
+        return match ($slotKey) {
+            'slot_a1', 'slot_a3' => 'Borstaccent: beweeg gecontroleerd binnen een pijnvrije bewegingsuitslag; houd je schouders stabiel.',
+            'slot_b2' => 'Schouderpress: houd je ribben en bekken boven elkaar; druk zonder je onderrug hol te trekken.',
+            'slot_a5' => 'Zijkant schouders: hef gecontroleerd zonder zwaaien of je schouders op te trekken.',
+            'slot_b5' => 'Achterkant schouders: beweeg vanuit je schouders en houd je romp stil.',
+            'slot_a6' => 'Biceps: houd je bovenarmen rustig en laat het gewicht gecontroleerd zakken.',
+            'slot_b6' => 'Triceps: beweeg vanuit je ellebogen; kies een comfortabele armpositie.',
+            'slot_a4' => 'Trapezius: trek je schouders omhoog zonder te rollen; laat gecontroleerd zakken.',
+            default => '',
+        };
     }
 
     /**
      * @param  array<string, string>  $dayVariants
      * @param  array<string, array<string, array<string, mixed>>>  $schema
-     * @param  array<string, bool>  $equipment
      * @return array<string, mixed>
      */
-    public function build(Cycle $current, ?string $templateKey = null, array $dayVariants = [], string $goal = 'hypertrophy', array $schema = [], array $equipment = []): array
+    public function build(Cycle $current, ?string $templateKey = null, array $dayVariants = [], string $goal = 'hypertrophy', array $schema = []): array
     {
         $this->ensureDefaults();
         if ($templateKey === 'repeat') {
@@ -277,8 +306,12 @@ class ProgramLibrary
             }
         }
         foreach ($definition['days'] as $day => &$dayDefinition) {
-            $selectedNames = $definition['type'] === 'push_pull'
-                ? $this->resolveDayExercises($dayDefinition['exercises'], $equipment, $day) : [];
+            if ($definition['type'] === 'push_pull') {
+                $names = array_column($dayDefinition['exercises'], 'selectedName');
+                if (count(array_unique($names)) !== count($names)) {
+                    throw ValidationException::withMessages(['schema.'.$day => 'Deze dagvariant bevat dubbele oefeningen. Pas de variant aan via Beheer → Programma.']);
+                }
+            }
             foreach ($dayDefinition['exercises'] as $key => &$item) {
                 $override = $schema[$day][$key] ?? [];
                 $baseName = $item['selectedName'];
@@ -287,21 +320,15 @@ class ProgramLibrary
                 if (! in_array($name, $allowed, true)) {
                     throw ValidationException::withMessages(['schema.'.$day.'.'.$key.'.selectedName' => 'Deze oefening past niet bij deze positie.']);
                 }
-                $originalName = $name;
-                if ($definition['type'] === 'push_pull') {
-                    if (isset($override['selectedName']) && $name !== $selectedNames[$key]) {
-                        throw ValidationException::withMessages(['schema.'.$day.'.'.$key.'.selectedName' => 'Kies een dagvariant. Losse oefeningen aanpassen kan via Beheer → Programma.']);
-                    }
-                    $name = $selectedNames[$key];
+                if ($definition['type'] === 'push_pull' && isset($override['selectedName']) && $name !== $baseName) {
+                    throw ValidationException::withMessages(['schema.'.$day.'.'.$key.'.selectedName' => 'Kies een dagvariant. Losse oefeningen aanpassen kan via Beheer → Programma.']);
                 }
-                $missingEquipment = array_values(array_filter($this->requirements($originalName), fn (string $required): bool => ! ($equipment[$required] ?? false)));
                 if ($definition['type'] === 'push_pull') {
-                    $item = $this->prescription($key, $name, $goal, $name === $baseName ? $item : array_intersect_key($item, array_flip(['sets', 'position'])));
+                    $item = $this->prescription($key, $name, $goal, $item);
                 } else {
                     $item['selectedName'] = $name;
                 }
-                $item['materialAlternative'] = $name !== $originalName ? $originalName : null;
-                $item['missingEquipment'] = $name !== $originalName ? $missingEquipment : [];
+                unset($item['materialAlternative'], $item['missingEquipment']);
                 if ($name !== $baseName) {
                     $dayDefinition['customized'] = true;
                 }
@@ -319,62 +346,6 @@ class ProgramLibrary
         unset($dayDefinition);
 
         return $definition;
-    }
-
-    /**
-     * @param  array<string, array<string, mixed>>  $items
-     * @param  array<string, bool>  $equipment
-     * @return array<string, string>
-     */
-    private function resolveDayExercises(array $items, array $equipment, string $day): array
-    {
-        $preferred = [];
-        foreach ($items as $key => $item) {
-            $name = $item['selectedName'];
-            if (! in_array($name, config('push_pull.roles.'.$key.'.exercises', []), true)) {
-                throw ValidationException::withMessages(['schema.'.$day.'.'.$key.'.selectedName' => 'Deze oefening past niet bij deze positie.']);
-            }
-            if ($this->compatible($name, $equipment)) {
-                $preferred[$key] = $name;
-            }
-        }
-        $choices = [];
-        foreach ($items as $key => $item) {
-            $compatible = array_values(array_filter(config('push_pull.roles.'.$key.'.exercises', []),
-                fn (string $name): bool => $this->compatible($name, $equipment)));
-            $unreserved = array_values(array_filter($compatible, fn (string $name): bool => ! in_array($name, $preferred, true)));
-            $choices[$key] = array_values(array_unique([...(isset($preferred[$key]) ? [$preferred[$key]] : []), ...$unreserved, ...$compatible]));
-        }
-        $selected = $this->matchDistinctExercises($choices);
-        if ($selected === null) {
-            throw ValidationException::withMessages(['schema.'.$day => 'Geen verschillende, passende oefeningen voor deze dag. Controleer je materiaal in je profiel of kies andere oefeningen of een andere dagvariant.']);
-        }
-
-        return $selected;
-    }
-
-    /**
-     * @param  array<string, list<string>>  $choices
-     * @param  array<string, string>  $selected
-     * @return array<string, string>|null
-     */
-    private function matchDistinctExercises(array $choices, array $selected = []): ?array
-    {
-        if (count($choices) === count($selected)) {
-            return $selected;
-        }
-        $key = array_keys($choices)[count($selected)];
-        foreach ($choices[$key] as $name) {
-            if (in_array($name, $selected, true)) {
-                continue;
-            }
-            $match = $this->matchDistinctExercises($choices, [...$selected, $key => $name]);
-            if ($match !== null) {
-                return $match;
-            }
-        }
-
-        return null;
     }
 
     /** @return array<string, mixed> */

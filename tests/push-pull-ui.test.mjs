@@ -13,13 +13,15 @@ function harness() {
     return ({
     innerHTML: '', textContent: '', style: { zIndex: markup.match(/z-index:\s*(\d+)/)?.[1] || '' }, dataset: {}, value: '',
     classList: { add(name) { classes.add(name); }, remove(name) { classes.delete(name); }, contains(name) { return classes.has(name); }, toggle(name) { if (classes.has(name)) classes.delete(name); else classes.add(name); } },
-    addEventListener() {}, setAttribute() {}, getAttribute() { return null; }, focus() {},
+    attrs: {}, isConnected: true, children: [], tabIndex: 0,
+    addEventListener() {}, setAttribute(name, value) { this.attrs[name] = value; }, getAttribute(name) { return this.attrs[name] ?? null; },
+    focus() { document.activeElement = this; }, contains(child) { return this === child || this.children.includes(child); }, closest() { return null; }, getClientRects() { return [1]; },
     querySelector() { return null; }, querySelectorAll() { return []; }, appendChild(child) { return child; }
   });
   };
   const document = {
     readyState: 'loading', visibilityState: 'visible',
-    getElementById(id) { if (!elements.has(id)) elements.set(id, element(html.match(new RegExp('<[^>]*id="' + id + '"[^>]*>'))?.[0] || '')); return elements.get(id); },
+    getElementById(id) { if (!elements.has(id)) { const item = element(html.match(new RegExp('<[^>]*id="' + id + '"[^>]*>'))?.[0] || 'class="hidden"'); item.id = id; if (id === 'settingsModal') item.tagName = 'DIALOG'; elements.set(id, item); } return elements.get(id); },
     addEventListener() {}, querySelectorAll() { return []; }, querySelector() { return null; },
     createElement: element, body: element()
   };
@@ -121,6 +123,25 @@ test('planned sets support two to five sets and deload caps', () => {
   assert.equal(h.run('getPlannedSetCount({prescription:{sets:5}},7)'), 2);
 });
 
+test('changing a day variant retains manual weights only for the exact same exercise even in a different position', async () => {
+  const h = harness(); prepare(h);
+  h.run('openSetupRoutineModal(); onSetupWeightChange("mon","slot_a1",17.5);');
+  const changed = proposal();
+  changed.programTemplate.days.mon.variantKey = 'push_e';
+  const sameExercise = { ...changed.schema.mon.slot_a1 };
+  changed.schema.mon = { slot_a3: sameExercise, slot_a1: { ...sameExercise, selectedName: 'Incline Dumbbell Press', weight: 12 } };
+  changed.days[0].slots = Object.entries(changed.schema.mon).map(([slotKey, item]) => ({ slotKey, ...item }));
+  h.context.fetch = async () => ({ ok: true, json: async () => changed });
+  await h.run('onSetupVariantChange("mon","push_e")');
+  assert.equal(h.run('setupWizardState.schema.mon.slot_a3.weight'), 17.5);
+  assert.equal(h.run('setupWizardState.schema.mon.slot_a3.weightEdited'), true);
+  assert.equal(h.run('setupWizardState.schema.mon.slot_a1.weight'), 12);
+  assert.equal(h.run('nextCycleProposal.schema.mon.slot_a3.weight'), 17.5);
+  h.run('onSetupWeightChange("mon","slot_a3","");');
+  await h.run('onSetupVariantChange("mon","push_e")');
+  assert.equal(h.run('setupWizardState.schema.mon.slot_a3.weight'), null);
+});
+
 test('failed period start preserves live state and double click issues only one request', async () => {
   const h = harness(); prepare(h);
   h.run('ensureTrainingSaved = async () => {};');
@@ -172,14 +193,107 @@ test('Push Pull report uses the same progression advice as the backend', () => {
   assert.equal(result.reason, 'Eigen prestaties');
 });
 
-test('material alternative explains exactly which equipment is missing', () => {
+test('proposal keeps variant exercises without material warnings', () => {
   const h = harness();
   const advice = proposal();
   Object.assign(advice.days[1].slots[0], { materialAlternative: 'Chest-Supported Dumbbell Row', missingEquipment: ['adjustable_bench'] });
   h.context.fixture = advice;
   const preview = h.run('renderNextCycleAdviceSlots(fixture)');
-  assert.match(preview, /Materiaalalternatief voor Chest-Supported Dumbbell Row/);
-  assert.match(preview, /Niet aangevinkt in je materiaalprofiel: Verstelbaar bankje/);
+  assert.match(preview, /Barbell Row/);
+  assert.doesNotMatch(preview, /Materiaalalternatief|Niet aangevinkt|materiaalprofiel/);
+});
+
+test('variant previews show actual contents, sets, duration and focus without hiding the video action', () => {
+  const h = harness(); prepare(h);
+  const advice = proposal();
+  Object.assign(advice.days[0], { subtitle: 'Barbell Bench Press + Incline Dumbbell Press', workSets: 14, estimatedMinutes: { min: 45, max: 60 } });
+  advice.days[0].slots[0].focusCue = 'Borstaccent: gecontroleerd bewegen.';
+  h.context.fixture = advice;
+  const preview = h.run('renderNextCycleAdviceSlots(fixture)');
+  assert.match(preview, /Barbell Bench Press \+ Incline Dumbbell Press/);
+  assert.match(preview, /14 werksets/);
+  assert.match(preview, /45–60 min/);
+  assert.match(preview, /Borstaccent/);
+  assert.match(preview, /Video & uitleg/);
+  h.run('startNewMesocyclePrompt(); openSetupRoutineModal();');
+  assert.match(h.elements.get('startCycleModalContent').innerHTML, /<details[^>]*><summary[^>]*>Weekbelasting/);
+  assert.doesNotMatch(h.elements.get('setupRoutineContent').innerHTML, /Profiel aanpassen|Nog geen materiaal/);
+});
+
+test('trainer presents exact exercise history, current goal and provisional next step together', () => {
+  const h = harness(); prepare(h);
+  h.run(`getExerciseHistory = () => [{cycle:1,week:6,isDeload:false,sets:[{position:1,weight:30,reps:10}]}];
+    getSlotProgress = () => ({requiredSets:3,targetWeight:30,targetReps:11});
+    getOverloadOutlook = () => ({title:'Extra herhaling',reason:'Doel eerst afronden',provisional:true,next:{requiredSets:3,weight:30,reps:12}});`);
+  const summary = h.run('trainingProgressSummaryHtml(7,"mon","slot_a1")');
+  assert.match(summary, /Laatste uitvoering:.*30 kg × 10/);
+  assert.match(summary, /Doel vandaag:.*3 × 11 reps/);
+  assert.match(summary, /Mogelijke volgende stap.*3 × 12 reps.*Doel eerst afronden/);
+  h.run('getExerciseHistory = () => [];');
+  assert.match(h.run('trainingProgressSummaryHtml(7,"mon","slot_a1")'), /Nog geen opgeslagen werksets/);
+  const preparation = h.run('trainingPreparationHtml()');
+  assert.match(preparation, /Opwarmsets tellen niet mee als werksets/);
+  assert.match(preparation, /Stop de betreffende oefening/);
+  assert.match(html, /Nog circa 2–3 nette reps mogelijk/);
+  assert.match(html, /Nog circa 0–1 nette rep mogelijk/);
+});
+
+test('nested dialogs trap tab, close only the top layer and restore focus to their opener', () => {
+  const h = harness(); prepare(h);
+  const doc = h.context.document;
+  const start = doc.getElementById('startCycleModal'), guide = doc.getElementById('exerciseGuideModal');
+  const opener = doc.createElement(), first = doc.createElement(), last = doc.createElement();
+  start.parentElement = doc.body;
+  guide.parentElement = doc.body;
+  doc.body.children = [start, guide, opener];
+  opener.focus();
+  h.run('startNewMesocyclePrompt(); syncModalAccessibility();');
+  assert.equal(doc.activeElement, start);
+  assert.equal(start.getAttribute('role'), 'dialog');
+  assert.equal(start.getAttribute('aria-modal'), 'true');
+  assert.equal(opener.inert, true);
+  start.children = [first, last];
+  start.querySelectorAll = () => [first, last];
+  last.focus();
+  let prevented = false;
+  h.context.keyEvent = { key: 'Tab', preventDefault() { prevented = true; } };
+  h.run('handleModalKeydown(keyEvent)');
+  assert.equal(prevented, true);
+  assert.equal(doc.activeElement, first);
+  h.context.keyEvent.shiftKey = true;
+  h.run('handleModalKeydown(keyEvent)');
+  assert.equal(doc.activeElement, last);
+  guide.classList.remove('hidden');
+  h.run('syncModalAccessibility();');
+  assert.equal(doc.activeElement, guide);
+  assert.equal(start.inert, true);
+  let stopped = false;
+  h.context.keyEvent = { key: 'Escape', preventDefault() {}, stopImmediatePropagation() { stopped = true; } };
+  h.run('handleModalKeydown(keyEvent)');
+  assert.equal(stopped, true);
+  assert.equal(guide.classList.contains('hidden'), true);
+  assert.equal(start.classList.contains('hidden'), false);
+  assert.equal(doc.activeElement, last);
+  assert.equal(start.inert, undefined);
+  h.run('handleModalKeydown(keyEvent)');
+  assert.equal(doc.activeElement, opener);
+  assert.equal(opener.inert, undefined);
+});
+
+test('busy setup cannot be dismissed and native settings take precedence over a guide', () => {
+  const h = harness(); prepare(h);
+  h.run('openSetupRoutineModal(); setupWizardState.busy = true; syncModalAccessibility();');
+  h.context.keyEvent = { key: 'Escape', preventDefault() {}, stopImmediatePropagation() {} };
+  h.run('handleModalKeydown(keyEvent)');
+  assert.equal(h.elements.get('setupRoutineModal').classList.contains('hidden'), false);
+  const settings = h.context.document.getElementById('settingsModal');
+  settings.open = true;
+  settings.close = () => { settings.open = false; };
+  const guide = h.context.document.getElementById('exerciseGuideModal');
+  guide.classList.remove('hidden');
+  h.run('handleModalKeydown(keyEvent)');
+  assert.equal(settings.open, false);
+  assert.equal(guide.classList.contains('hidden'), false);
 });
 
 

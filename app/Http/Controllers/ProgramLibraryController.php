@@ -24,6 +24,7 @@ class ProgramLibraryController extends Controller
             'variants' => ProgramVariant::query()->orderBy('family')->orderBy('name')->get(),
             'templates' => PeriodTemplate::query()->orderBy('id')->get(),
             'families' => config('push_pull.families'), 'roles' => config('push_pull.roles'),
+            'variantOverviews' => ProgramVariant::query()->get()->mapWithKeys(fn (ProgramVariant $variant): array => [$variant->id => $this->library->overview($variant->exercises)]),
         ]);
     }
 

@@ -5447,6 +5447,34 @@
       if (hint) hint.textContent = canStartNewPeriod() ? 'Voorstellen en dagvarianten A–F bekijken en aanpassen' : 'Voorstellen bekijken; starten na week ' + appState.totalWeeks;
     }
 
+    function variantOverviewHtml(variant) {
+      if (!variant) return '';
+      const duration = variant.estimatedMinutes;
+      return '<div class="mb-3 space-y-1 text-xs text-slate-400">' +
+        (variant.subtitle ? '<p class="text-slate-200">' + escapeReportText(variant.subtitle) + '</p>' : '') +
+        (variant.workSets ? '<p>' + variant.workSets + ' werksets' + (duration ? ' · circa ' + duration.min + '–' + duration.max + ' min, inclusief korte warming-up; rust en opstelling kunnen dit verlengen' : '') + '</p>' : '') + '</div>';
+    }
+
+    function trainingPreparationHtml() {
+      return '<details class="mt-3 rounded-xl border border-slate-700 p-3 text-xs text-slate-300"><summary class="cursor-pointer font-bold text-blue-300">Opwarmen, inspanning & pijn</summary><p class="mt-2">Begin met enkele minuten rustig bewegen en oefen de beweging. Bouw bij de eerste zware press of row met enkele steeds zwaardere, korte opwarmsets op; blijf ruim van uitputting. Bij een volgende oefening kan een lichte oefenset voldoende zijn. Opwarmsets tellen niet mee als werksets.</p><p class="mt-2">Spiervermoeidheid is iets anders dan scherpe pijn, gewrichtspijn of ongebruikelijke klachten. Stop de betreffende oefening bij zulke klachten; probeer geen herhaling te forceren. Laat aanhoudende of terugkerende klachten beoordelen.</p></details>';
+    }
+
+    function trainingProgressSummaryHtml(weekNum, dayKey, slotKey) {
+      const slot = getTrainingDay(weekNum, dayKey)[slotKey];
+      const name = slot.selectedName || EXERCISE_CATALOG[slotKey].defaultName;
+      const last = getExerciseHistory(name, { week: weekNum, day: dayKey }).at(-1);
+      const progress = getSlotProgress(weekNum, dayKey, slotKey);
+      const outlook = getOverloadOutlook(weekNum, name);
+      const unit = getExerciseVolumeRule(name).weightLabel;
+      const target = isExerciseBodyweight(name) ? 'Lichaamsgewicht' : progress.targetWeight > 0 ? progress.targetWeight + ' kg · ' + unit : 'Startgewicht inregelen';
+      const next = outlook.next;
+      return '<section aria-label="Laatste uitvoering, doel en volgende stap" class="rounded-xl border border-blue-500/30 bg-blue-950/20 p-3 text-xs space-y-2">' +
+        '<p><strong>Laatste uitvoering:</strong> ' + (last ? 'P' + last.cycle + ' W' + last.week + (last.isDeload ? ' · herstelweek' : '') + ' · ' + escapeReportText(formatHistorySets(last)) + ' · ' + escapeReportText(unit) : 'Nog geen opgeslagen werksets voor deze oefening.') + '</p>' +
+        '<p><strong>Doel vandaag:</strong> ' + progress.requiredSets + ' × ' + progress.targetReps + ' reps · ' + escapeReportText(target) + '</p>' +
+        '<p><strong>' + (outlook.provisional ? 'Mogelijke volgende stap' : 'Volgende stap') + ':</strong> ' + escapeReportText(outlook.title) + (next ? ' · ' + next.requiredSets + ' × ' + next.reps + ' reps · ' + (isExerciseBodyweight(name) ? 'BW' : next.weight + ' kg') : '') + '. ' + escapeReportText(outlook.reason) + '</p>' +
+        (slot.prescription?.focusCue ? '<p class="text-blue-200">' + escapeReportText(slot.prescription.focusCue) + '</p>' : '') + '</section>';
+    }
+
     function proposalHistoryHtml(last, unit = '') {
       if (!last) return '<p class="text-xs text-slate-500">Nog niet uitgevoerd. Startgewicht inregelen.</p>';
       const sets = (last.sets || []).map(set => (set.weight ? set.weight + ' kg × ' : 'BW × ') + set.reps).join(' / ');
@@ -5456,14 +5484,14 @@
 
     function renderNextCycleAdviceSlots(advice) {
       return (advice.days || []).map(day => '<div class="period-day-card rounded-xl border border-slate-800 bg-slate-900/70 p-3">' +
-        '<div class="mb-2 text-xs font-bold text-blue-300">' + escapeReportText(day.title) + '</div>' +
+        '<div class="mb-2 text-sm font-bold text-blue-300">' + escapeReportText(day.title) + '</div>' + variantOverviewHtml(day) +
         day.slots.map(slot => '<div class="proposal-exercise border-b border-slate-800 py-3 last:border-0"><div class="space-y-1 min-w-0">' +
           '<div class="text-sm font-bold">' + escapeReportText(slot.selectedName) + '</div>' +
           (slot.rotated && slot.fromName ? '<p class="text-xs text-slate-500">Vervangt: ' + escapeReportText(slot.fromName) + '</p>' : '') +
           '<p class="text-xs text-emerald-300">' + slot.sets + ' × ' + slot.minReps + '–' + slot.maxReps + ' reps · ' +
           (slot.isBodyweight ? 'Lichaamsgewicht' : slot.weight > 0 ? slot.weight + ' ' + escapeReportText(slot.weightLabel) : 'Startgewicht bepalen') + ' · ' + slot.rest + 's rust</p>' +
           '<p class="text-xs text-slate-400">' + escapeReportText(slot.weightReason || '') + '</p>' +
-          (slot.materialAlternative ? '<p class="text-xs text-amber-300">Materiaalalternatief voor ' + escapeReportText(slot.materialAlternative) + '. ' + (slot.missingEquipment?.length ? 'Niet aangevinkt in je materiaalprofiel: ' + escapeReportText(slot.missingEquipment.map(key => equipmentLabels()[key] || key).join(', ')) + '.' : 'Aangepast om met je beschikbare materiaal verschillende oefeningen te behouden.') + '</p>' : '') +
+          (slot.focusCue ? '<p class="text-xs text-blue-200">' + escapeReportText(slot.focusCue) + '</p>' : '') +
           proposalHistoryHtml(slot.lastPerformed, slot.weightLabel) + '</div>' +
           '<button type="button" onclick="openProposalGuide(\'' + day.day + '\',\'' + slot.slotKey + '\')" class="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-300">▶ Video & uitleg</button>' + '</div>').join('') + '</div>').join('');
     }
@@ -5494,7 +5522,7 @@
         '<p class="text-xs text-slate-400">' + escapeReportText(advice.programTemplate?.focus || '') + '</p>' +
         '<p class="text-xs text-slate-400">' + escapeReportText(advice.reason || '') + '</p>' +
         (advice.unavailableReason ? '<p class="text-sm text-amber-300">' + escapeReportText(advice.unavailableReason) + '</p>' : '') +
-        '<p class="text-xs text-slate-400">' + volumes + '. Directe en ondersteunende sets zijn aparte tellingen.</p>' +
+        '<details class="rounded-xl border border-slate-800 p-3 text-xs text-slate-400"><summary class="cursor-pointer font-bold text-slate-200">Weekbelasting & toelichting</summary><p class="mt-2">' + volumes + '. Directe en ondersteunende sets zijn aparte tellingen; er is geen ideale procentuele verdeling. Gebruik prestaties en herstel om zo nodig de sets in Beheer aan te passen.</p><p class="mt-2">Zes weken is een evaluatiemoment, geen vaste optimale duur. Een nieuwe periode neemt vermoeidheid niet weg. Neem bij aanhoudende vermoeidheid eerst een lichte week of extra rust.</p></details>' +
         '<div class="period-days-grid">' + renderNextCycleAdviceSlots(advice) + '</div>' +
         '</div>';
       const actions = document.getElementById('startCycleModalActions');
@@ -5893,11 +5921,21 @@
     }
 
     async function onSetupVariantChange(day, variantKey) {
+      const manualWeights = new Map(Object.values(setupWizardState.schema[day] || {})
+        .filter(item => item.weightEdited)
+        .map(item => [item.selectedName.trim().toLowerCase(), item.weight]));
       const dayVariants = proposalDayVariants(setupWizardState.programTemplate);
       dayVariants[day] = variantKey;
       const schema = clonePersistedState(setupWizardState.schema);
       delete schema[day];
       await refreshSetupProposal(dayVariants, schema);
+      if (setupWizardState.programTemplate.days[day].variantKey !== variantKey) return;
+      Object.entries(setupWizardState.schema[day]).forEach(([key, item]) => {
+        const name = item.selectedName.trim().toLowerCase();
+        if (manualWeights.has(name)) onSetupWeightChange(day, key, manualWeights.get(name) ?? '');
+      });
+      rememberSetupProposal();
+      renderSetupRoutineModal();
     }
 
     async function onSetupSlotChange(day, key, name) {
@@ -5938,7 +5976,7 @@
       const disabled = state.busy ? ' disabled' : '';
       const variants = (appState.programLibrary?.variants || []).filter(variant => variant.family === (['mon','thu'].includes(day) ? 'push' : 'pull'));
       const variantSelector = isNew && state.programTemplate?.type === 'push_pull' ? '<label class="block text-sm font-bold">Dagvariant<select onchange="onSetupVariantChange(\'' + day + '\',this.value)" class="' + control + '"' + disabled + '>' +
-        variants.map(variant => '<option value="' + escapeReportText(variant.key) + '"' + (state.programTemplate.days[day].variantKey === variant.key ? ' selected' : '') + '>' + escapeReportText(variant.name) + '</option>').join('') + '</select></label>' : '';
+        variants.map(variant => '<option value="' + escapeReportText(variant.key) + '"' + (state.programTemplate.days[day].variantKey === variant.key ? ' selected' : '') + '>' + escapeReportText(variant.name + (variant.subtitle ? ' · ' + variant.subtitle : '')) + '</option>').join('') + '</select></label>' : '';
       const slots = (state.daySlots[day] || []).map((key, index) => {
         const item = state.schema[day][key], name = item.selectedName, bodyweight = isExerciseBodyweight(name);
         const unit = item.weightLabel || getExerciseVolumeRule(name).weightLabel;
@@ -5946,6 +5984,7 @@
           '<div class="setup-exercise-header"><div class="min-w-0"><p class="text-xs text-slate-400">Oefening ' + (index + 1) + ' uit dagvariant</p><p class="mt-1 text-sm font-bold text-slate-100">' + escapeReportText(name) + '</p></div>' +
           '<button type="button" onclick="openSetupGuide(\'' + day + '\',\'' + key + '\')"' + disabled + ' class="shrink-0 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-300">▶ Video & uitleg</button></div>' +
           '<p class="text-xs text-emerald-300">' + item.sets + ' × ' + item.minReps + '–' + item.maxReps + ' reps · ' + item.rest + 's rust</p>' +
+          (item.focusCue ? '<p class="text-xs text-blue-200">' + escapeReportText(item.focusCue) + '</p>' : '') +
           proposalHistoryHtml(item.lastPerformed, unit) +
           (bodyweight ? '<p class="text-sm text-emerald-300">Lichaamsgewicht</p>' :
             '<label class="block text-xs text-slate-400">Startgewicht · ' + escapeReportText(unit) + '<input aria-label="Startgewicht ' + (index + 1) + '" type="number" min="0" step="0.5" value="' + escapeReportText(item.weight ?? '') + '" placeholder="Inregelen" onchange="onSetupWeightChange(\'' + day + '\',\'' + key + '\',this.value)" class="' + control + '"' + disabled + '></label>') +
@@ -5953,11 +5992,10 @@
       }).join('');
       content.innerHTML = '<div class="space-y-4"><h2 class="text-lg font-black">Nieuwe periode · dagvarianten kiezen</h2>' +
         '<p class="text-xs text-slate-400">' + 'Kies per dag een vaste variant. De bijbehorende oefeningen staan vast; startgewichten kun je instellen.' + '</p>' +
-        '<div class="setup-tools-row"><p class="text-xs text-slate-400">Oefeningen in A–F aanpassen? <a href="/beheer/programma#dagvarianten" target="_blank" rel="noopener" class="text-blue-300 underline">A–F beheren via Beheer → Programma</a>.</p>' +
-        '<p class="text-xs text-slate-400">' + equipmentSummaryHtml() + ' <button onclick="openSettingsModal()" class="text-blue-300 underline">Profiel aanpassen</button></p></div>' +
+        '<p class="text-xs text-slate-400">Oefeningen in A–F aanpassen? <a href="/beheer/programma#dagvarianten" target="_blank" rel="noopener" class="text-blue-300 underline">A–F beheren via Beheer → Programma</a>. Varianten gebruiken je vaste trainingsmateriaal.</p>' +
         '<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">' + ['mon','tue','thu','fri'].map(key => '<button onclick="setSetupWizardDay(\'' + key + '\')"' + disabled + ' class="rounded-xl border p-2 text-xs ' +
           (key === day ? 'border-blue-500 bg-blue-950 text-blue-200' : 'border-slate-700 bg-slate-900 text-slate-300') + '">' + escapeReportText(state.dayTitles[key]) + '</button>').join('') + '</div>' +
-        variantSelector + (state.busy ? '<p role="status" class="text-sm text-blue-300">Voorstel en startgewichten bijwerken…</p>' : '') +
+        variantSelector + variantOverviewHtml(appState.programLibrary?.variants?.find(variant => variant.key === state.programTemplate?.days?.[day]?.variantKey)) + (state.busy ? '<p role="status" class="text-sm text-blue-300">Voorstel en startgewichten bijwerken…</p>' : '') +
         '<div class="setup-exercise-grid">' + slots + '</div>' +
         '</div>';
       const actions = document.getElementById('setupRoutineActions');
@@ -7508,6 +7546,8 @@
         const last = nextCycleProposal?.exerciseHistory?.[exerciseName.trim().toLowerCase()] || appState.nextCycle?.exerciseHistory?.[exerciseName.trim().toLowerCase()];
         const video = getExerciseVideoData(exerciseName, slotKey);
         historyBox.innerHTML = proposalHistoryHtml(last, getExerciseVolumeRule(exerciseName).weightLabel) +
+          ((prescription?.focusCue || contextSlot?.focusCue) ? '<p class="mt-2 text-blue-200">' + escapeReportText(prescription?.focusCue || contextSlot.focusCue) + '</p>' : '') +
+          trainingPreparationHtml() +
           (video.matchType === 'similar' ? '<p class="mt-2 text-amber-300">Video van een vergelijkbare variant: ' + escapeReportText(video.matchedExercise || '') + '. Let op verschillen in opstelling en uitvoering.</p>' : '') +
           (!video.videoId ? '<p class="mt-2 text-slate-400">Geen video beschikbaar voor deze oefening. De uitvoeringsuitleg blijft beschikbaar.</p>' : '');
       }
@@ -9140,13 +9180,14 @@
                 <span>🎯</span> Doel: ${targetReps} reps
               </span>
               <span class="bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-800 text-slate-300 flex items-center gap-1 text-[11px]">
-                <span>⏱️</span> Rustrichtlijn: ${formatTime(catalogItem.restTime || 90)}
+                <span>⏱️</span> Rustrichtlijn: ${formatTime(slotData.prescription?.rest || catalogItem.restTime || 90)}
               </span>
             </div>
           </div>
 
           <!-- ADVIES BANNER (PROGRESSIVE OVERLOAD / HERHALEN / DELOAD / STARTGEWICHT) -->
-          <p class="text-xs text-slate-300">${isDeloadWeek(liveWorkout.weekNum) ? '☾ Hersteldoel' : '🎯 Gepland'}: ${maxSetsPerSlot} × ${isBW ? 'BW' : advice.advisedWeight + ' kg'} × ${targetReps} reps</p>
+          ${trainingProgressSummaryHtml(liveWorkout.weekNum, liveWorkout.dayKey, slotKey)}
+          ${trainingPreparationHtml()}
 
           <!-- SLIMME COACH NOTITIE OVER RUSTTIJD -->
           ${advice.coachRestNote ? `
@@ -9205,7 +9246,7 @@
                   <div class="text-[10px] text-slate-400 font-mono">Geen halters of schijven nodig</div>
                 </div>
                 <div class="p-2 rounded-lg bg-slate-900/60 text-center text-[10px] font-mono text-emerald-300 border border-emerald-500/20">
-                  Progressive overload via herhalingen (+2 reps per behaald doel)
+                  Progressive overload via herhalingen (${appState.programDefinition?.type === 'push_pull' ? '+1' : 'maximaal +2'} reps per behaald doel)
                 </div>
               ` : `
                 <div class="flex items-center justify-center">
@@ -9271,7 +9312,7 @@
               <span class="text-[10px] text-slate-400 font-mono">Standaard: niet beoordeeld</span>
             </div>
 
-            <p class="text-[11px] text-slate-400">Kies wat je merkte; je hoeft geen resterende reps te raden. Maximaal vraagt eerst bevestiging, herhaald zwaar én gemist kan tot verlagen leiden.</p>
+            <p class="text-[11px] text-slate-400">Schat hoeveel nette herhalingen nog mogelijk waren. Dit is een hulpmiddel, geen exacte meting. Bij twijfel kies je ‘Niet beoordeeld’. Eén zware of gemiste set verlaagt je volgende trainingsdoel niet automatisch.</p>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="lwExertionGroup">
               <button type="button" onclick="setLiveExertion('unknown')" id="lwExertionBtn_unknown" class="py-2.5 px-2 rounded-xl border text-xs ${!liveWorkout.tempExertion || liveWorkout.tempExertion === 'unknown' ? 'border-slate-300 text-white bg-slate-700' : 'border-slate-800 text-slate-400 bg-slate-950'}">⚪ Niet beoordeeld<span class="block text-[9px] mt-1">Twijfel of niet op gelet</span></button>
               <button 
@@ -9285,7 +9326,7 @@
                 }">
                 <span class="text-base">🟢</span>
                 <span class="text-xs font-black uppercase tracking-tight">VLOT</span>
-                <span class="text-[9px] text-slate-400 leading-tight">Hele set gemakkelijk en gecontroleerd</span>
+                <span class="text-[9px] text-slate-400 leading-tight">Nog circa 4 of meer nette reps mogelijk</span>
               </button>
 
               <button 
@@ -9299,7 +9340,7 @@
                 }">
                 <span class="text-base">✓</span>
                 <span class="text-xs font-black uppercase tracking-tight">GOED</span>
-                <span class="text-[9px] text-slate-400 leading-tight">Laatste reps zwaar, maar netjes</span>
+                <span class="text-[9px] text-slate-400 leading-tight">Nog circa 2–3 nette reps mogelijk</span>
               </button>
 
               <button 
@@ -9313,7 +9354,7 @@
                 }">
                 <span class="text-base">🔴</span>
                 <span class="text-xs font-black uppercase tracking-tight">MAXIMAAL</span>
-                <span class="text-[9px] text-slate-400 leading-tight">Nog een nette rep leek nauwelijks haalbaar</span>
+                <span class="text-[9px] text-slate-400 leading-tight">Nog circa 0–1 nette rep mogelijk</span>
               </button>
             </div>
           </div>
@@ -10640,6 +10681,117 @@
     }
 
 
+    const modalControls = [
+      ['liveWorkoutModal', 'Trainer', 60, () => closeLiveWorkoutModal()],
+      ['restTimerModal', 'Rusttimer', 65, () => toggleTimerModal()],
+      ['dataModal', 'Trainingsdata', 70, () => closeDataModal()],
+      ['weekReportModal', 'Weekrapport', 75, () => closeWeekReportModal()],
+      ['cycleHistoryModal', 'Periodes en resultaten', 75, () => closeCycleHistoryModal()],
+      ['backupModal', 'Back-up', 80, () => closeBackupModal()],
+      ['setupRoutineModal', 'Nieuwe periode inrichten', 80, () => closeSetupRoutineModal()],
+      ['strengthBenchmarkModal', 'Startgewichten en onderbouwing', 80, () => closeBenchmarkModal()],
+      ['startCycleModal', 'Periodevoorstellen', 80, () => closeStartCycleModal()],
+      ['pwaGuideModal', 'App installeren', 90, () => closePwaGuideModal()],
+      ['exerciseGuideModal', 'Video en oefeningsuitleg', 100, () => closeGuideModal()],
+      ['cloudSyncPromptModal', 'Cloudsynchronisatie', 110, () => closeCloudSyncModal()],
+      ['settingsModal', 'Instellingen', 1000, () => closeSettingsModal()],
+    ];
+    let modalStack = [], modalInertElements = [], modalObserver = null;
+
+    function modalIsVisible(element) {
+      return element && (element.tagName === 'DIALOG' ? element.open : !element.classList.contains('hidden'));
+    }
+
+    function focusModal(element) {
+      const heading = element.querySelector('h1, h2, h3');
+      const target = heading || element.querySelector('.app-modal-panel') || element;
+      target.setAttribute('tabindex', '-1');
+      target.focus({ preventScroll: true });
+    }
+
+    function syncModalAccessibility() {
+      modalInertElements.forEach(([element, wasInert]) => { element.inert = wasInert; });
+      modalInertElements = [];
+      const previousTop = modalStack.at(-1);
+      const visible = modalControls.map(([id, label, level, close]) => ({ element: document.getElementById(id), label, level, close }))
+        .filter(item => modalIsVisible(item.element));
+      const existing = modalStack.filter(item => visible.some(current => current.element === item.element));
+      const added = visible.filter(item => !existing.some(current => current.element === item.element));
+      added.forEach(item => {
+        item.opener = document.activeElement;
+        item.openerId = item.opener?.id;
+        item.openerAction = item.opener?.getAttribute('onclick');
+        item.element.setAttribute('role', 'dialog');
+        item.element.setAttribute('aria-label', item.label);
+        item.element.setAttribute('tabindex', '-1');
+      });
+      modalStack = [...existing, ...added].sort((a, b) => a.level - b.level);
+      const top = modalStack.at(-1);
+      visible.forEach(item => item.element.setAttribute('aria-modal', item.element === top?.element ? 'true' : 'false'));
+      if (top) {
+        let branch = top.element;
+        while (branch && branch !== document.body) {
+          Array.from(branch.parentElement?.children || []).filter(sibling => sibling !== branch).forEach(sibling => {
+            modalInertElements.push([sibling, sibling.inert]);
+            sibling.inert = true;
+          });
+          branch = branch.parentElement;
+        }
+      }
+      if (previousTop && previousTop.element !== top?.element && !modalIsVisible(previousTop.element)) {
+        let restore = previousTop.opener;
+        if (!restore?.isConnected && previousTop.openerId) restore = document.getElementById(previousTop.openerId);
+        if (!restore?.isConnected && previousTop.openerAction && top) {
+          restore = Array.from(top.element.querySelectorAll('[onclick]')).find(element => element.getAttribute('onclick') === previousTop.openerAction);
+        }
+        if (restore?.isConnected && !restore.closest('[inert]') && (!top || top.element.contains(restore))) {
+          restore.focus({ preventScroll: true });
+        } else if (top) {
+          focusModal(top.element);
+        } else {
+          document.getElementById('menuDrawerOpenBtn')?.focus({ preventScroll: true });
+        }
+      } else if (top && (top !== previousTop || !top.element.contains(document.activeElement))) {
+        focusModal(top.element);
+      }
+    }
+
+    function handleModalKeydown(event) {
+      syncModalAccessibility();
+      const top = modalStack.at(-1);
+      if (!top) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        top.close();
+        syncModalAccessibility();
+      } else if (event.key === 'Tab') {
+        const controls = Array.from(top.element.querySelectorAll('a[href], button, input, select, textarea, summary, iframe, [tabindex]'))
+          .filter(element => !element.disabled && element.tabIndex >= 0 && !element.closest('[hidden], [inert], .hidden') && element.getClientRects().length);
+        const index = controls.indexOf(document.activeElement);
+        if (!controls.length || index === -1 || (event.shiftKey ? index === 0 : index === controls.length - 1)) {
+          event.preventDefault();
+          if (controls.length) controls[event.shiftKey ? controls.length - 1 : 0].focus();
+          else focusModal(top.element);
+        }
+      }
+    }
+
+    function initializeModalAccessibility() {
+      if (modalObserver) return;
+      modalObserver = new MutationObserver(syncModalAccessibility);
+      modalControls.forEach(([id]) => {
+        const element = document.getElementById(id);
+        if (element) modalObserver.observe(element, { attributes: true, attributeFilter: ['class', 'open', 'style'], childList: true, subtree: true });
+      });
+      window.addEventListener('keydown', handleModalKeydown, true);
+      document.addEventListener('focusin', event => {
+        const top = modalStack.at(-1);
+        if (top && !top.element.contains(event.target)) focusModal(top.element);
+      });
+      syncModalAccessibility();
+    }
+
     /* 13. START */
     async function startApp() {
       try {
@@ -10692,47 +10844,7 @@
       }
       registerIronForgeServiceWorker();
 
-      // ESC toets ondersteuning om de bovenste actieve modal te sluiten
-      window.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          if (document.getElementById("settingsModal")?.open) return;
-          const pwaModal = document.getElementById("pwaGuideModal");
-          if (pwaModal && !pwaModal.classList.contains("hidden")) {
-            closePwaGuideModal();
-            return;
-          }
-          const guideModal = document.getElementById("exerciseGuideModal");
-          if (guideModal && !guideModal.classList.contains("hidden")) {
-            closeGuideModal();
-            return;
-          }
-          const cycleModal = document.getElementById("cycleHistoryModal");
-          if (cycleModal && !cycleModal.classList.contains("hidden")) {
-            closeCycleHistoryModal();
-            return;
-          }
-          const startModal = document.getElementById("startCycleModal");
-          if (startModal && !startModal.classList.contains("hidden")) {
-            closeStartCycleModal();
-            return;
-          }
-          const backupModal = document.getElementById("backupModal");
-          if (backupModal && !backupModal.classList.contains("hidden")) {
-            closeBackupModal();
-            return;
-          }
-          const dataModal = document.getElementById("dataModal");
-          if (dataModal && !dataModal.classList.contains("hidden")) {
-            closeDataModal();
-            return;
-          }
-          const restModal = document.getElementById("restTimerModal");
-          if (restModal && !restModal.classList.contains("hidden")) {
-            toggleTimerModal();
-            return;
-          }
-        }
-      });
+      initializeModalAccessibility();
     }
 
     if (document.readyState === "loading") {

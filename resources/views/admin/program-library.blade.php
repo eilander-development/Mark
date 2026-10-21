@@ -12,6 +12,9 @@
         @foreach ($variants->where('family', $family) as $variant)
             <details id="variant-{{ $variant->id }}" class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
                 <summary class="cursor-pointer font-bold">{{ $variant->name }}{{ $variant->archived ? ' · Gearchiveerd' : '' }} <span class="text-xs font-normal text-slate-400">· {{ collect($variant->exercises)->sum('sets') }} werksets</span></summary>
+                @php $overview = $variantOverviews[$variant->id]; @endphp
+                <p class="mt-2 text-xs text-slate-300">{{ $overview['subtitle'] }}</p>
+                <p class="mt-1 text-xs text-slate-400">Circa {{ $overview['estimatedMinutes']['min'] }}–{{ $overview['estimatedMinutes']['max'] }} min inclusief korte warming-up. Rust en opstelling kunnen dit verlengen. Vast materiaal; oefeningen worden niet automatisch vervangen.</p>
                 <form method="post" action="{{ route('admin.variants.update', $variant) }}" class="mt-4 space-y-4">
                     @csrf @method('PATCH')
                     <label class="block text-xs text-slate-400">Naam<input name="name" value="{{ $variant->name }}" required maxlength="100" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"></label>
@@ -59,7 +62,7 @@
                         }
                     @endphp
                     <label class="block text-xs text-slate-400">{{ $label }}<select name="days[{{ $day }}]" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2">
-                        @foreach ($variants->where('family', $family)->where('archived', false) as $variant)<option value="{{ $variant->key }}" @selected(($template->days[$day] ?? null) === $variant->key)>{{ $variant->name }}</option>@endforeach
+                        @foreach ($variants->where('family', $family)->where('archived', false) as $variant)<option value="{{ $variant->key }}" @selected(($template->days[$day] ?? null) === $variant->key)>{{ $variant->name }} · {{ $variantOverviews[$variant->id]['subtitle'] }}</option>@endforeach
                     </select></label>
                 @endforeach
                 <p class="text-xs text-slate-400">Huidige directe weeksets: @foreach($volume as $group => $sets){{ config('push_pull.roles') ? (['chest'=>'borst','back'=>'rug','shoulders'=>'schouders','biceps'=>'biceps','triceps'=>'triceps','traps'=>'trapezius'][$group] ?? $group) : $group }} {{ $sets }}{{ $loop->last ? '.' : ' · ' }}@endforeach Na opslaan wordt dit opnieuw berekend.</p>

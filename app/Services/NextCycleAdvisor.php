@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Cycle;
-use App\Models\Profile;
 use Illuminate\Validation\ValidationException;
 
 class NextCycleAdvisor
@@ -23,7 +22,6 @@ class NextCycleAdvisor
         $goal ??= $cycle->training_goal ?? 'hypertrophy';
         $library = $this->library->export();
         $history = $this->history->all();
-        $equipment = Profile::query()->first()?->equipment ?? ['barbell' => true, 'dumbbells' => true, 'bench' => true];
         $keys = array_column($library['templates'], 'key');
         $previousKey = $cycle->program_definition['key'] ?? null;
         $index = array_search($previousKey, $keys, true);
@@ -33,7 +31,7 @@ class NextCycleAdvisor
         foreach ([...$library['templates'], ['key' => 'repeat', 'name' => 'Huidige indeling herhalen', 'description' => 'Dezelfde indeling, met een nieuw startadvies.']] as $template) {
             try {
                 $definition = $this->library->build($cycle, $template['key'], $template['key'] === $selected ? $dayVariants : [], $goal,
-                    $template['key'] === $selected ? $overrides : [], $equipment);
+                    $template['key'] === $selected ? $overrides : []);
                 $proposals[$template['key']] = $this->enrich($cycle, $definition, $history);
             } catch (ValidationException $exception) {
                 if (($templateKey !== null || $dayVariants !== [] || $overrides !== []) && $selected === $template['key']) {
@@ -102,7 +100,8 @@ class NextCycleAdvisor
                 }
             }
             unset($item);
-            $days[] = ['day' => $day, 'title' => $dayDefinition['title'], 'variantKey' => $dayDefinition['variantKey'] ?? null, 'slots' => $slots];
+            $days[] = ['day' => $day, 'title' => $dayDefinition['title'], 'variantKey' => $dayDefinition['variantKey'] ?? null,
+                ...$this->library->overview($dayDefinition['exercises']), 'slots' => $slots];
         }
         unset($dayDefinition);
         $definition['splits'] = $this->library->splits($definition);
