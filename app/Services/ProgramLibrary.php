@@ -52,7 +52,7 @@ class ProgramLibrary
             'variants.*.name' => ['required', 'string', 'max:100'],
             'variants.*.description' => ['nullable', 'string', 'max:600'],
             'variants.*.archived' => ['sometimes', 'boolean'],
-            'variants.*.exercises' => ['required', 'array', 'size:5'],
+            'variants.*.exercises' => ['required', 'array', 'between:5,6'],
             'variants.*.exercises.*.selectedName' => ['required', 'string', 'max:160'],
             'variants.*.exercises.*.sets' => ['required', 'integer', 'between:1,5'],
             'variants.*.exercises.*.minReps' => ['required', 'integer', 'between:4,30'],
@@ -145,7 +145,7 @@ class ProgramLibrary
         $result['minReps'] = $overrides['baseMinReps'] ?? $overrides['minReps'] ?? $role['minReps'];
         $result['maxReps'] = $overrides['baseMaxReps'] ?? $overrides['maxReps'] ?? $role['maxReps'];
         unset($result['exercises']);
-        if ($slotKey === 'slot_a3' && str_contains(mb_strtolower($name), 'press') && ! isset($overrides['minReps'])) {
+        if (in_array($slotKey, ['slot_a3', 'slot_b3'], true) && str_contains(mb_strtolower($name), 'press') && ! isset($overrides['minReps'])) {
             $result['minReps'] = 8;
             $result['maxReps'] = 12;
             $result['rest'] = max(150, (int) $result['rest']);
@@ -231,7 +231,8 @@ class ProgramLibrary
         }
 
         return match ($slotKey) {
-            'slot_a1', 'slot_a3' => 'Borstaccent: beweeg gecontroleerd binnen een pijnvrije bewegingsuitslag; houd je schouders stabiel.',
+            'slot_b1' => 'Pullover: houd je ellebooghoek vrijwel gelijk en beweeg alleen zo ver achter je hoofd als comfortabel lukt. Borst en rug werken samen.',
+            'slot_a1', 'slot_a3', 'slot_b3' => 'Borstaccent: beweeg gecontroleerd binnen een pijnvrije bewegingsuitslag; houd je schouders stabiel.',
             'slot_b2' => 'Schouderpress: houd je ribben en bekken boven elkaar; druk zonder je onderrug hol te trekken.',
             'slot_a5' => 'Zijkant schouders: hef gecontroleerd zonder zwaaien of je schouders op te trekken.',
             'slot_b5' => 'Achterkant schouders: beweeg vanuit je schouders en houd je romp stil.',

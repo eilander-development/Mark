@@ -1,34 +1,38 @@
 <?php
 
 $push = [
-    'A' => ['Barbell Bench Press', 'Incline Dumbbell Press', 'Seated Dumbbell Shoulder Press', 'Dumbbell Lateral Raises', 'Dumbbell Overhead Tricep Extension'],
-    'B' => ['Dumbbell Bench Press', 'Dumbbell Chest Flyes', 'Barbell Overhead Press (OHP)', 'Seated Dumbbell Lateral Raises', 'Dumbbell Skull Crushers (Liggend op Bankje)'],
-    'C' => ['Incline Dumbbell Press', 'Dumbbell Chest Flyes', 'Arnold Press', 'Dumbbell Lateral Raises', 'Dumbbell Overhead Tricep Extension'],
-    'D' => ['Dumbbell Bench Press', 'Incline Dumbbell Flyes', 'Seated Dumbbell Shoulder Press', 'Seated Dumbbell Lateral Raises', 'Dumbbell Skull Crushers (Liggend op Bankje)'],
-    'E' => ['Incline Barbell Press', 'Dumbbell Chest Flyes', 'Standing Dumbbell Shoulder Press', 'Dumbbell Lateral Raises', 'Barbell Lying Tricep Extension (Skull Crushers)'],
-    'F' => ['Barbell Bench Press', 'Incline Dumbbell Press', 'Seated Barbell Press', 'Seated Dumbbell Lateral Raises', 'Incline Dumbbell Overhead Extension'],
+    'A' => ['Barbell Bench Press', 'Incline Dumbbell Press', 'Dumbbell Chest Flyes', 'Seated Dumbbell Shoulder Press', 'Dumbbell Lateral Raises', 'Dumbbell Overhead Tricep Extension'],
+    'B' => ['Dumbbell Bench Press', 'Dumbbell Chest Flyes', 'Incline Dumbbell Press', 'Barbell Overhead Press (OHP)', 'Seated Dumbbell Lateral Raises', 'Dumbbell Skull Crushers (Liggend op Bankje)'],
+    'C' => ['Incline Dumbbell Press', 'Dumbbell Chest Flyes', 'Dumbbell Bench Press', 'Arnold Press', 'Dumbbell Lateral Raises', 'Dumbbell Overhead Tricep Extension'],
+    'D' => ['Dumbbell Bench Press', 'Incline Dumbbell Flyes', 'Incline Dumbbell Press', 'Seated Dumbbell Shoulder Press', 'Seated Dumbbell Lateral Raises', 'Dumbbell Skull Crushers (Liggend op Bankje)'],
+    'E' => ['Incline Barbell Press', 'Dumbbell Chest Flyes', 'Dumbbell Bench Press', 'Standing Dumbbell Shoulder Press', 'Dumbbell Lateral Raises', 'Barbell Lying Tricep Extension (Skull Crushers)'],
+    'F' => ['Barbell Bench Press', 'Incline Dumbbell Press', 'Dumbbell Chest Flyes', 'Seated Barbell Press', 'Seated Dumbbell Lateral Raises', 'Incline Dumbbell Overhead Extension'],
 ];
 $pull = [
-    'A' => ['Barbell Row', 'Dumbbell One-Arm Row', 'Rear Delt Flyes', 'Barbell Bicep Curls', 'Barbell Shrugs'],
-    'B' => ['Chest-Supported Dumbbell Row', 'Barbell Row', 'Prone Incline Rear Delt Raises', 'Dumbbell Bicep Curls', 'Dumbbell Shrugs'],
-    'C' => ['Barbell Row', 'Dumbbell One-Arm Row', 'Seated Rear Delt Flyes', 'Incline Dumbbell Curls', 'Dumbbell Shrugs'],
-    'D' => ['Dumbbell One-Arm Row', 'Chest-Supported Dumbbell Row', 'Prone Incline Rear Delt Raises', 'Hammer Curls (Dumbbells)', 'Dumbbell Shrugs'],
-    'E' => ['Barbell Row (Wijde Grip)', 'Dumbbell One-Arm Row', 'Rear Delt Flyes', 'Spider Curls (Borst op Bank)', 'Barbell Shrugs'],
-    'F' => ['Underhand Barbell Row (Yates Row)', 'Chest-Supported Dumbbell Row', 'Prone Incline Rear Delt Raises', 'Dumbbell Bicep Curls', 'Incline Bench Dumbbell Shrugs'],
+    'A' => ['Barbell Row', 'Dumbbell One-Arm Row', 'Dumbbell Pullover', 'Rear Delt Flyes', 'Barbell Bicep Curls', 'Barbell Shrugs'],
+    'B' => ['Chest-Supported Dumbbell Row', 'Barbell Row', 'Dumbbell Pullover', 'Prone Incline Rear Delt Raises', 'Dumbbell Bicep Curls', 'Dumbbell Shrugs'],
+    'C' => ['Barbell Row', 'Dumbbell One-Arm Row', 'Dumbbell Pullover', 'Seated Rear Delt Flyes', 'Incline Dumbbell Curls', 'Dumbbell Shrugs'],
+    'D' => ['Dumbbell One-Arm Row', 'Chest-Supported Dumbbell Row', 'Dumbbell Pullover', 'Prone Incline Rear Delt Raises', 'Hammer Curls (Dumbbells)', 'Dumbbell Shrugs'],
+    'E' => ['Barbell Row (Wijde Grip)', 'Dumbbell One-Arm Row', 'Dumbbell Pullover', 'Rear Delt Flyes', 'Spider Curls (Borst op Bank)', 'Barbell Shrugs'],
+    'F' => ['Underhand Barbell Row (Yates Row)', 'Chest-Supported Dumbbell Row', 'Dumbbell Pullover', 'Prone Incline Rear Delt Raises', 'Dumbbell Bicep Curls', 'Incline Bench Dumbbell Shrugs'],
 ];
 
 return [
     'families' => [
-        'push' => ['label' => 'Push', 'muscles' => 'Borst, voorste/zijkant schouders en triceps', 'slots' => ['slot_a1', 'slot_a3', 'slot_b2', 'slot_a5', 'slot_b6']],
-        'pull' => ['label' => 'Pull', 'muscles' => 'Rug, achterste schouders, biceps en trapezius', 'slots' => ['slot_a2', 'slot_b4', 'slot_b5', 'slot_a6', 'slot_a4']],
+        'push' => ['label' => 'Push', 'muscles' => 'Borst, voorste/zijkant schouders en triceps', 'slots' => ['slot_a1', 'slot_a3', 'slot_b3', 'slot_b2', 'slot_a5', 'slot_b6']],
+        'pull' => ['label' => 'Pull', 'muscles' => 'Rug, achterste schouders, biceps en trapezius', 'slots' => ['slot_a2', 'slot_b4', 'slot_b1', 'slot_b5', 'slot_a6', 'slot_a4']],
     ],
     'defaults' => ['push' => $push, 'pull' => $pull],
     'roles' => [
+        'slot_b3' => ['label' => 'Extra borst', 'family' => 'push', 'primary' => 'chest', 'secondary' => ['shoulders'], 'sets' => 3, 'minReps' => 10, 'maxReps' => 15, 'rest' => 90, 'priority' => false,
+            'exercises' => ['Dumbbell Chest Flyes', 'Incline Dumbbell Flyes', 'Floor Dumbbell Flyes', 'Incline Dumbbell Press', 'Dumbbell Bench Press', 'Dumbbell Floor Press']],
+        'slot_b1' => ['label' => 'Pullover · borst en rug', 'family' => 'pull', 'primary' => 'back', 'secondary' => ['chest', 'triceps'], 'sets' => 3, 'minReps' => 10, 'maxReps' => 15, 'rest' => 90, 'priority' => false,
+            'exercises' => ['Dumbbell Pullover']],
         'slot_a1' => ['label' => 'Borstpress', 'family' => 'push', 'primary' => 'chest', 'secondary' => ['triceps', 'shoulders'], 'sets' => 3, 'minReps' => 8, 'maxReps' => 12, 'rest' => 150, 'priority' => true,
             'exercises' => ['Barbell Bench Press', 'Incline Barbell Press', 'Dumbbell Bench Press', 'Incline Dumbbell Press', 'Dumbbell Floor Press', 'Opdrukken (Klassieke Push-ups)']],
         'slot_a3' => ['label' => 'Aanvullende borst', 'family' => 'push', 'primary' => 'chest', 'secondary' => ['shoulders'], 'sets' => 3, 'minReps' => 10, 'maxReps' => 15, 'rest' => 90, 'priority' => false,
             'exercises' => ['Incline Dumbbell Press', 'Dumbbell Chest Flyes', 'Incline Dumbbell Flyes', 'Floor Dumbbell Flyes', 'Dumbbell Floor Press']],
-        'slot_b2' => ['label' => 'Schouderpress', 'family' => 'push', 'primary' => 'shoulders', 'secondary' => ['triceps'], 'sets' => 2, 'minReps' => 8, 'maxReps' => 12, 'rest' => 150, 'priority' => true,
+        'slot_b2' => ['label' => 'Schouderpress', 'family' => 'push', 'primary' => 'shoulders', 'secondary' => ['triceps'], 'sets' => 3, 'minReps' => 8, 'maxReps' => 12, 'rest' => 150, 'priority' => true,
             'exercises' => ['Seated Dumbbell Shoulder Press', 'Barbell Overhead Press (OHP)', 'Arnold Press', 'Standing Dumbbell Shoulder Press', 'Seated Barbell Press']],
         'slot_a5' => ['label' => 'Zijkant schouders', 'family' => 'push', 'primary' => 'shoulders', 'secondary' => ['traps'], 'sets' => 3, 'minReps' => 12, 'maxReps' => 20, 'rest' => 90, 'priority' => false,
             'exercises' => ['Dumbbell Lateral Raises', 'Seated Dumbbell Lateral Raises', 'Leaning Dumbbell Lateral Raises', 'Lying Incline Lateral Raises']],
@@ -38,11 +42,11 @@ return [
             'exercises' => ['Barbell Row', 'Dumbbell One-Arm Row', 'Chest-Supported Dumbbell Row', 'Barbell Row (Wijde Grip)', 'Underhand Barbell Row (Yates Row)', 'Pull-ups (Optrekken Bovengreep)', 'Chin-ups (Optrekken Ondergreep)']],
         'slot_b4' => ['label' => 'Aanvullende rug', 'family' => 'pull', 'primary' => 'back', 'secondary' => ['biceps', 'shoulders'], 'sets' => 3, 'minReps' => 8, 'maxReps' => 12, 'rest' => 150, 'priority' => false,
             'exercises' => ['Dumbbell One-Arm Row', 'Chest-Supported Dumbbell Row', 'Barbell Row', 'Pull-ups (Optrekken Bovengreep)', 'Chin-ups (Optrekken Ondergreep)', 'Dumbbell Pullover']],
-        'slot_b5' => ['label' => 'Achterkant schouders', 'family' => 'pull', 'primary' => 'shoulders', 'secondary' => ['back', 'traps'], 'sets' => 2, 'minReps' => 12, 'maxReps' => 20, 'rest' => 90, 'priority' => false,
+        'slot_b5' => ['label' => 'Achterkant schouders', 'family' => 'pull', 'primary' => 'shoulders', 'secondary' => ['back', 'traps'], 'sets' => 3, 'minReps' => 12, 'maxReps' => 20, 'rest' => 90, 'priority' => false,
             'exercises' => ['Rear Delt Flyes', 'Seated Rear Delt Flyes', 'Prone Incline Rear Delt Raises', 'Dumbbell Face Pulls (Liggend op Schuin Bankje)']],
         'slot_a6' => ['label' => 'Biceps', 'family' => 'pull', 'primary' => 'biceps', 'secondary' => [], 'sets' => 3, 'minReps' => 10, 'maxReps' => 15, 'rest' => 90, 'priority' => false,
             'exercises' => ['Barbell Bicep Curls', 'Dumbbell Bicep Curls', 'Incline Dumbbell Curls', 'Hammer Curls (Dumbbells)', 'Spider Curls (Borst op Bank)', 'Concentration Curls']],
-        'slot_a4' => ['label' => 'Trapezius', 'family' => 'pull', 'primary' => 'traps', 'secondary' => [], 'sets' => 2, 'minReps' => 10, 'maxReps' => 15, 'rest' => 90, 'priority' => false,
+        'slot_a4' => ['label' => 'Trapezius', 'family' => 'pull', 'primary' => 'traps', 'secondary' => [], 'sets' => 3, 'minReps' => 10, 'maxReps' => 15, 'rest' => 90, 'priority' => false,
             'exercises' => ['Barbell Shrugs', 'Dumbbell Shrugs', 'Incline Bench Dumbbell Shrugs', 'Dumbbell Shrugs met Pauze (2s Squeeze)']],
     ],
     'equipment' => [

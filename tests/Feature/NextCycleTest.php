@@ -62,8 +62,8 @@ class NextCycleTest extends TestCase
             ->assertJsonPath('days.0.title', 'Maandag: Push A')
             ->assertJsonPath('schema.mon.slot_a1.selectedName', 'Barbell Bench Press');
 
-        $this->assertSame(['slot_a1', 'slot_a3', 'slot_b2', 'slot_a5', 'slot_b6'], array_column($advice->json('days.0.slots'), 'slotKey'));
-        $this->assertSame(['slot_a2', 'slot_b4', 'slot_b5', 'slot_a6', 'slot_a4'], array_column($advice->json('days.1.slots'), 'slotKey'));
+        $this->assertSame(['slot_a1', 'slot_a3', 'slot_b3', 'slot_b2', 'slot_a5', 'slot_b6'], array_column($advice->json('days.0.slots'), 'slotKey'));
+        $this->assertSame(['slot_a2', 'slot_b4', 'slot_b1', 'slot_b5', 'slot_a6', 'slot_a4'], array_column($advice->json('days.1.slots'), 'slotKey'));
     }
 
     public function test_legacy_templates_remain_available_for_existing_periods(): void

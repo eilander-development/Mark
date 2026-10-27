@@ -42,7 +42,7 @@ class PushPullProgramTest extends TestCase
         $this->assertCount(12, $library['variants']);
         $this->assertCount(4, $library['templates']);
         foreach ($library['variants'] as $variant) {
-            $this->assertCount(5, $variant['exercises']);
+            $this->assertCount(6, $variant['exercises']);
             foreach ($variant['exercises'] as $key => $item) {
                 $this->assertSame($variant['family'], config('push_pull.roles.'.$key.'.family'));
                 $this->assertContains($item['selectedName'], config('push_pull.roles.'.$key.'.exercises'));
@@ -54,8 +54,8 @@ class PushPullProgramTest extends TestCase
             ->assertJsonPath('programTemplate.days.mon.variantName', 'Push A')
             ->assertJsonPath('programTemplate.days.tue.variantName', 'Pull A')
             ->assertJsonPath('programTemplate.days.thu.variantName', 'Push B')
-            ->assertJsonPath('weekMuscles.chest.direct', 12)
-            ->assertJsonPath('weekMuscles.back.direct', 12);
+            ->assertJsonPath('weekMuscles.chest.direct', 18)
+            ->assertJsonPath('weekMuscles.back.direct', 18);
     }
 
     public function test_selected_template_is_frozen_and_existing_period_is_untouched(): void
@@ -69,8 +69,8 @@ class PushPullProgramTest extends TestCase
         ProgramVariant::query()->where('key', 'push_c')->update(['name' => 'Andere naam']);
         $this->getJson('/api/marker-state')->assertOk()
             ->assertJsonPath('appState.splits.mon.variantName', 'Push C')
-            ->assertJsonPath('appState.weeks.1.mon.slot_b2.requiredSets', 2)
-            ->assertJsonPath('appState.weeks.1.mon.slot_b2.prescription.sets', 2);
+            ->assertJsonPath('appState.weeks.1.mon.slot_b2.requiredSets', 3)
+            ->assertJsonPath('appState.weeks.1.mon.slot_b2.prescription.sets', 3);
         $this->assertSame('25', $oldSet->fresh()->weight);
         $this->assertNull($old->fresh()->program_definition);
     }
@@ -105,13 +105,13 @@ class PushPullProgramTest extends TestCase
     public function test_work_sets_and_deload_counts_follow_each_exercise(): void
     {
         $this->start();
-        $this->getJson('/api/weeks/1/report')->assertOk()->assertJsonPath('totalSets', 54)
-            ->assertJsonPath('muscleSets.groups.chest.planned', 12)
-            ->assertJsonPath('muscleSets.groups.back.planned', 12)
+        $this->getJson('/api/weeks/1/report')->assertOk()->assertJsonPath('totalSets', 72)
+            ->assertJsonPath('muscleSets.groups.chest.planned', 18)
+            ->assertJsonPath('muscleSets.groups.back.planned', 18)
             ->assertJsonPath('muscleSets.groups.biceps.planned', 6);
         app(CycleFactory::class)->preferences()->update(['current_week' => 6]);
         $this->postJson('/api/weeks/advance', ['week' => 6, 'recovery_week' => true])->assertOk();
-        $this->getJson('/api/weeks/7/report')->assertOk()->assertJsonPath('totalSets', 40);
+        $this->getJson('/api/weeks/7/report')->assertOk()->assertJsonPath('totalSets', 48);
     }
 
     public function test_goal_changes_ranges_without_inventing_a_new_start_weight(): void
@@ -191,7 +191,7 @@ class PushPullProgramTest extends TestCase
             }
         }
         $this->getJson('/api/cycles/next-advice')->assertOk()
-            ->assertJsonPath('days.0.workSets', 14)->assertJsonPath('days.1.workSets', 13);
+            ->assertJsonPath('days.0.workSets', 18)->assertJsonPath('days.1.workSets', 18);
     }
 
     public function test_corrupt_library_duplicates_are_reported_without_replacing_them(): void
@@ -330,7 +330,7 @@ class PushPullProgramTest extends TestCase
         $this->assertSame('Push C persoonlijk', $variant->fresh()->name);
         $this->assertSame('Eigen opbouw', $variant->fresh()->description);
         $this->getJson('/api/marker-state')->assertOk()
-            ->assertJsonPath('appState.weeks.1.mon.slot_b2.prescription.sets', 2)
+            ->assertJsonPath('appState.weeks.1.mon.slot_b2.prescription.sets', 3)
             ->assertJsonPath('appState.weeks.1.mon.slot_b2.sets.0.weight', '12')
             ->assertJsonPath('appState.programDefinition.days.mon.variantName', 'Push C');
     }

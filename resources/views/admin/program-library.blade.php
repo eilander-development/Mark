@@ -27,7 +27,7 @@
                             </select>
                             <div class="grid grid-cols-3 gap-2 sm:grid-cols-5">
                                 @foreach (['position' => 'Volgorde', 'sets' => 'Sets', 'minReps' => 'Vanaf reps', 'maxReps' => 'Tot reps', 'rest' => 'Rust (sec)'] as $field => $label)
-                                    <label class="text-[11px] text-slate-400">{{ $label }}<input type="number" name="exercises[{{ $key }}][{{ $field }}]" value="{{ $item[$field] ?? $loop->parent->iteration }}" min="{{ $field === 'rest' ? 30 : ($field === 'sets' || $field === 'position' ? 1 : 4) }}" max="{{ $field === 'rest' ? 300 : ($field === 'sets' || $field === 'position' ? 5 : 30) }}" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-sm"></label>
+                                    <label class="text-[11px] text-slate-400">{{ $label }}<input type="number" name="exercises[{{ $key }}][{{ $field }}]" value="{{ $item[$field] ?? $loop->parent->iteration }}" min="{{ $field === 'rest' ? 30 : ($field === 'sets' || $field === 'position' ? 1 : 4) }}" max="{{ $field === 'rest' ? 300 : ($field === 'position' ? count($variant->exercises) : ($field === 'sets' ? 5 : 30)) }}" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-sm"></label>
                                 @endforeach
                             </div>
                         </fieldset>

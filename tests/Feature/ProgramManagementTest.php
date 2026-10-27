@@ -52,7 +52,7 @@ class ProgramManagementTest extends TestCase
         $this->assertSame('slot_a3', array_key_first($variant->fresh()->exercises));
         $this->assertSame(2, $variant->fresh()->exercises['slot_a1']['sets']);
         $exported = collect(app(ProgramLibrary::class)->export()['variants'])->firstWhere('key', 'push_a');
-        $this->assertSame(13, $exported['workSets']);
+        $this->assertSame(17, $exported['workSets']);
         $this->assertSame('Incline Dumbbell Press + Barbell Bench Press', $exported['subtitle']);
     }
 

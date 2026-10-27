@@ -41,7 +41,7 @@ class ProgramLibraryController extends Controller
             $rules[$prefix.'.minReps'] = ['required', 'integer', 'between:4,30'];
             $rules[$prefix.'.maxReps'] = ['required', 'integer', 'between:4,30', 'gte:'.$prefix.'.minReps'];
             $rules[$prefix.'.rest'] = ['required', 'integer', 'between:30,300'];
-            $rules[$prefix.'.position'] = ['required', 'integer', 'between:1,5'];
+            $rules[$prefix.'.position'] = ['required', 'integer', 'between:1,'.count($keys)];
         }
         $data = $request->validate($rules);
         if (($data['archived'] ?? false) && PeriodTemplate::query()->where('archived', false)->get()->contains(fn (PeriodTemplate $template): bool => in_array($variant->key, $template->days, true))) {
@@ -58,7 +58,7 @@ class ProgramLibraryController extends Controller
             throw ValidationException::withMessages(['exercises' => 'Kies per dag verschillende oefeningen.']);
         }
         if (count(array_unique(array_column($exercises, 'position'))) !== count($keys)) {
-            throw ValidationException::withMessages(['exercises' => 'Geef iedere oefening een unieke positie van 1 tot 5.']);
+            throw ValidationException::withMessages(['exercises' => 'Geef iedere oefening een unieke positie van 1 tot '.count($keys).'.']);
         }
         uasort($exercises, fn (array $a, array $b): int => $a['position'] <=> $b['position']);
         $variant->update(['name' => $data['name'], 'description' => $data['description'] ?? '',
