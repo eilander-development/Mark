@@ -15,7 +15,7 @@ class ExerciseVolume
                 'Dumbbell Floor Press', 'Tempo Dumbbell Bench Press', 'Dumbbell Chest Flyes',
                 'Incline Dumbbell Flyes', 'Floor Dumbbell Flyes', 'Incline Dumbbell Hex Press',
                 'Chest-Supported Dumbbell Row', 'Incline Dumbbell Row',
-                'Seated Dumbbell Shoulder Press', 'Standing Dumbbell Shoulder Press', 'Arnold Press',
+                'Seated Dumbbell Shoulder Press', 'Seated Neutral-Grip Dumbbell Shoulder Press', 'Standing Dumbbell Shoulder Press', 'Arnold Press',
                 'Dumbbell High Incline Press', 'Dumbbell Lateral Raises', 'Seated Dumbbell Lateral Raises',
                 'Prone Incline Lateral Raises', 'Around The World Raises', 'Rear Delt Flyes',
                 'Dumbbell Face Pulls (Liggend op Schuin Bankje)', 'Seated Rear Delt Flyes',

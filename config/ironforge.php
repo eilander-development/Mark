@@ -253,7 +253,7 @@ return [
                 'Zakken tot minimaal oorhoogte voor een volledige, veilige spierrek.',
             ],
             'alternatives' => [
-                'Seated Dumbbell Shoulder Press', 'Barbell Overhead Press (OHP)', 'Seated Barbell Press', 'Arnold Press',
+                'Seated Dumbbell Shoulder Press', 'Seated Neutral-Grip Dumbbell Shoulder Press', 'Barbell Overhead Press (OHP)', 'Seated Barbell Press', 'Arnold Press',
                 'Standing Dumbbell Shoulder Press', 'Landmine Shoulder Press', 'Push Press (Barbell)',
                 'Dumbbell High Incline Press',
             ],

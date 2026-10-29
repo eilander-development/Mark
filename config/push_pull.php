@@ -2,11 +2,11 @@
 
 $push = [
     'A' => ['Barbell Bench Press', 'Incline Dumbbell Press', 'Dumbbell Chest Flyes', 'Seated Dumbbell Shoulder Press', 'Dumbbell Lateral Raises', 'Dumbbell Overhead Tricep Extension'],
-    'B' => ['Dumbbell Bench Press', 'Dumbbell Chest Flyes', 'Incline Dumbbell Press', 'Barbell Overhead Press (OHP)', 'Seated Dumbbell Lateral Raises', 'Dumbbell Skull Crushers (Liggend op Bankje)'],
+    'B' => ['Dumbbell Bench Press', 'Dumbbell Chest Flyes', 'Incline Dumbbell Press', 'Arnold Press', 'Seated Dumbbell Lateral Raises', 'Dumbbell Skull Crushers (Liggend op Bankje)'],
     'C' => ['Incline Dumbbell Press', 'Dumbbell Chest Flyes', 'Dumbbell Bench Press', 'Arnold Press', 'Dumbbell Lateral Raises', 'Dumbbell Overhead Tricep Extension'],
-    'D' => ['Dumbbell Bench Press', 'Incline Dumbbell Flyes', 'Incline Dumbbell Press', 'Seated Dumbbell Shoulder Press', 'Seated Dumbbell Lateral Raises', 'Dumbbell Skull Crushers (Liggend op Bankje)'],
-    'E' => ['Incline Barbell Press', 'Dumbbell Chest Flyes', 'Dumbbell Bench Press', 'Standing Dumbbell Shoulder Press', 'Dumbbell Lateral Raises', 'Barbell Lying Tricep Extension (Skull Crushers)'],
-    'F' => ['Barbell Bench Press', 'Incline Dumbbell Press', 'Dumbbell Chest Flyes', 'Seated Barbell Press', 'Seated Dumbbell Lateral Raises', 'Incline Dumbbell Overhead Extension'],
+    'D' => ['Dumbbell Bench Press', 'Incline Dumbbell Flyes', 'Incline Dumbbell Press', 'Seated Neutral-Grip Dumbbell Shoulder Press', 'Seated Dumbbell Lateral Raises', 'Dumbbell Skull Crushers (Liggend op Bankje)'],
+    'E' => ['Incline Barbell Press', 'Dumbbell Chest Flyes', 'Dumbbell Bench Press', 'Seated Neutral-Grip Dumbbell Shoulder Press', 'Dumbbell Lateral Raises', 'Barbell Lying Tricep Extension (Skull Crushers)'],
+    'F' => ['Barbell Bench Press', 'Incline Dumbbell Press', 'Dumbbell Chest Flyes', 'Seated Dumbbell Shoulder Press', 'Seated Dumbbell Lateral Raises', 'Incline Dumbbell Overhead Extension'],
 ];
 $pull = [
     'A' => ['Barbell Row', 'Dumbbell One-Arm Row', 'Dumbbell Pullover', 'Rear Delt Flyes', 'Barbell Bicep Curls', 'Barbell Shrugs'],
@@ -33,7 +33,7 @@ return [
         'slot_a3' => ['label' => 'Aanvullende borst', 'family' => 'push', 'primary' => 'chest', 'secondary' => ['shoulders'], 'sets' => 3, 'minReps' => 10, 'maxReps' => 15, 'rest' => 90, 'priority' => false,
             'exercises' => ['Incline Dumbbell Press', 'Dumbbell Chest Flyes', 'Incline Dumbbell Flyes', 'Floor Dumbbell Flyes', 'Dumbbell Floor Press']],
         'slot_b2' => ['label' => 'Schouderpress', 'family' => 'push', 'primary' => 'shoulders', 'secondary' => ['triceps'], 'sets' => 3, 'minReps' => 8, 'maxReps' => 12, 'rest' => 150, 'priority' => true,
-            'exercises' => ['Seated Dumbbell Shoulder Press', 'Barbell Overhead Press (OHP)', 'Arnold Press', 'Standing Dumbbell Shoulder Press', 'Seated Barbell Press']],
+            'exercises' => ['Seated Dumbbell Shoulder Press', 'Seated Neutral-Grip Dumbbell Shoulder Press', 'Barbell Overhead Press (OHP)', 'Arnold Press', 'Standing Dumbbell Shoulder Press', 'Seated Barbell Press']],
         'slot_a5' => ['label' => 'Zijkant schouders', 'family' => 'push', 'primary' => 'shoulders', 'secondary' => ['traps'], 'sets' => 3, 'minReps' => 12, 'maxReps' => 20, 'rest' => 90, 'priority' => false,
             'exercises' => ['Dumbbell Lateral Raises', 'Seated Dumbbell Lateral Raises', 'Leaning Dumbbell Lateral Raises', 'Lying Incline Lateral Raises']],
         'slot_b6' => ['label' => 'Triceps', 'family' => 'push', 'primary' => 'triceps', 'secondary' => [], 'sets' => 3, 'minReps' => 10, 'maxReps' => 15, 'rest' => 90, 'priority' => false,
@@ -60,6 +60,7 @@ return [
         'Incline Dumbbell Flyes' => ['dumbbells', 'bench', 'adjustable_bench'],
         'Floor Dumbbell Flyes' => ['dumbbells'],
         'Seated Dumbbell Shoulder Press' => ['dumbbells', 'bench', 'adjustable_bench'],
+        'Seated Neutral-Grip Dumbbell Shoulder Press' => ['dumbbells', 'bench', 'adjustable_bench'],
         'Barbell Overhead Press (OHP)' => ['barbell', 'rack'],
         'Arnold Press' => ['dumbbells', 'bench', 'adjustable_bench'],
         'Standing Dumbbell Shoulder Press' => ['dumbbells'],

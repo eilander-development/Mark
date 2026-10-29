@@ -222,6 +222,12 @@ class ProgramLibrary
 
     private function focusCue(string $slotKey, string $name): string
     {
+        if ($name === 'Arnold Press') {
+            return 'Zittende Arnold press: houd je rug tegen de leuning en draai je handpalmen tijdens het drukken gecontroleerd naar voren.';
+        }
+        if ($name === 'Seated Neutral-Grip Dumbbell Shoulder Press') {
+            return 'Zittende schouderpress: houd je handpalmen naar elkaar en je rug tegen de leuning; druk zonder je onderrug hol te trekken.';
+        }
         if (str_contains($name, 'Row')) {
             if ($name === 'Dumbbell One-Arm Row' || str_contains($name, 'Yates') || ($name === 'Barbell Row' && $slotKey === 'slot_b4')) {
                 return 'Lataccent: trek je elleboog richting je heup; houd je romp stil en vermijd draaien.';
